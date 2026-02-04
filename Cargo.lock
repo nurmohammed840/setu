@@ -146,7 +146,7 @@ dependencies = [
  "databuf_derive_impl 0.2.3",
  "quote2",
  "syn",
- "type-id-derive-impl",
+ "type-id-derive",
 ]
 
 [[package]]
@@ -543,7 +543,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "type-id-derive-impl"
+name = "type-id-derive"
 version = "0.1.0"
 dependencies = [
  "quote2",

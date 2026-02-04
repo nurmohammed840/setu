@@ -20,7 +20,7 @@ fn message_expand(input: TokenStream, f: impl FnOnce(databuf_derive_impl::Expand
     let is_unit_enum = databuf_derive_impl::is_unit_enum(&input);
     let enum_repr = databuf_derive_impl::get_enum_repr(&input.attrs);
 
-    type_id_derive_impl::expand(
+    type_id_derive::expand(
         crate_path!(::frpc::__private::frpc_message::type_id),
         &input,
         &mut output,

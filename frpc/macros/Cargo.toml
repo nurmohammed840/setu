@@ -9,5 +9,5 @@ proc-macro = true
 [dependencies]
 syn = "2.0"
 quote2 = "0.7"
-type-id-derive-impl = { version = "0.1", path = "../../libs/type-id-derive-impl" }
+type-id-derive = { version = "0.1", path = "../../libs/type-id-derive" }
 databuf_derive_impl = "0.2.3"
