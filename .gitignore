@@ -1,6 +1,6 @@
+.*
+
 /target
-Cargo.lock
 
-examples/out
-
-tests/playground.*
+/examples/out
+/tests/playground.rs
