@@ -10,3 +10,4 @@ repository = "https://github.com/nurmohammed840/setu"
 description = "binary object representation"
 
 [dependencies]
+lipi-macros = { path = "./macros", version = "0.1" }

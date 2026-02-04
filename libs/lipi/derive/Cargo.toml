@@ -1,0 +1,9 @@
+[package]
+name = "lipi-derive"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+quote2 = "0.9"
+proc-macro2 = { version = "1", features = ["span-locations"] }
+syn = { version = "2", features = ["extra-traits"] }

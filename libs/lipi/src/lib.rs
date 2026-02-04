@@ -14,6 +14,7 @@ pub use encoder::FieldEncoder;
 
 pub use convert::ConvertFrom;
 pub use entries::Entries;
+pub use lipi_macros::*;
 
 pub type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 pub type Result<T, E = Error> = std::result::Result<T, E>;
