@@ -1,19 +1,21 @@
-use lipi::{ConvertFrom, Decoder, Encoder, IntoValue, Value, errors::ConvertError};
+use std::io::{self, Write};
+
+use lipi::{ConvertFrom, Decoder, Encoder, FieldEncoder, List, Value, errors::ConvertError};
 
 struct Bytes<'de> {
     data: &'de [u8],
 }
 
-impl<'de> IntoValue<'de> for Bytes<'de> {
-    fn to_value(&self) -> Value<'de> {
-        Value::Bytes(self.data)
+impl<'de> FieldEncoder for Bytes<'de> {
+    fn encode(&self, writer: &mut dyn Write, id: u16) -> io::Result<()> {
+        Value::encode(&Value::List(List::U8(self.data)), writer, id)
     }
 }
 
 impl<'de> ConvertFrom<&Value<'de>> for Bytes<'de> {
     fn convert_from(value: &Value<'de>) -> Result<Self, ConvertError> {
         match value {
-            Value::Bytes(data) => Ok(Bytes { data }),
+            Value::List(List::U8(data)) => Ok(Bytes { data }),
             _ => Err(ConvertError::from("expected `Bytes` type")),
         }
     }
@@ -34,7 +36,7 @@ fn test_custom_type() {
     };
 
     let mut buf = Vec::new();
-    bytes.encode(&mut buf).unwrap();
+    Encoder::encode(&bytes, &mut buf).unwrap();
     // println!("reader: {:#?}", buf);
 
     let mut reader = &buf[..];

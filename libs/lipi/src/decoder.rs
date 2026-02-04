@@ -1,15 +1,13 @@
-use crate::*;
-
-use super::Result;
+use crate::{utils::try_collect, *};
 
 fn parse_header(reader: &mut &[u8]) -> Result<(u64, u8)> {
     let byte = utils::read_byte(reader)?;
 
-    let ty = byte & 0b00001111;
+    let ty = byte & 0b_1111;
     let id = (byte >> 4) as u64;
 
     let id = if id == 0b1111 {
-        varint::read_unsigned(reader)? + 15
+        varint::read_u64(reader)? + 15
     } else {
         id
     };
@@ -17,41 +15,35 @@ fn parse_header(reader: &mut &[u8]) -> Result<(u64, u8)> {
 }
 
 fn parse_str<'de>(reader: &mut &'de [u8]) -> Result<&'de str> {
-    Ok(parse_bytes(reader).map(str::from_utf8)??)
-}
-
-fn parse_bytes<'de>(reader: &mut &'de [u8]) -> Result<&'de [u8]> {
-    let len = varint::read_unsigned(reader).map(u32::try_from)??;
-    utils::read_bytes(reader, len.try_into().unwrap())
-}
-
-fn collect<T>(len: u32, mut f: impl FnMut() -> Result<T>) -> Result<Vec<T>> {
-    let mut arr = Vec::with_capacity(len.try_into().unwrap());
-    for _ in 0..len {
-        arr.push(f()?);
-    }
-    Ok(arr)
+    let len = varint::read_u64(reader)?;
+    let bytes = utils::read_bytes(reader, usize::try_from(len)?)?;
+    Ok(str::from_utf8(bytes)?)
 }
 
 fn parse_list<'de>(reader: &mut &'de [u8]) -> Result<List<'de>> {
     let (len, ty) = parse_header(reader)?;
-    let len = u32::try_from(len)?;
+    let len = usize::try_from(len)?;
 
     match ty {
-        0 | 1 => collect(len, || match utils::read_byte(reader)? {
-            0 => Ok(false),
-            1 => Ok(true),
-            v => Err(errors::ParseError::new(format!("invalid boolean value: `{v}`")).into()),
-        })
-        .map(List::Bool),
-        2 => collect(len, || utils::read_buf(reader).map(f32::from_le_bytes)).map(List::F32),
-        3 => collect(len, || utils::read_buf(reader).map(f64::from_le_bytes)).map(List::F64),
-        4 => collect(len, || varint::read_unsigned(reader).map(zig_zag::from)).map(List::Int),
-        5 => collect(len, || varint::read_unsigned(reader)).map(List::UInt),
-        6 => collect(len, || parse_str(reader)).map(List::Str),
-        7 => collect(len, || parse_bytes(reader)).map(List::Bytes),
-        8 => collect(len, || parse_list(reader)).map(List::List),
-        9 => collect(len, || Entries::parse(reader)).map(List::Struct),
+        1 => {
+            try_collect(len, || utils::read_byte(reader).and_then(utils::bool_from)).map(List::Bool)
+        }
+
+        2 => utils::read_bytes(reader, len).map(List::U8),
+        3 => utils::read_bytes(reader, len)
+            .map(utils::i8_slice_from)
+            .map(List::I8),
+
+        4 => try_collect(len, || utils::read_buf(reader).map(f32::from_le_bytes)).map(List::F32),
+        5 => try_collect(len, || utils::read_buf(reader).map(f64::from_le_bytes)).map(List::F64),
+
+        6 => try_collect(len, || varint::read_u64(reader)).map(List::UInt),
+        7 => try_collect(len, || varint::read_u64(reader).map(zig_zag::from_u64)).map(List::Int),
+
+        8 => try_collect(len, || parse_str(reader)).map(List::Str),
+        9 => try_collect(len, || Entries::parse(reader)).map(List::Struct),
+
+        11 => try_collect(len, || parse_list(reader)).map(List::List),
         code => Err(errors::UnknownType { code }.into()),
     }
 }
@@ -65,27 +57,29 @@ impl<'de> Entries<'de> {
                 0 => Ok(Value::Bool(false)),
                 1 => Ok(Value::Bool(true)),
 
-                2 => utils::read_buf(reader)
+                2 => utils::read_byte(reader).map(Value::U8),
+                3 => utils::read_byte(reader).map(u8::cast_signed).map(Value::I8),
+
+                4 => utils::read_buf(reader)
                     .map(f32::from_le_bytes)
                     .map(Value::F32),
 
-                3 => utils::read_buf(reader)
+                5 => utils::read_buf(reader)
                     .map(f64::from_le_bytes)
                     .map(Value::F64),
 
-                4 => varint::read_unsigned(reader)
-                    .map(zig_zag::from)
+                6 => varint::read_u64(reader).map(Value::UInt),
+                7 => varint::read_u64(reader)
+                    .map(zig_zag::from_u64)
                     .map(Value::Int),
 
-                5 => varint::read_unsigned(reader).map(Value::UInt),
-                6 => parse_str(reader).map(Value::Str),
-                7 => parse_bytes(reader).map(Value::Bytes),
-                8 => parse_list(reader).map(Value::List),
+                8 => parse_str(reader).map(Value::Str),
                 9 => Entries::parse(reader).map(Value::Struct),
                 10 => {
                     debug_assert!(key == 0);
                     break; // End of struct
                 }
+                11 => parse_list(reader).map(Value::List),
                 code => Err(errors::UnknownType { code }.into()),
             }?;
             entries.insert(key.try_into()?, value);

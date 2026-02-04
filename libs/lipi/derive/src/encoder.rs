@@ -60,16 +60,15 @@ pub fn expand(input: &DeriveInput) -> TokenStream {
     let mut t = TokenStream::new();
     quote!(t, {
         impl #impl_generics ::lipi::Encoder for #ident #ty_generics #where_clause {
-            fn encode(&self, w: &mut (impl ::std::io::Write + ?::std::marker::Sized)) -> ::std::io::Result<()> {
+            fn encode(&self, w: &mut dyn ::std::io::Write) -> ::std::io::Result<()> {
                 #body
-                ::std::io::Write::write_all(w, &[10])?;
-                ::std::result::Result::Ok(())
+                ::std::io::Write::write_all(w, &[10])
             }
         }
 
         impl #impl_generics ::lipi::FieldEncoder for #ident #ty_generics #where_clause {
-            fn encode(&self, w: &mut (impl ::std::io::Write + ?::std::marker::Sized), id: u16) -> ::std::io::Result<()> {
-                ::lipi::__private::encode_struct_field(self, w, id)
+            fn encode(&self, w: &mut dyn ::std::io::Write, id: u16) -> ::std::io::Result<()> {
+                ::lipi::__private::field_encoder(self, w, id)
             }
         }
     });
