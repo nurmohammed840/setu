@@ -169,6 +169,7 @@ impl Item for List<'_> {
             List::Str(items) => Item::encode(items, writer),
             List::List(items) => Item::encode(items, writer),
             List::Struct(items) => Item::encode(items, writer),
+            List::Table(_) => todo!()
         }
     }
 }
@@ -345,6 +346,7 @@ impl FieldEncoder for Value<'_> {
             Value::Str(val) => FieldEncoder::encode(*val, writer, id),
             Value::Struct(entries) => FieldEncoder::encode(entries, writer, id),
             Value::List(list) => FieldEncoder::encode(list, writer, id),
+            Value::Table(_) => todo!()
         }
     }
 }

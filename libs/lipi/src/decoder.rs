@@ -14,16 +14,32 @@ fn parse_header(reader: &mut &[u8]) -> Result<(u64, u8)> {
     Ok((id, ty))
 }
 
-fn parse_str<'de>(reader: &mut &'de [u8]) -> Result<&'de str> {
+fn parse_bytes<'de>(reader: &mut &'de [u8]) -> Result<&'de [u8]> {
     let len = varint::read_u64(reader)?;
-    let bytes = utils::read_bytes(reader, usize::try_from(len)?)?;
-    Ok(str::from_utf8(bytes)?)
+    utils::read_bytes(reader, usize::try_from(len)?)
+}
+
+fn parse_str<'de>(reader: &mut &'de [u8]) -> Result<&'de str> {
+    Ok(str::from_utf8(parse_bytes(reader)?)?)
+}
+
+fn parse_table<'de>(reader: &mut &'de [u8]) -> Result<Table<'de>> {
+    let len = usize::try_from(varint::read_u64(reader)?)?;
+    let mut table = Table::with_capacity(len);
+
+    for _ in 0..len {
+        let (key, ty) = parse_header(reader)?;
+        table.insert(key.try_into()?, parse_list_values(reader, len, ty)?);
+    }
+    Ok(table)
 }
 
 fn parse_list<'de>(reader: &mut &'de [u8]) -> Result<List<'de>> {
     let (len, ty) = parse_header(reader)?;
-    let len = usize::try_from(len)?;
+    parse_list_values(reader, usize::try_from(len)?, ty)
+}
 
+fn parse_list_values<'de>(reader: &mut &'de [u8], len: usize, ty: u8) -> Result<List<'de>> {
     match ty {
         1 => {
             try_collect(len, || utils::read_byte(reader).and_then(utils::bool_from)).map(List::Bool)
@@ -43,15 +59,18 @@ fn parse_list<'de>(reader: &mut &'de [u8]) -> Result<List<'de>> {
         8 => try_collect(len, || parse_str(reader)).map(List::Str),
         9 => try_collect(len, || Entries::parse(reader)).map(List::Struct),
 
-        11 => try_collect(len, || parse_list(reader)).map(List::List),
+        10 => try_collect(len, || parse_list(reader)).map(List::List),
+        11 => try_collect(len, || parse_table(reader)).map(List::Table),
         code => Err(errors::UnknownType { code }.into()),
     }
 }
 
 impl<'de> Entries<'de> {
     pub fn parse(reader: &mut &'de [u8]) -> Result<Self> {
-        let mut entries = Entries::new();
-        loop {
+        let len = usize::try_from(varint::read_u64(reader)?)?;
+
+        let mut entries = Entries::with_capacity(len.try_into()?);
+        for _ in 0..len {
             let (key, ty) = parse_header(reader)?;
             let value = match ty {
                 0 => Ok(Value::Bool(false)),
@@ -75,14 +94,14 @@ impl<'de> Entries<'de> {
 
                 8 => parse_str(reader).map(Value::Str),
                 9 => Entries::parse(reader).map(Value::Struct),
-                10 => {
-                    debug_assert!(key == 0);
-                    break; // End of struct
+                10 => parse_list(reader).map(Value::List),
+                11 => parse_table(reader).map(Value::Table),
+                _ => {
+                    let _bytes = parse_bytes(reader)?;
+                    continue;
                 }
-                11 => parse_list(reader).map(Value::List),
-                code => Err(errors::UnknownType { code }.into()),
-            }?;
-            entries.insert(key.try_into()?, value);
+            };
+            entries.insert(key.try_into()?, value?);
         }
         Ok(entries)
     }

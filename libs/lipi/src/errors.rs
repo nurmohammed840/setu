@@ -66,10 +66,11 @@ impl List<'_> {
             List::Str(_) => "[string]",
             List::Struct(_) => "[struct]",
             List::List(_) => "[...]",
+            List::Table(_) => "[table]",
         }
     }
 
-    pub(crate) fn invalid_type(&self, expected: &str) -> ConvertError {
+    pub(crate) fn _invalid_type(&self, expected: &str) -> ConvertError {
         ConvertError::new(format!(
             "expected `{expected}`, found `{}`",
             self.type_name()
@@ -90,6 +91,7 @@ impl Value<'_> {
             Value::Str(_) => "string",
             Value::Struct(_) => "struct",
             Value::List(list) => list.type_name(),
+            Value::Table(_) => "table",
         }
     }
 

@@ -22,6 +22,7 @@ impl Debug for Value<'_> {
             Value::Bool(val) => val.fmt(f),
             Value::List(list) => list.fmt(f),
             Value::Struct(items) => items.fmt(f),
+            Value::Table(table) => table.fmt(f),
         }
     }
 }
@@ -29,10 +30,10 @@ impl Debug for Value<'_> {
 impl Debug for List<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Bool(val) => Debug::fmt(val, f),
+            List::Bool(val) => Debug::fmt(val, f),
 
-            Self::I8(val) => Debug::fmt(val, f),
-            Self::U8(val) => {
+            List::I8(val) => Debug::fmt(val, f),
+            List::U8(val) => {
                 f.write_char('(')?;
                 let mut bytes = val.iter().peekable();
                 while let Some(byte) = bytes.next() {
@@ -45,14 +46,15 @@ impl Debug for List<'_> {
                 f.write_char(')')
             }
 
-            Self::F32(val) => Debug::fmt(val, f),
-            Self::F64(val) => Debug::fmt(val, f),
-            Self::Int(val) => Debug::fmt(val, f),
-            Self::UInt(val) => Debug::fmt(val, f),
-            Self::Str(val) => Debug::fmt(val, f),
+            List::F32(val) => Debug::fmt(val, f),
+            List::F64(val) => Debug::fmt(val, f),
+            List::Int(val) => Debug::fmt(val, f),
+            List::UInt(val) => Debug::fmt(val, f),
+            List::Str(val) => Debug::fmt(val, f),
 
-            Self::List(val) => Debug::fmt(val, f),
-            Self::Struct(val) => Debug::fmt(val, f),
+            List::List(val) => Debug::fmt(val, f),
+            List::Struct(val) => Debug::fmt(val, f),
+            List::Table(val) => Debug::fmt(val, f),
         }
     }
 }
@@ -70,6 +72,14 @@ impl<'de> fmt::Debug for Entries<'de> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_map()
             .entries(self.iter().map(|(k, v)| (k, v)))
+            .finish()
+    }
+}
+
+impl<'de> fmt::Debug for Table<'de> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_map()
+            .entries(self.0.iter().map(|(k, v)| (k, v)))
             .finish()
     }
 }

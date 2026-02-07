@@ -150,7 +150,8 @@ The field header contains a 4-bit `Type` tag (`0..=15`) which defines how the fi
 |    `8`    | `String`                                 |
 |    `9`    | `Struct`                                 |
 |   `10`    | `List`                                   |
-| `11..=15` | Reserved / other types                   |
+|   `11`    | `Table`                                  |
+| `12..=15` | Reserved / other types                   |
 
 **Note:** Boolean types `0` (`false`) and `1` (`true`) are encoded entirely in the header and have no value bytes.
 
@@ -162,7 +163,7 @@ Optional values in a `List` are represented using a structured type.
 
 ### Reserved / Other Types
 
-Type tags `11..=15` are **unused by Lipi**. Decoders **MUST** ignore unknown types and skip the next `N` bytes, where `N` is specified by the length prefix.
+Type tags `12..=15` are **unused by Lipi**. Decoders **MUST** ignore unknown types and skip the next `N` bytes, where `N` is specified by the length prefix.
 
 ```
 ┌──────────────────┬───────────────────┐
@@ -177,6 +178,22 @@ but **MUST** read exactly `N` bytes before continuing with the next field.
 
 A `List` in Lipi is encoded as a **length-prefixed** sequence of values,
 `Header` encodes the **length** of the list and the value **type**.
+
+```
+┌──────────┬─────────────────┐
+|  Header  |   Value, ...    |
+└──────────┴─────────────────┘
+```
+
+# Table
+
+```
+┌───────────────────┬────────────────────┐
+|  length (varint)  |     Column, ...    |
+└───────────────────┴────────────────────┘
+```
+
+Column:
 
 ```
 ┌──────────┬─────────────────┐

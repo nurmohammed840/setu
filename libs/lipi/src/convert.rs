@@ -4,7 +4,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     hash::Hash,
 };
-use utils::{convert_vec, convert_vec_from};
+use utils::convert_vec;
 
 // -------------------------------------------------------------------------
 
@@ -138,7 +138,7 @@ impl<'v, 'de, T> ConvertFrom<&'v List<'de>> for T
 where
     T: Decoder<'de>,
 {
-    fn convert_from(list: &'v List<'de>) -> Result<Self, ConvertError> {
+    fn convert_from(_list: &'v List<'de>) -> Result<Self, ConvertError> {
         todo!()
     }
 }
@@ -149,7 +149,7 @@ where
 {
     fn convert_from(value: &'v Value<'de>) -> Result<Self, ConvertError> {
         match value {
-            Value::List(list) => {
+            Value::List(_list) => {
                 // list;
                 todo!()
             }

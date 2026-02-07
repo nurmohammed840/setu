@@ -9,9 +9,9 @@ mod zig_zag;
 
 pub mod errors;
 
-pub use lipi_macros::*;
 #[doc(hidden)]
 pub use encoder::FieldEncoder;
+pub use lipi_macros::*;
 
 pub use convert::ConvertFrom;
 pub use entries::Entries;
@@ -55,6 +55,7 @@ pub enum Value<'de> {
 
     Struct(Entries<'de>),
     List(List<'de>),
+    Table(Table<'de>),
 }
 
 #[derive(Clone)]
@@ -74,4 +75,37 @@ pub enum List<'de> {
 
     Struct(Vec<Entries<'de>>),
     List(Vec<List<'de>>),
+    Table(Vec<Table<'de>>),
+}
+
+#[derive(Clone)]
+pub struct Table<'de>(pub(crate) Vec<(u16, List<'de>)>);
+
+impl<'de> Table<'de> {
+    pub fn new() -> Self {
+        Table(Vec::with_capacity(8))
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        Table(Vec::with_capacity(capacity))
+    }
+
+    #[inline]
+    pub fn insert(&mut self, key: u16, value: List<'de>) {
+        self.0.push((key, value));
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, (u16, List<'de>)> {
+        self.0.iter()
+    }
 }

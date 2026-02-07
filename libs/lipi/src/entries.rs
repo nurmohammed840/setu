@@ -9,6 +9,11 @@ impl<'de> Entries<'de> {
         Self(Vec::with_capacity(8))
     }
 
+    #[inline]
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self(Vec::with_capacity(capacity))
+    }
+
     pub fn get(&self, k: u16) -> Option<&Value<'de>> {
         self.0
             .iter()
@@ -40,7 +45,7 @@ impl<'de> Entries<'de> {
         self.0.len()
     }
 
-    pub(crate) fn iter(&self) -> std::slice::Iter<'_, (u16, Value<'de>)> {
+    pub fn iter(&self) -> std::slice::Iter<'_, (u16, Value<'de>)> {
         self.0.iter()
     }
 }
