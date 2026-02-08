@@ -4,7 +4,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     hash::Hash,
 };
-use utils::convert_vec;
+use utils::try_convert_into_vec;
 
 // -------------------------------------------------------------------------
 
@@ -87,7 +87,7 @@ macro_rules! convert {
         impl<'v, 'de> ConvertFrom<&'v Value<'de>> for Vec<$ty> {
             fn convert_from(value: &'v Value<'de>) -> Result<Self, ConvertError> {
                 match value {
-                    Value::List(List::$name(items)) => convert_vec(items).map_err(ConvertError::from),
+                    Value::List(List::$name(items)) => try_convert_into_vec(items).map_err(ConvertError::from),
                     _ => Err(value.invalid_type(type_name::<Self>())),
                 }
             }

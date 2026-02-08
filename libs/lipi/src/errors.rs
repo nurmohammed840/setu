@@ -41,18 +41,6 @@ impl ParseError {
     }
 }
 
-#[derive(Debug)]
-pub struct UnknownType {
-    pub code: u8,
-}
-
-impl std::error::Error for UnknownType {}
-impl fmt::Display for UnknownType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "unknown type: {}", self.code)
-    }
-}
-
 impl List<'_> {
     fn type_name(&self) -> &str {
         match self {
@@ -68,6 +56,10 @@ impl List<'_> {
             List::List(_) => "[...]",
             List::Table(_) => "[table]",
             List::Union(_) => "[union]",
+            // ---
+            List::UnknownI(_) => "[unknown I]",
+            List::UnknownII(_) => "[unknown II]",
+            List::UnknownIII(_) => "[unknown III]",
         }
     }
 
@@ -94,8 +86,12 @@ impl Value<'_> {
             Value::List(list) => list.type_name(),
             Value::Table(_) => "table",
             Value::Union(_) => "union",
+            // ---
+            Value::UnknownI(_) => "unknown I",
+            Value::UnknownII(_) => "unknown II",
+            Value::UnknownIII(_) => "unknown III",
         }
-    }
+    }   
 
     pub(crate) fn invalid_type(&self, expected: &str) -> ConvertError {
         ConvertError::new(format!(

@@ -24,6 +24,10 @@ impl Debug for Value<'_> {
             Value::Struct(items) => items.fmt(f),
             Value::Table(table) => table.fmt(f),
             Value::Union(union) => union.fmt(f),
+            // ---
+            Value::UnknownI(bytes) => bytes.fmt(f),
+            Value::UnknownII(bytes) => bytes.fmt(f),
+            Value::UnknownIII(bytes) => bytes.fmt(f),
         }
     }
 }
@@ -57,13 +61,17 @@ impl Debug for List<'_> {
             List::Union(val) => Debug::fmt(val, f),
             List::List(val) => Debug::fmt(val, f),
             List::Table(val) => Debug::fmt(val, f),
+            // ---
+            List::UnknownI(bytes) => bytes.fmt(f),
+            List::UnknownII(bytes) => bytes.fmt(f),
+            List::UnknownIII(bytes) => bytes.fmt(f),
         }
     }
 }
 
 impl<'de> fmt::Display for Entries<'de> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (key, value) in self.iter() {
+        for Entry { key, value } in self.iter() {
             writeln!(f, "{key}: {value:#?}")?;
         }
         Ok(())
@@ -73,7 +81,7 @@ impl<'de> fmt::Display for Entries<'de> {
 impl<'de> fmt::Debug for Entries<'de> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_map()
-            .entries(self.iter().map(|(k, v)| (k, v)))
+            .entries(self.iter().map(|Entry { key, value }| (key, value)))
             .finish()
     }
 }

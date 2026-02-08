@@ -44,15 +44,15 @@ pub fn bool_from(byte: u8) -> Result<bool> {
     }
 }
 
-pub fn convert_vec<T, M>(items: &[T]) -> Result<Vec<M>, M::Error>
+pub fn try_convert_into_vec<T, M>(items: &[T]) -> Result<Vec<M>, M::Error>
 where
     T: Clone,
     M: TryFrom<T>,
 {
-    convert_vec_from(items, |t| M::try_from(t.clone()))
+    try_convert_vec_from(items, |t| M::try_from(t.clone()))
 }
 
-pub fn convert_vec_from<'a, T, M, E>(
+pub fn try_convert_vec_from<'a, T, M, E>(
     items: &'a [T],
     f: fn(&'a T) -> Result<M, E>,
 ) -> Result<Vec<M>, E> {
@@ -126,7 +126,7 @@ mod tests {
         })
         .unwrap();
 
-        let values = convert_vec_from(&items, |s| s.parse::<i32>()).unwrap();
+        let values = try_convert_vec_from(&items, |s| s.parse::<i32>()).unwrap();
         assert_eq!(values, [1, 2, 3]);
     }
 }

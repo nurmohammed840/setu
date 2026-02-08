@@ -1,7 +1,20 @@
 use crate::{Value, convert::ConvertFrom, errors};
 
+#[derive(Clone, Debug)]
+pub struct Entry<'de> {
+    pub key: u16,
+    pub value: Value<'de>,
+}
+
 #[derive(Clone, Default)]
-pub struct Entries<'de>(Vec<(u16, Value<'de>)>);
+pub struct Entries<'de>(Vec<Entry<'de>>);
+
+impl<'de> From<Vec<Entry<'de>>> for Entries<'de> {
+    #[inline]
+    fn from(value: Vec<Entry<'de>>) -> Self {
+        Self(value)
+    }
+}
 
 impl<'de> Entries<'de> {
     #[inline]
@@ -17,12 +30,12 @@ impl<'de> Entries<'de> {
     pub fn get(&self, k: u16) -> Option<&Value<'de>> {
         self.0
             .iter()
-            .find_map(|(key, value)| (*key == k).then_some(value))
+            .find_map(|Entry { key, value }| (*key == k).then_some(value))
     }
 
     #[inline]
     pub fn insert(&mut self, key: u16, value: Value<'de>) {
-        self.0.push((key, value));
+        self.0.push(Entry { key, value });
     }
 
     pub fn get_and_convert<'v, T>(&'v self, k: u16) -> Result<T, errors::ConvertError>
@@ -45,7 +58,7 @@ impl<'de> Entries<'de> {
         self.0.len()
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, (u16, Value<'de>)> {
+    pub fn iter(&self) -> std::slice::Iter<'_, Entry<'de>> {
         self.0.iter()
     }
 }

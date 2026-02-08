@@ -115,7 +115,7 @@ impl Item for Entries<'_> {
     }
 
     fn encode(&self, writer: &mut dyn Write) -> Result<()> {
-        for (key, value) in self.iter() {
+        for Entry { key, value } in self.iter() {
             FieldEncoder::encode(value, writer, *key)?;
         }
         writer.write_all(&[10])
@@ -170,7 +170,11 @@ impl Item for List<'_> {
             List::List(items) => Item::encode(items, writer),
             List::Struct(items) => Item::encode(items, writer),
             List::Table(_) => todo!(),
-            List::Union(_) => todo!()
+            List::Union(_) => todo!(),
+            // ---
+            List::UnknownI(_) => todo!(),
+            List::UnknownII(_) => todo!(),
+            List::UnknownIII(_) => todo!(),
         }
     }
 }
@@ -348,7 +352,11 @@ impl FieldEncoder for Value<'_> {
             Value::Struct(entries) => FieldEncoder::encode(entries, writer, id),
             Value::List(list) => FieldEncoder::encode(list, writer, id),
             Value::Table(_) => todo!(),
-            Value::Union(_) => todo!()
+            Value::Union(_) => todo!(),
+
+            Value::UnknownI(_) => todo!(),
+            Value::UnknownII(_) => todo!(),
+            Value::UnknownIII(_) => todo!(),
         }
     }
 }

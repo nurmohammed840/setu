@@ -16,7 +16,7 @@ pub use lipi_macros::*;
 
 // pub use bit_set::BitSet;
 pub use convert::ConvertFrom;
-pub use entries::Entries;
+pub use entries::{Entries, Entry};
 
 pub type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -56,12 +56,14 @@ pub enum Value<'de> {
     Str(&'de str),
 
     Struct(Entries<'de>),
-    Union(Box<(u16, Value<'de>)>),
+    Union(Box<Entry<'de>>),
     List(List<'de>),
     Table(Table<'de>),
 
     // ---------------
-    
+    UnknownI(&'de [u8]),
+    UnknownII(&'de [u8]),
+    UnknownIII(&'de [u8]),
 }
 
 #[derive(Clone)]
@@ -80,9 +82,14 @@ pub enum List<'de> {
     Str(Vec<&'de str>),
 
     Struct(Vec<Entries<'de>>),
-    Union(Vec<(u16, Value<'de>)>),
+    Union(Vec<Entry<'de>>),
     List(Vec<List<'de>>),
     Table(Vec<Table<'de>>),
+
+    // ---------------
+    UnknownI(Vec<&'de [u8]>),
+    UnknownII(Vec<&'de [u8]>),
+    UnknownIII(Vec<&'de [u8]>),
 }
 
 #[derive(Clone)]
