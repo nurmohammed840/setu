@@ -1,3 +1,4 @@
+// mod bit_set;
 mod convert;
 mod decoder;
 mod encoder;
@@ -13,6 +14,7 @@ pub mod errors;
 pub use encoder::FieldEncoder;
 pub use lipi_macros::*;
 
+// pub use bit_set::BitSet;
 pub use convert::ConvertFrom;
 pub use entries::Entries;
 
