@@ -23,6 +23,7 @@ impl Debug for Value<'_> {
             Value::List(list) => list.fmt(f),
             Value::Struct(items) => items.fmt(f),
             Value::Table(table) => table.fmt(f),
+            Value::Union(union) => union.fmt(f),
         }
     }
 }
@@ -52,8 +53,9 @@ impl Debug for List<'_> {
             List::UInt(val) => Debug::fmt(val, f),
             List::Str(val) => Debug::fmt(val, f),
 
-            List::List(val) => Debug::fmt(val, f),
             List::Struct(val) => Debug::fmt(val, f),
+            List::Union(val) => Debug::fmt(val, f),
+            List::List(val) => Debug::fmt(val, f),
             List::Table(val) => Debug::fmt(val, f),
         }
     }

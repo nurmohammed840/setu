@@ -40,7 +40,7 @@ fn parse_list<'de>(reader: &mut &'de [u8]) -> Result<List<'de>> {
 }
 
 fn parse_list_values<'de>(reader: &mut &'de [u8], len: usize, ty: u8) -> Result<List<'de>> {
-    match ty {
+    let value = match ty {
         1 => {
             try_collect(len, || utils::read_byte(reader).and_then(utils::bool_from)).map(List::Bool)
         }
@@ -61,8 +61,15 @@ fn parse_list_values<'de>(reader: &mut &'de [u8], len: usize, ty: u8) -> Result<
 
         10 => try_collect(len, || parse_list(reader)).map(List::List),
         11 => try_collect(len, || parse_table(reader)).map(List::Table),
-        code => Err(errors::UnknownType { code }.into()),
-    }
+        _ => {
+            for _ in 0..len {
+                let _bytes = parse_bytes(reader)?;
+            }
+            // return Ok(None);
+            todo!()
+        }
+    };
+    value
 }
 
 impl<'de> Entries<'de> {
@@ -94,8 +101,9 @@ impl<'de> Entries<'de> {
 
                 8 => parse_str(reader).map(Value::Str),
                 9 => Entries::parse(reader).map(Value::Struct),
-                10 => parse_list(reader).map(Value::List),
-                11 => parse_table(reader).map(Value::Table),
+                10 => Entries::parse(reader).map(Value::Struct),
+                11 => parse_list(reader).map(Value::List),
+                12 => parse_table(reader).map(Value::Table),
                 _ => {
                     let _bytes = parse_bytes(reader)?;
                     continue;
@@ -105,4 +113,13 @@ impl<'de> Entries<'de> {
         }
         Ok(entries)
     }
+}
+
+fn parse_value<'de>(reader: &mut &'de [u8]) -> Result<Value<'de>> {
+    todo!()
+}
+
+fn parse_union<'de>(reader: &mut &'de [u8]) -> Result<(u16, Value<'de>)> {
+    let (len, ty) = parse_header(reader)?;
+    todo!()
 }

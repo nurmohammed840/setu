@@ -104,6 +104,18 @@ The field header contains the field **key** (as an integer) and a **4-bit type t
 The field **key** can be considered analogous to a JSON object’s field name.
 This allows fields to be encoded in any order and enables forward and backward-compatible schema changes.
 
+# Union
+
+A `Union` is encoded like a `Struct`, but contains exactly one field.
+
+```
+┌──────────┬───────────┐
+|  Header  |   Value   |
+└──────────┴───────────┘
+```
+
+it is used to represent enums ([tagged union](https://en.wikipedia.org/wiki/Tagged_union)).
+
 # Header
 
 For numbers in the range `0..14`, the number is stored directly in the header and fits in a single byte.
@@ -149,9 +161,10 @@ The field header contains a 4-bit `Type` tag (`0..=15`) which defines how the fi
 |    `7`    | `Int` (signed VarInt / ZigZag + ULEB128) |
 |    `8`    | `String`                                 |
 |    `9`    | `Struct`                                 |
-|   `10`    | `List`                                   |
-|   `11`    | `Table`                                  |
-| `12..=15` | Reserved / other types                   |
+|   `10`    | `Union`                                  |
+|   `11`    | `List`                                   |
+|   `12`    | `Table`                                  |
+| `13..=15` | Reserved / other types                   |
 
 **Note:** Boolean types `0` (`false`) and `1` (`true`) are encoded entirely in the header and have no value bytes.
 
@@ -163,7 +176,7 @@ Optional values in a `List` are represented using a structured type.
 
 ### Reserved / Other Types
 
-Type tags `12..=15` are **unused by Lipi**. Decoders **MUST** ignore unknown types and skip the next `N` bytes, where `N` is specified by the length prefix.
+Type tags `13..=15` are **unused by Lipi**. Decoders **MUST** ignore unknown types and skip the next `N` bytes, where `N` is specified by the length prefix.
 
 ```
 ┌──────────────────┬───────────────────┐

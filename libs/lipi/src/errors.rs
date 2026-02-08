@@ -67,6 +67,7 @@ impl List<'_> {
             List::Struct(_) => "[struct]",
             List::List(_) => "[...]",
             List::Table(_) => "[table]",
+            List::Union(_) => "[union]",
         }
     }
 
@@ -92,6 +93,7 @@ impl Value<'_> {
             Value::Struct(_) => "struct",
             Value::List(list) => list.type_name(),
             Value::Table(_) => "table",
+            Value::Union(_) => "union",
         }
     }
 

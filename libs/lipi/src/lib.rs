@@ -56,8 +56,12 @@ pub enum Value<'de> {
     Str(&'de str),
 
     Struct(Entries<'de>),
+    Union(Box<(u16, Value<'de>)>),
     List(List<'de>),
     Table(Table<'de>),
+
+    // ---------------
+    
 }
 
 #[derive(Clone)]
@@ -76,6 +80,7 @@ pub enum List<'de> {
     Str(Vec<&'de str>),
 
     Struct(Vec<Entries<'de>>),
+    Union(Vec<(u16, Value<'de>)>),
     List(Vec<List<'de>>),
     Table(Vec<Table<'de>>),
 }
