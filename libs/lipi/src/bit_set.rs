@@ -79,8 +79,18 @@ impl BitSet {
     }
 }
 
-// pub const fn div_ceil(lhs: usize, rhs: usize) -> usize {
-//     let d = lhs / rhs;
-//     let r = lhs % rhs;
-//     if r > 0 { d + 1 } else { d }
-// }
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn packed_bool_len() {
+        assert_eq!(0_u8.div_ceil(8), 0);
+        assert_eq!(1_u8.div_ceil(8), 1);
+        assert_eq!(8_u8.div_ceil(8), 1);
+        assert_eq!(9_u8.div_ceil(8), 2);
+        assert_eq!(16u8.div_ceil(8), 2);
+
+        for i in 0..=256 as usize {
+            assert_eq!(i.div_ceil(8), (i + 7) / 8);
+        }
+    }
+}

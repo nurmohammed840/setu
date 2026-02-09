@@ -5,10 +5,46 @@
 `Booleans` are encoded differently depending on context:
 
 - **Field values (in a struct)**: Encoded directly in the **field header**. No additional bytes are used.
-- **List values (in a `Vec<bool>`)**: Encoded as a single **`u8`**:
-  - `0` → `false`
-  - `1` → `true`
-  - `n` → Any other value is considered invalid and MUST result in a **parse error**.
+- **List values (in a `Vec<bool>`)**: The boolean values are packed into bytes, **8 values per byte**.
+
+```
+┌──────────────────┬───────────────────┐
+| length (varint)  |  bytes (packed)   |
+└──────────────────┴───────────────────┘
+```
+
+`length` is the number of boolean values, **NOT** the number of bytes in the packed representation.
+
+Decoders **MUST** read the next `N` bytes as the packed boolean payload, where `N` is computed from `length`:
+
+```rust
+N = (length + 7) / 8
+// Or
+N = div_ceil(length, 8)
+```
+
+Since most programming languages perform integer division by truncation (floor division), `7` is added to `length` to ensure rounding up.  
+Alternatively, a [ceiling division](https://doc.rust-lang.org/std/primitive.usize.html#method.div_ceil) can be performed; 
+
+```rust
+fn div_ceil(lhs: usize, rhs: usize) -> usize {
+    let d = lhs / rhs;
+    let r = lhs % rhs;
+    if r > 0 { d + 1 } else { d }
+}
+```
+
+### Packed Boolean Access
+
+Booleans are stored **8 per byte**, in **LSB-first order**. To read or set a boolean at a given index `idx` (`0 ≤ idx < length`):
+
+```rust
+// Read the boolean at index
+(bytes[idx / 8] & (1 << (idx % 8))) != 0;
+
+// Set the boolean at index `idx` to true
+bytes[idx / 8] |= 1 << (idx % 8);
+```
 
 # Integer
 

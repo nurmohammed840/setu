@@ -1,4 +1,4 @@
-// mod bit_set;
+mod bit_set;
 mod convert;
 mod decoder;
 mod encoder;
@@ -94,6 +94,12 @@ pub enum List<'de> {
 
 #[derive(Clone)]
 pub struct Table<'de>(pub(crate) Vec<(u16, List<'de>)>);
+
+impl<'de> Default for Table<'de> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl<'de> Table<'de> {
     pub fn new() -> Self {

@@ -91,7 +91,7 @@ impl Value<'_> {
             Value::UnknownII(_) => "unknown II",
             Value::UnknownIII(_) => "unknown III",
         }
-    }   
+    }
 
     pub(crate) fn invalid_type(&self, expected: &str) -> ConvertError {
         ConvertError::new(format!(

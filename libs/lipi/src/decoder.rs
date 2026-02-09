@@ -6,7 +6,7 @@ fn parse_header(reader: &mut &[u8]) -> Result<(u64, u8)> {
     let ty = byte & 0b_1111;
     let id = (byte >> 4) as u64;
 
-    let id = if id == 0b1111 {
+    let id = if id == 0b_1111 {
         varint::read_u64(reader)? + 15
     } else {
         id
