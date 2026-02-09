@@ -81,6 +81,12 @@ impl<Bytes: AsMut<[u8]>> BitSet<Bytes> {
     }
 }
 
+impl<T: AsRef<[u8]>> BitSet<T> {
+    pub fn from_parts(len: usize, bytes: T) -> Self {
+        Self { len, slots: bytes }
+    }
+}
+
 impl BitSet<Box<[u8]>> {
     pub fn new(len: usize) -> Self {
         Self {
@@ -130,13 +136,13 @@ mod tests {
 
     #[test]
     fn create_bit_set() {
-        let bit_set_1 = BitSet::<Box<[u8]>>::from(&[true, false]);
-        let bit_set_2 = BitSet::<Cow<[u8]>>::from(&[true, false]);
-        assert_eq!(bit_set_1.as_packed_bytes(), bit_set_2.as_packed_bytes());
+        let bs_1 = BitSet::<Box<[u8]>>::from(&[true, false]);
+        let bs_2 = BitSet::<Cow<[u8]>>::from(&[true, false]);
+        assert_eq!(bs_1.as_packed_bytes(), bs_2.as_packed_bytes());
 
-        let mut bit_set_3 = BitSet::<Vec<u8>>::new(2);
-        bit_set_3.insert(0).unwrap();
-        assert_eq!(bit_set_1.as_packed_bytes(), bit_set_3.as_packed_bytes());
+        let mut bs_3 = BitSet::<Vec<u8>>::new(2);
+        bs_3.insert(0).unwrap();
+        assert_eq!(bs_1.as_packed_bytes(), bs_3.as_packed_bytes());
     }
 
     #[test]
