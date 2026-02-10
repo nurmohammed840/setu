@@ -14,9 +14,19 @@ fn parse_header(reader: &mut &[u8]) -> Result<(u64, u8)> {
     Ok((id, ty))
 }
 
+fn parse_length(reader: &mut &[u8]) -> Result<usize> {
+    Ok(usize::try_from(varint::read_u64(reader)?)?)
+}
+
+fn parse_packed_booleans<'de>(reader: &mut &'de [u8], len: usize) -> Result<BitSet<&'de [u8]>> {
+    let packed_bytes_len = len.div_ceil(8);
+    let packed = utils::read_bytes(reader, packed_bytes_len)?;
+    Ok(BitSet::from_parts(len, packed))
+}
+
 fn parse_bytes<'de>(reader: &mut &'de [u8]) -> Result<&'de [u8]> {
-    let len = varint::read_u64(reader)?;
-    utils::read_bytes(reader, usize::try_from(len)?)
+    let len = parse_length(reader)?;
+    utils::read_bytes(reader, len)
 }
 
 fn parse_str<'de>(reader: &mut &'de [u8]) -> Result<&'de str> {
@@ -24,7 +34,7 @@ fn parse_str<'de>(reader: &mut &'de [u8]) -> Result<&'de str> {
 }
 
 fn parse_table<'de>(reader: &mut &'de [u8]) -> Result<Table<'de>> {
-    let len = usize::try_from(varint::read_u64(reader)?)?;
+    let len = parse_length(reader)?;
 
     fn parse_column<'de>(reader: &mut &'de [u8], len: usize) -> Result<(u16, List<'de>)> {
         let (key, ty) = parse_header(reader)?;
@@ -41,9 +51,8 @@ fn parse_list<'de>(reader: &mut &'de [u8]) -> Result<List<'de>> {
 
 fn parse_list_values<'de>(reader: &mut &'de [u8], len: usize, ty: u8) -> Result<List<'de>> {
     match ty {
-        1 => {
-            try_collect(len, || utils::read_byte(reader).and_then(utils::bool_from)).map(List::Bool)
-        }
+        0 => Err(errors::ParseError.into()),
+        1 => parse_packed_booleans(reader, len).map(List::Bool),
 
         2 => utils::read_bytes(reader, len).map(List::U8),
         3 => utils::read_bytes(reader, len)
@@ -76,7 +85,7 @@ fn parse_list_values<'de>(reader: &mut &'de [u8], len: usize, ty: u8) -> Result<
 
 impl<'de> Entries<'de> {
     pub fn parse(reader: &mut &'de [u8]) -> Result<Self> {
-        let len = usize::try_from(varint::read_u64(reader)?)?;
+        let len = parse_length(reader)?;
         try_collect(len, || parse_entry(reader)).map(Entries::from)
     }
 }

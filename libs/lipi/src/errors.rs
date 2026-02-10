@@ -3,12 +3,13 @@ use std::fmt;
 
 #[derive(Debug)]
 pub struct UnexpectedEof {
+    /// Number of additional bytes required.
     pub size: usize,
 }
 impl std::error::Error for UnexpectedEof {}
 impl fmt::Display for UnexpectedEof {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("unexpected end of file")
+        write!(f, "unexpected end of file: needed {} more bytes", self.size)
     }
 }
 
@@ -22,22 +23,11 @@ impl fmt::Display for VarIntError {
 }
 
 #[derive(Debug)]
-pub struct ParseError {
-    pub message: Box<str>,
-}
-
+pub struct ParseError;
 impl std::error::Error for ParseError {}
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.message, f)
-    }
-}
-
-impl ParseError {
-    pub fn new(message: impl Into<Box<str>>) -> Self {
-        Self {
-            message: message.into(),
-        }
+        f.write_str("invalid type tag: `0`")
     }
 }
 

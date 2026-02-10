@@ -159,7 +159,7 @@ impl Item for List<'_> {
     }
     fn encode(&self, writer: &mut dyn Write) -> Result<()> {
         match self {
-            List::Bool(items) => Item::encode(items, writer),
+            List::Bool(_) => todo!(),
             List::U8(items) => Item::encode(items, writer),
             List::I8(items) => Item::encode(items, writer),
             List::F32(items) => Item::encode(items, writer),

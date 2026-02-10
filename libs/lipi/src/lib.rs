@@ -23,6 +23,8 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 use std::io::{self, Write};
 
+use crate::bit_set::BitSet;
+
 #[doc(hidden)]
 pub mod __private {
     pub use crate::encoder::field_encoder;
@@ -68,7 +70,7 @@ pub enum Value<'de> {
 
 #[derive(Clone)]
 pub enum List<'de> {
-    Bool(Vec<bool>),
+    Bool(BitSet<&'de [u8]>),
 
     U8(&'de [u8]),
     I8(&'de [i8]),
