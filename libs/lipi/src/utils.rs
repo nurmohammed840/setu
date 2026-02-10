@@ -121,4 +121,35 @@ mod tests {
         let values = try_convert_vec_from(&items, |s| s.parse::<i32>()).unwrap();
         assert_eq!(values, [1, 2, 3]);
     }
+
+    #[test]
+    fn test_try_collect_drop() {
+        use std::cell::RefCell;
+        thread_local! {
+               pub static DROPED: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
+        }
+
+        struct DropCount(u8);
+        impl Drop for DropCount {
+            fn drop(&mut self) {
+                DROPED.with(|d| d.borrow_mut().push(self.0));
+            }
+        }
+
+        let mut i = 0;
+        let items = try_collect(5, || {
+            if i >= 3 {
+                Err(())
+            } else {
+                i += 1;
+                Ok(DropCount(i))
+            }
+        });
+
+        assert!(items.is_err());
+        drop(items);
+        
+        assert_eq!(i, 3);
+        assert_eq!(DROPED.with(|d| d.take()), [1, 2, 3]);
+    }
 }

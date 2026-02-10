@@ -128,7 +128,7 @@ fn parse_entry<'de>(reader: &mut &'de [u8]) -> Result<Entry<'de>> {
                 _ => unreachable!(),
             }
         }
-    };
+    }?;
 
-    Ok(Entry { key, value: value? })
+    Ok(Entry { key, value })
 }
