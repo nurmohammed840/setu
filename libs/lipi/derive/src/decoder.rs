@@ -2,7 +2,7 @@ use proc_macro2::{Span, TokenStream};
 use quote2::{Quote, quote};
 use syn::*;
 
-pub fn expand(input: &DeriveInput) -> TokenStream {
+pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> TokenStream {
     let DeriveInput {
         ident,
         generics,
@@ -13,7 +13,7 @@ pub fn expand(input: &DeriveInput) -> TokenStream {
     let body = quote(|t| match data {
         Data::Struct(DataStruct { fields, .. }) => {
             for field in fields {
-                match crate::utils::get_key(field) {
+                match crate::utils::get_attr(field, key_attr) {
                     Some(key) => {
                         let key_name = &field.ident;
                         quote!(t, { #key_name: e.get_and_convert(#key)?, });
@@ -32,7 +32,7 @@ pub fn expand(input: &DeriveInput) -> TokenStream {
     let (_, ty_generics, where_clause) = generics.split_for_impl();
 
     // Add a bound `T: Decode<'de>` to every type parameter of `T`.
-    let bound: TypeParamBound = parse_quote!(::lipi::Decode<'decode>);
+    let bound: TypeParamBound = parse_quote!(#crate_path::Decode<'decode>);
     let mut params = generics.params.clone();
     let mut lifetime = LifetimeParam::new(Lifetime::new("'decode", Span::call_site()));
 
@@ -46,8 +46,8 @@ pub fn expand(input: &DeriveInput) -> TokenStream {
 
     let mut t = TokenStream::new();
     quote!(t, {
-        impl <#lifetime, #params> ::lipi::Decoder<'decode> for #ident #ty_generics #where_clause {
-            fn decode(e: &::lipi::Entries<'decode>) -> ::lipi::Result<Self> {
+        impl <#lifetime, #params> #crate_path::Decoder<'decode> for #ident #ty_generics #where_clause {
+            fn decode(e: &#crate_path::Entries<'decode>) -> #crate_path::Result<Self> {
                 Ok(Self { #body })
             }
         }

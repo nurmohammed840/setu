@@ -3,7 +3,7 @@ use quote2::{Quote, ToTokens, quote};
 use std::collections::HashSet;
 use syn::{spanned::Spanned, *};
 
-pub fn expand(input: &DeriveInput) -> TokenStream {
+pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> TokenStream {
     let DeriveInput {
         ident,
         generics,
@@ -16,7 +16,7 @@ pub fn expand(input: &DeriveInput) -> TokenStream {
             let mut seen: HashSet<&Expr> = HashSet::new();
 
             for field in fields {
-                if let Some(key) = crate::utils::get_key(field) {
+                if let Some(key) = crate::utils::get_attr(field, key_attr) {
                     match seen.get(key) {
                         Some(key_0) => {
                             let loc = key.span().start();
@@ -46,7 +46,7 @@ pub fn expand(input: &DeriveInput) -> TokenStream {
                     };
 
                     quote!(t, {
-                        ::lipi::FieldEncoder::encode(#ref_symbol self.#ident, w, #key)?;
+                        #crate_path::FieldEncoder::encode(#ref_symbol self.#ident, w, #key)?;
                     });
                 }
             }
@@ -59,16 +59,16 @@ pub fn expand(input: &DeriveInput) -> TokenStream {
 
     let mut t = TokenStream::new();
     quote!(t, {
-        impl #impl_generics ::lipi::Encoder for #ident #ty_generics #where_clause {
+        impl #impl_generics #crate_path::Encoder for #ident #ty_generics #where_clause {
             fn encode(&self, w: &mut dyn ::std::io::Write) -> ::std::io::Result<()> {
                 #body
                 ::std::io::Write::write_all(w, &[10])
             }
         }
 
-        impl #impl_generics ::lipi::FieldEncoder for #ident #ty_generics #where_clause {
+        impl #impl_generics #crate_path::FieldEncoder for #ident #ty_generics #where_clause {
             fn encode(&self, w: &mut dyn ::std::io::Write, id: u16) -> ::std::io::Result<()> {
-                ::lipi::__private::field_encoder(self, w, id)
+                #crate_path::__private::field_encoder(self, w, id)
             }
         }
     });
