@@ -1,7 +1,8 @@
 mod bit_set;
 mod convert;
 mod decoder;
-mod encoder;
+// mod encoder;
+mod encoder_new;
 mod entries;
 mod print;
 mod utils;
@@ -11,7 +12,7 @@ mod zig_zag;
 pub mod errors;
 
 #[doc(hidden)]
-pub use encoder::FieldEncoder;
+pub use encoder_new::FieldEncoder;
 pub use lipi_macros::*;
 
 // pub use bit_set::BitSet;
@@ -27,7 +28,7 @@ use crate::bit_set::BitSet;
 
 #[doc(hidden)]
 pub mod __private {
-    pub use crate::encoder::field_encoder;
+    pub use crate::encoder_new::{encode_struct, encode_length};
 }
 
 pub trait Encoder {

@@ -15,6 +15,15 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
         Data::Struct(DataStruct { fields, .. }) => {
             let mut seen: HashSet<&Expr> = HashSet::new();
 
+            let field_count = fields
+                .iter()
+                .filter_map(|field| crate::utils::get_attr(field, key_attr))
+                .count();
+
+            quote!(t, {
+                #crate_path::__private::encode_length(w, #field_count);
+            });
+
             for field in fields {
                 if let Some(key) = crate::utils::get_attr(field, key_attr) {
                     match seen.get(key) {
@@ -62,13 +71,13 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
         impl #impl_generics #crate_path::Encoder for #ident #ty_generics #where_clause {
             fn encode(&self, w: &mut dyn ::std::io::Write) -> ::std::io::Result<()> {
                 #body
-                ::std::io::Write::write_all(w, &[10])
+                ::std::io::Result::Ok(())
             }
         }
 
         impl #impl_generics #crate_path::FieldEncoder for #ident #ty_generics #where_clause {
             fn encode(&self, w: &mut dyn ::std::io::Write, id: u16) -> ::std::io::Result<()> {
-                #crate_path::__private::field_encoder(self, w, id)
+                #crate_path::__private::encode_struct(self, w, id)
             }
         }
     });

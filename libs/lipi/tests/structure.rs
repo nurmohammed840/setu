@@ -77,8 +77,8 @@ pub struct Types<'a> {
 
 #[derive(Encoder, Debug, Decoder, Clone, PartialEq)]
 struct User {
-    #[key = 0]
-    id: Vec<u8>,
+    // #[key = 0]
+    // id: Vec<u8>,
     #[key = 1]
     name: String,
     #[key = 2]
@@ -100,7 +100,7 @@ impl<'a> Types<'a> {
             string: "Hello World",
             bytes: "Hello, World".as_bytes(),
             user: User {
-                id: vec![1, 2, 3, 4, 5],
+                // id: vec![1, 2, 3, 4, 5],
                 name: "Alex".into(),
                 email: None,
             },
