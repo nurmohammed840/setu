@@ -6,8 +6,17 @@ pub struct BitSet<Bytes> {
 
 impl<Bytes: AsRef<[u8]>> BitSet<Bytes> {
     #[inline]
-    pub fn capacity(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.len
+    }
+
+    #[inline]
+    pub fn as_bytes(&self) -> &[u8] {
+        self.slots.as_ref()
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.slots.as_ref().len() * 8
     }
 
     #[inline]
@@ -23,10 +32,6 @@ impl<Bytes: AsRef<[u8]>> BitSet<Bytes> {
             .as_ref()
             .get(slot_idx)
             .is_some_and(|slot| slot & mask != 0)
-    }
-
-    pub fn as_packed_bytes(&self) -> &[u8] {
-        self.slots.as_ref()
     }
 }
 
@@ -138,11 +143,11 @@ mod tests {
     fn create_bit_set() {
         let bs_1 = BitSet::<Box<[u8]>>::from(&[true, false]);
         let bs_2 = BitSet::<Cow<[u8]>>::from(&[true, false]);
-        assert_eq!(bs_1.as_packed_bytes(), bs_2.as_packed_bytes());
+        assert_eq!(bs_1.as_bytes(), bs_2.as_bytes());
 
         let mut bs_3 = BitSet::<Vec<u8>>::new(2);
         bs_3.insert(0).unwrap();
-        assert_eq!(bs_1.as_packed_bytes(), bs_3.as_packed_bytes());
+        assert_eq!(bs_1.as_bytes(), bs_3.as_bytes());
     }
 
     #[test]
@@ -163,13 +168,13 @@ mod tests {
         let mut bs = BitSet::<Vec<u8>>::new(8);
 
         bs.insert(0).unwrap();
-        assert_eq!(bs.as_packed_bytes(), &[0b0000_0001]);
+        assert_eq!(bs.as_bytes(), &[0b0000_0001]);
 
         bs.insert(1).unwrap();
-        assert_eq!(bs.as_packed_bytes(), &[0b0000_0011]);
+        assert_eq!(bs.as_bytes(), &[0b0000_0011]);
 
         bs.insert(7).unwrap();
-        assert_eq!(bs.as_packed_bytes(), &[0b1000_0011]);
+        assert_eq!(bs.as_bytes(), &[0b1000_0011]);
 
         assert!(bs.has(0));
         assert!(bs.has(1));
@@ -245,6 +250,6 @@ mod tests {
 
         // byte0: bit7 set => 0b1000_0000
         // byte1: bit0 + bit7 set => 0b1000_0001
-        assert_eq!(bs.as_packed_bytes(), &[0b1000_0000, 0b1000_0001]);
+        assert_eq!(bs.as_bytes(), &[0b1000_0000, 0b1000_0001]);
     }
 }
