@@ -1,20 +1,18 @@
 mod bit_set;
 mod convert;
 mod decoder;
-mod encoder;
 mod entries;
 mod print;
 mod utils;
 mod varint;
 mod zig_zag;
 
+pub mod encoder;
 pub mod errors;
 
-#[doc(hidden)]
-pub use encoder::FieldEncoder;
 pub use lipi_macros::*;
 
-// pub use bit_set::BitSet;
+pub use bit_set::BitSet;
 pub use convert::ConvertFrom;
 pub use entries::{Entries, Entry};
 
@@ -22,13 +20,6 @@ pub type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 use std::io::{self, Write};
-
-use crate::bit_set::BitSet;
-
-#[doc(hidden)]
-pub mod __private {
-    pub use crate::encoder::{encode_length, encode_struct};
-}
 
 pub trait Encoder {
     fn encode(&self, _: &mut dyn Write) -> io::Result<()>;

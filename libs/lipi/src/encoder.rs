@@ -38,12 +38,14 @@ fn encode_list_type(writer: &mut dyn Write, len: usize, ty: u8) -> Result<()> {
 
 // ------------------------------------------------------------------------
 
+#[doc(hidden)]
 pub fn encode_length(writer: &mut dyn Write, length: usize) -> Result<()> {
     let mut buf = unsafe { Leb128Buf::<10>::new() };
     buf.write_u64(length as u64);
     writer.write_all(buf.as_bytes())
 }
 
+#[doc(hidden)]
 pub fn encode_struct<T: Encoder>(this: &T, writer: &mut dyn Write, id: u16) -> Result<()> {
     encode_header(writer, id.into(), 9)?;
     T::encode(this, writer)
@@ -88,35 +90,35 @@ impl<T: FieldEncoder> FieldEncoder for Option<T> {
     }
 }
 
-impl<T: Item + ?Sized> FieldEncoder for T {
+impl<T: ValueEncoder + ?Sized> FieldEncoder for T {
     fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
         encode_header(writer, id.into(), T::TY)?;
-        Item::encode(self, writer)
+        ValueEncoder::encode(self, writer)
     }
 }
 
 // ------------------------------------------------------------------------
 
-pub trait Item {
+pub trait ValueEncoder {
     const TY: u8;
     fn encode(&self, writer: &mut dyn Write) -> Result<()>;
 }
 
-impl Item for f32 {
+impl ValueEncoder for f32 {
     const TY: u8 = 4;
     fn encode(&self, writer: &mut dyn Write) -> Result<()> {
         writer.write_all(&self.to_le_bytes())
     }
 }
 
-impl Item for f64 {
+impl ValueEncoder for f64 {
     const TY: u8 = 5;
     fn encode(&self, writer: &mut dyn Write) -> Result<()> {
         writer.write_all(&self.to_le_bytes())
     }
 }
 
-impl Item for char {
+impl ValueEncoder for char {
     const TY: u8 = 6;
     fn encode(&self, writer: &mut dyn Write) -> Result<()> {
         writer.write_all(&u32::from(*self).to_le_bytes())
@@ -125,7 +127,7 @@ impl Item for char {
 
 macro_rules! encode_for {
     [@uint: $($ty: ty),*] => [$(
-        impl Item for $ty {
+        impl ValueEncoder for $ty {
             const TY: u8 = 6;
             #[inline]
             fn encode(&self, writer: &mut dyn Write) -> Result<()> {
@@ -134,7 +136,7 @@ macro_rules! encode_for {
         }
     )*];
     [@int: $($ty: ty),*] => [$(
-        impl Item for $ty {
+        impl ValueEncoder for $ty {
             const TY: u8 = 7;
             #[inline]
             fn encode(&self, writer: &mut dyn Write) -> Result<()> {
@@ -143,7 +145,7 @@ macro_rules! encode_for {
         }
     )*];
     [@string: $($ty: ty),*] => [$(
-        impl Item for $ty {
+        impl ValueEncoder for $ty {
             const TY: u8 = 8;
             #[inline]
             fn encode(&self, writer: &mut dyn Write) -> Result<()> {
@@ -165,7 +167,7 @@ encode_for! {
 
 // --------------------------------- List ----------------------------------
 
-impl<Bytes: AsRef<[u8]>> Item for BitSet<Bytes> {
+impl<Bytes: AsRef<[u8]>> ValueEncoder for BitSet<Bytes> {
     const TY: u8 = 11;
     fn encode(&self, writer: &mut dyn Write) -> Result<()> {
         encode_list_type(writer, self.len(), 1)?;
@@ -173,15 +175,15 @@ impl<Bytes: AsRef<[u8]>> Item for BitSet<Bytes> {
     }
 }
 
-impl Item for [bool] {
+impl ValueEncoder for [bool] {
     const TY: u8 = 11;
     fn encode(&self, writer: &mut dyn Write) -> Result<()> {
         let bs: BitSet<Vec<u8>> = BitSet::from(self);
-        Item::encode(&bs, writer)
+        ValueEncoder::encode(&bs, writer)
     }
 }
 
-impl Item for [u8] {
+impl ValueEncoder for [u8] {
     const TY: u8 = 11;
     fn encode(&self, writer: &mut dyn Write) -> Result<()> {
         encode_list_type(writer, self.len(), 2)?;
@@ -189,7 +191,7 @@ impl Item for [u8] {
     }
 }
 
-impl Item for [i8] {
+impl ValueEncoder for [i8] {
     const TY: u8 = 11;
     fn encode(&self, writer: &mut dyn Write) -> Result<()> {
         encode_list_type(writer, self.len(), 3)?;
@@ -199,12 +201,12 @@ impl Item for [i8] {
 
 macro_rules! encode_list {
     [$($ty: ty),*] => [$(
-        impl<T: Item> Item for $ty {
+        impl<T: ValueEncoder> ValueEncoder for $ty {
             const TY: u8 = 11;
             fn encode(&self, writer: &mut dyn Write) -> Result<()> {
                 encode_list_type(writer, self.len(), T::TY)?;
                 for val in self {
-                    Item::encode(val, writer)?;
+                    ValueEncoder::encode(val, writer)?;
                 }
                 Ok(())
             }
@@ -221,25 +223,25 @@ encode_list! {
     std::collections::BinaryHeap<T>
 }
 
-impl<T> Item for Vec<T>
+impl<T> ValueEncoder for Vec<T>
 where
-    [T]: Item,
+    [T]: ValueEncoder,
 {
     const TY: u8 = 11;
     #[inline]
     fn encode(&self, writer: &mut dyn Write) -> Result<()> {
-        <[T] as Item>::encode(self, writer)
+        <[T] as ValueEncoder>::encode(self, writer)
     }
 }
 
-impl<T, const N: usize> Item for [T; N]
+impl<T, const N: usize> ValueEncoder for [T; N]
 where
-    [T]: Item,
+    [T]: ValueEncoder,
 {
     const TY: u8 = 11;
     #[inline]
     fn encode(&self, writer: &mut dyn Write) -> Result<()> {
-        <[T] as Item>::encode(self, writer)
+        <[T] as ValueEncoder>::encode(self, writer)
     }
 }
 
@@ -247,7 +249,7 @@ where
 
 macro_rules! encode_map {
     [$($ty: ty),*] => [$(
-        impl<K: Item, V: Item> Item for $ty {
+        impl<K: ValueEncoder, V: ValueEncoder> ValueEncoder for $ty {
             const TY: u8 = 12;
             fn encode(&self, writer: &mut dyn Write) -> Result<()> {
                 encode_length(writer, 2)?; // Columns len
@@ -277,11 +279,11 @@ encode_map! {
 
 macro_rules! deref_impl {
     [$($ty: ty),*] => [$(
-        impl<T: ?Sized + Item> Item for $ty {
+        impl<T: ?Sized + ValueEncoder> ValueEncoder for $ty {
             const TY: u8 = T::TY;
             #[inline]
             fn encode(&self, writer: &mut dyn Write) -> Result<()> {
-                Item::encode(&**self, writer)
+                ValueEncoder::encode(&**self, writer)
             }
         }
     )*]
@@ -293,7 +295,7 @@ deref_impl! {
 
 macro_rules! tuples {
     [Len: $len:tt $($name:tt : $idx:tt)*] => {
-        impl<$($name,)*> Item for ($($name,)*)
+        impl<$($name,)*> ValueEncoder for ($($name,)*)
         where
             $($name: FieldEncoder,)*
         {
