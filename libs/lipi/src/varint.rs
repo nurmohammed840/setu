@@ -6,6 +6,7 @@ use crate::{errors, utils};
 pub trait LEB128 {
     fn write_byte(&mut self, byte: u8);
 
+    #[inline]
     fn write_u32(&mut self, mut num: u32) {
         while num > 0b_111_1111 {
             self.write_byte((num as u8) | 0b_1000_0000); // Set continuation bit
@@ -14,6 +15,7 @@ pub trait LEB128 {
         self.write_byte(num as u8); // Push last byte without continuation bit
     }
 
+    #[inline]
     fn write_u64(&mut self, mut num: u64) {
         while num > 0b_111_1111 {
             self.write_byte((num as u8) | 0b_1000_0000);
@@ -51,21 +53,24 @@ pub struct Leb128Buf<const N: usize> {
 }
 
 impl<const N: usize> Leb128Buf<N> {
-    pub fn new() -> Self {
+    #[inline]
+    pub unsafe fn new() -> Self {
         Self {
             buf: [0; N],
             pos: 0,
         }
     }
 
+    #[inline]
     pub fn as_bytes(&self) -> &[u8] {
-        &self.buf[..self.pos as usize]
+        unsafe { self.buf.get_unchecked(..self.pos as usize) }
     }
 }
 
 impl<const N: usize> LEB128 for Leb128Buf<N> {
+    #[inline]
     fn write_byte(&mut self, byte: u8) {
-        self.buf[self.pos as usize] = byte;
+        unsafe { *self.buf.get_unchecked_mut(self.pos as usize) = byte };
         self.pos += 1;
     }
 }
@@ -81,7 +86,7 @@ mod tests {
     }
 
     fn check(num: u64) {
-        let mut buf = Leb128Buf::<10>::new();
+        let mut buf = unsafe { Leb128Buf::<10>::new() };
         buf.write_u64(num);
         assert_eq!(buf.as_bytes().len(), encoded_varint64_len(num));
     }

@@ -8,7 +8,7 @@ fn encode_header(writer: &mut dyn Write, num: u32, ty: u8) -> Result<()> {
     if num < 15 {
         writer.write_all(&[(num as u8) << 4 | ty])
     } else {
-        let mut buf = Leb128Buf::<6>::new();
+        let mut buf = unsafe { Leb128Buf::<6>::new() };
         buf.write_byte((0b_1111 << 4) | ty);
         buf.write_u32(num - 15);
         writer.write_all(buf.as_bytes())
@@ -21,7 +21,7 @@ fn encode_bytes(writer: &mut dyn Write, bytes: &[u8]) -> Result<()> {
 }
 
 fn encode_uint(writer: &mut dyn Write, num: u64) -> Result<()> {
-    let mut buf = Leb128Buf::<10>::new();
+    let mut buf = unsafe { Leb128Buf::<10>::new() };
     buf.write_u64(num);
     writer.write_all(buf.as_bytes())
 }
@@ -39,10 +39,8 @@ fn encode_list_type(writer: &mut dyn Write, len: usize, ty: u8) -> Result<()> {
 // ------------------------------------------------------------------------
 
 pub fn encode_length(writer: &mut dyn Write, length: usize) -> Result<()> {
-    let len = u32::try_from(length).map_err(io::Error::other)?;
-
-    let mut buf = Leb128Buf::<5>::new();
-    buf.write_u32(len);
+    let mut buf = unsafe { Leb128Buf::<10>::new() };
+    buf.write_u64(length as u64);
     writer.write_all(buf.as_bytes())
 }
 

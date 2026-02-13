@@ -19,8 +19,7 @@ fn parse_length(reader: &mut &[u8]) -> Result<usize> {
 }
 
 fn parse_packed_booleans<'de>(reader: &mut &'de [u8], len: usize) -> Result<BitSet<&'de [u8]>> {
-    let packed_bytes_len = len.div_ceil(8);
-    let packed = utils::read_bytes(reader, packed_bytes_len)?;
+    let packed = utils::read_bytes(reader, utils::bool_packed_len(len))?;
     Ok(BitSet::from_parts(len, packed))
 }
 

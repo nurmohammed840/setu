@@ -59,6 +59,11 @@ pub fn try_convert_vec_from<'a, T, M, E>(
     Ok(arr)
 }
 
+#[inline]
+pub fn bool_packed_len(len: usize) -> usize {
+    (len + 7) / 8
+}
+
 pub fn try_collect<T, E>(len: usize, mut f: impl FnMut() -> Result<T, E>) -> Result<Vec<T>, E> {
     let mut arr = Vec::<T>::with_capacity(len);
     for idx in 0..len {
@@ -74,6 +79,19 @@ pub fn try_collect<T, E>(len: usize, mut f: impl FnMut() -> Result<T, E>) -> Res
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_bool_packed_len() {
+        assert_eq!(0_u8.div_ceil(8), 0);
+        assert_eq!(1_u8.div_ceil(8), 1);
+        assert_eq!(8_u8.div_ceil(8), 1);
+        assert_eq!(9_u8.div_ceil(8), 2);
+        assert_eq!(16u8.div_ceil(8), 2);
+
+        for len in 0..=256 as usize {
+            assert_eq!(len.div_ceil(8), bool_packed_len(len));
+        }
+    }
 
     #[test]
     fn test_read_byte() {
@@ -148,7 +166,7 @@ mod tests {
 
         assert!(items.is_err());
         drop(items);
-        
+
         assert_eq!(i, 3);
         assert_eq!(DROPED.with(|d| d.take()), [1, 2, 3]);
     }
