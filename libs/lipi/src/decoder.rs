@@ -34,14 +34,15 @@ fn parse_str<'de>(reader: &mut &'de [u8]) -> Result<&'de str> {
 }
 
 fn parse_table<'de>(reader: &mut &'de [u8]) -> Result<Table<'de>> {
-    let len = parse_length(reader)?;
+    let cols_len = parse_length(reader)?;
+    let vals_len = parse_length(reader)?;
 
     fn parse_column<'de>(reader: &mut &'de [u8], len: usize) -> Result<(u16, List<'de>)> {
         let (key, ty) = parse_header(reader)?;
         Ok((u16::try_from(key)?, parse_list_values(reader, len, ty)?))
     }
 
-    try_collect(len, || parse_column(reader, len)).map(Table)
+    try_collect(cols_len, || parse_column(reader, vals_len)).map(Table)
 }
 
 fn parse_list<'de>(reader: &mut &'de [u8]) -> Result<List<'de>> {

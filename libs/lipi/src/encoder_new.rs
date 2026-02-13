@@ -30,9 +30,8 @@ fn encode_int(writer: &mut dyn Write, num: i64) -> Result<()> {
     encode_uint(writer, zig_zag::into_u64(num))
 }
 
-fn encode_header_list(writer: &mut dyn Write, id: u16, len: usize, ty: u8) -> Result<()> {
+fn encode_list_type(writer: &mut dyn Write, len: usize, ty: u8) -> Result<()> {
     let len = u32::try_from(len).map_err(io::Error::other)?;
-    encode_header(writer, id.into(), 11)?;
     encode_header(writer, len, ty)
 }
 
@@ -81,41 +80,71 @@ impl FieldEncoder for i8 {
     }
 }
 
-impl FieldEncoder for f32 {
+impl<T: FieldEncoder> FieldEncoder for Option<T> {
     fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-        encode_header(writer, id.into(), 4)?;
+        match self {
+            Some(val) => FieldEncoder::encode(val, writer, id),
+            None => Ok(()),
+        }
+    }
+}
+
+impl<T: Item + ?Sized> FieldEncoder for T {
+    fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
+        encode_header(writer, id.into(), T::TY)?;
+        Item::encode(self, writer)
+    }
+}
+
+// ------------------------------------------------------------------------
+
+pub trait Item {
+    const TY: u8;
+    fn encode(&self, writer: &mut dyn Write) -> Result<()>;
+}
+
+impl Item for f32 {
+    const TY: u8 = 4;
+    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
         writer.write_all(&self.to_le_bytes())
     }
 }
 
-impl FieldEncoder for f64 {
-    fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-        encode_header(writer, id.into(), 5)?;
+impl Item for f64 {
+    const TY: u8 = 5;
+    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
         writer.write_all(&self.to_le_bytes())
+    }
+}
+
+impl Item for char {
+    const TY: u8 = 6;
+    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+        writer.write_all(&u32::from(*self).to_le_bytes())
     }
 }
 
 macro_rules! encode_for {
     [@uint: $($ty: ty),*] => [$(
-        impl FieldEncoder for $ty {
-            fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-                encode_header(writer, id.into(), 6)?;
+        impl Item for $ty {
+            const TY: u8 = 6;
+            fn encode(&self, writer: &mut dyn Write) -> Result<()> {
                 encode_uint(writer, (*self).into())
             }
         }
     )*];
     [@int: $($ty: ty),*] => [$(
-        impl FieldEncoder for $ty {
-            fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-                encode_header(writer, id.into(), 7)?;
+        impl Item for $ty {
+            const TY: u8 = 7;
+            fn encode(&self, writer: &mut dyn Write) -> Result<()> {
                 encode_int(writer, (*self).into())
             }
         }
     )*];
     [@string: $($ty: ty),*] => [$(
-        impl FieldEncoder for $ty {
-            fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-                encode_header(writer, id.into(), 8)?;
+        impl Item for $ty {
+            const TY: u8 = 8;
+            fn encode(&self, writer: &mut dyn Write) -> Result<()> {
                 encode_bytes(writer, self.as_bytes())
             }
         }
@@ -132,180 +161,129 @@ encode_for! {
     @string: str, String
 }
 
-// ---------------------------------------------------------------------
+// --------------------------------- List ----------------------------------
 
-impl<Bytes: AsRef<[u8]>> FieldEncoder for BitSet<Bytes> {
-    fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-        encode_header_list(writer, id, self.len(), 1)?;
+impl<Bytes: AsRef<[u8]>> Item for BitSet<Bytes> {
+    const TY: u8 = 11;
+    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+        encode_list_type(writer, self.len(), 1)?;
         writer.write_all(self.as_bytes())
     }
 }
 
-macro_rules! encode_list {
-    [@bools: $($ty: ty),*] => [$(
-        impl FieldEncoder for $ty {
-            fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-                let bs = BitSet::<Vec<u8>>::from(self);
-                bs.encode(writer, id)
-            }
-        }
-    )*];
-    [@bytes: $($ty: ty),*] => [$(
-        impl FieldEncoder for $ty {
-            fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-                encode_header_list(writer, id.into(), self.len(), 2)?;
-                writer.write_all(self)
-            }
-        }
-    )*];
-    [@i8_bytes: $($ty: ty),*] => [$(
-        impl FieldEncoder for $ty {
-            fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-                encode_header_list(writer, id.into(), self.len(), 3)?;
-                writer.write_all(utils::u8_slice_from(self))
-            }
-        }
-    )*];
-}
-
-encode_list! {
-    @bools: [bool], Vec<bool>
-}
-
-encode_list! {
-    @bytes: [u8], Vec<u8>
-}
-
-encode_list! {
-    @i8_bytes: [i8], Vec<i8>
-}
-
-// ----------------------------------------------------------------------
-
-trait Item {
-    const TY: u8;
-    fn encode(&self, _writer: &mut dyn Write) -> Result<()>;
-}
-
-impl Item for f32 {
-    const TY: u8 = 4;
+impl Item for [bool] {
+    const TY: u8 = 11;
     fn encode(&self, writer: &mut dyn Write) -> Result<()> {
-        todo!()
+        let bs: BitSet<Vec<u8>> = BitSet::from(self);
+        Item::encode(&bs, writer)
     }
 }
 
-impl Item for f64 {
-    const TY: u8 = 5;
-    fn encode(&self, _writer: &mut dyn Write) -> Result<()> {
-        todo!()
-    }
-}
-impl Item for u16 {
-    const TY: u8 = 6;
-
-    fn encode(&self, _writer: &mut dyn Write) -> Result<()> {
-        todo!()
-    }
-}
-impl Item for u32 {
-    const TY: u8 = 6;
-    fn encode(&self, _writer: &mut dyn Write) -> Result<()> {
-        todo!()
-    }
-}
-impl Item for u64 {
-    const TY: u8 = 6;
-    fn encode(&self, _writer: &mut dyn Write) -> Result<()> {
-        todo!()
+impl Item for [u8] {
+    const TY: u8 = 11;
+    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+        encode_list_type(writer, self.len(), 2)?;
+        writer.write_all(self)
     }
 }
 
-impl Item for i16 {
-    const TY: u8 = 7;
-
-    fn encode(&self, _writer: &mut dyn Write) -> Result<()> {
-        todo!()
-    }
-}
-impl Item for i32 {
-    const TY: u8 = 7;
-
-    fn encode(&self, _writer: &mut dyn Write) -> Result<()> {
-        todo!()
+impl Item for [i8] {
+    const TY: u8 = 11;
+    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+        encode_list_type(writer, self.len(), 3)?;
+        writer.write_all(utils::u8_slice_from(self))
     }
 }
 
-impl Item for i64 {
-    const TY: u8 = 7;
-
-    fn encode(&self, _writer: &mut dyn Write) -> Result<()> {
-        todo!()
-    }
-}
-
-impl<T: Item> Item for [T] {
-    const TY: u8 = 0;
-    fn encode(&self, _writer: &mut dyn Write) -> Result<()> {
-        todo!()
-    }
-}
-
-impl<T: Item> Item for Vec<T> {
-    const TY: u8 = 0;
-    fn encode(&self, _writer: &mut dyn Write) -> Result<()> {
-        todo!()
-    }
-}
-
-impl<T: Item> Item for &T {
-    const TY: u8 = T::TY;
-    fn encode(&self, _writer: &mut dyn Write) -> Result<()> {
-        todo!()
-    }
-}
-
-// ----------------------------------------------------------------------
-
-impl<T: Item> FieldEncoder for [T] {
-    fn encode(&self, _: &mut dyn Write, _: u16) -> Result<()> {
-        todo!()
-    }
-}
-
-impl<T: Item> FieldEncoder for Vec<T> {
-    fn encode(&self, _: &mut dyn Write, _: u16) -> Result<()> {
-        todo!()
-    }
-}
-
-// ----------------------------------------------------------------------
-
-impl<T: FieldEncoder> FieldEncoder for Option<T> {
-    fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-        match self {
-            Some(val) => FieldEncoder::encode(val, writer, id),
-            None => Ok(()),
+macro_rules! encode_list {
+    [$($ty: ty),*] => [$(
+        impl<T: Item> Item for $ty {
+            const TY: u8 = 11;
+            fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+                encode_list_type(writer, self.len(), T::TY)?;
+                for val in self {
+                    Item::encode(val, writer)?;
+                }
+                Ok(())
+            }
         }
+    )*];
+}
+
+encode_list! {
+    [T],
+    std::collections::HashSet<T>,
+    std::collections::BTreeSet<T>,
+    std::collections::LinkedList<T>,
+    std::collections::VecDeque<T>
+}
+
+impl<T> Item for Vec<T>
+where
+    [T]: Item,
+{
+    const TY: u8 = 11;
+    #[inline]
+    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+        <[T] as Item>::encode(self, writer)
     }
 }
 
-// impl<T: FieldEncoder, const N: usize> FieldEncoder for [T; N]  {
-//     fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-//         todo!()
-//     }
-// }
+impl<T, const N: usize> Item for [T; N]
+where
+    [T]: Item,
+{
+    const TY: u8 = 11;
+    #[inline]
+    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+        <[T] as Item>::encode(self, writer)
+    }
+}
+
+// --------------------------------- Table ----------------------------------
+
+macro_rules! encode_map {
+    [$($ty: ty),*] => [$(
+        impl<K: Item, V: Item> Item for $ty {
+            const TY: u8 = 12;
+            fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+                encode_length(writer, 2)?; // Columns len
+                encode_length(writer, self.len())?; // Values len
+
+                encode_header(writer, 0, K::TY)?;
+                for key in self.keys() {
+                    K::encode(key, writer)?;
+                }
+
+                encode_header(writer, 1, V::TY)?;
+                for value in self.values() {
+                    V::encode(value, writer)?;
+                }
+                Ok(())
+            }
+        }
+    )*];
+}
+
+encode_map! {
+    std::collections::HashMap<K, V>,
+    std::collections::BTreeMap<K, V>
+}
+
+// --------------------------------------------------------------------------
 
 macro_rules! deref_impl {
     [$($ty: ty),*] => [$(
-        impl<T: ?Sized + FieldEncoder> FieldEncoder for $ty {
+        impl<T: ?Sized + Item> Item for $ty {
+            const TY: u8 = T::TY;
             #[inline]
-            fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-                FieldEncoder::encode(*self, writer, id)
+            fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+                Item::encode(&**self, writer)
             }
         }
     )*]
 }
 
 deref_impl! {
-    &T, &mut T
+    &T, &mut T, Box<T>
 }

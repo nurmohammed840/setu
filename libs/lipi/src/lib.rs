@@ -1,7 +1,8 @@
 mod bit_set;
 mod convert;
 mod decoder;
-// mod encoder;
+#[allow(warnings)]
+mod encoder;
 mod encoder_new;
 mod entries;
 mod print;
@@ -28,7 +29,7 @@ use crate::bit_set::BitSet;
 
 #[doc(hidden)]
 pub mod __private {
-    pub use crate::encoder_new::{encode_struct, encode_length};
+    pub use crate::encoder_new::{encode_length, encode_struct};
 }
 
 pub trait Encoder {
