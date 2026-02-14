@@ -1,10 +1,13 @@
+#![allow(warnings)]
 use crate::bit_set::BitSet;
 
 use super::*;
 use std::{io::Result, u32};
 use varint::{LEB128, Leb128Buf};
 
-fn encode_header(writer: &mut dyn Write, num: u32, ty: u8) -> Result<()> {
+type Writer<'a> = &'a mut dyn Write;
+
+fn encode_header(writer: Writer, num: u32, ty: u8) -> Result<()> {
     if num < 15 {
         writer.write_all(&[(num as u8) << 4 | ty])
     } else {
@@ -15,23 +18,23 @@ fn encode_header(writer: &mut dyn Write, num: u32, ty: u8) -> Result<()> {
     }
 }
 
-fn encode_bytes(writer: &mut dyn Write, bytes: &[u8]) -> Result<()> {
+fn encode_bytes(writer: Writer, bytes: &[u8]) -> Result<()> {
     encode_length(writer, bytes.len())?;
     writer.write_all(bytes)
 }
 
-fn encode_uint(writer: &mut dyn Write, num: u64) -> Result<()> {
+fn encode_uint(writer: Writer, num: u64) -> Result<()> {
     let mut buf = unsafe { Leb128Buf::<10>::new() };
     buf.write_u64(num);
     writer.write_all(buf.as_bytes())
 }
 
 #[inline]
-fn encode_int(writer: &mut dyn Write, num: i64) -> Result<()> {
+fn encode_int(writer: Writer, num: i64) -> Result<()> {
     encode_uint(writer, zig_zag::into_u64(num))
 }
 
-fn encode_list_type(writer: &mut dyn Write, len: usize, ty: u8) -> Result<()> {
+fn encode_list_type(writer: Writer, len: usize, ty: u8) -> Result<()> {
     let len = u32::try_from(len).map_err(io::Error::other)?;
     encode_header(writer, len, ty)
 }
@@ -39,26 +42,47 @@ fn encode_list_type(writer: &mut dyn Write, len: usize, ty: u8) -> Result<()> {
 // ------------------------------------------------------------------------
 
 #[doc(hidden)]
-pub fn encode_length(writer: &mut dyn Write, length: usize) -> Result<()> {
+pub fn encode_length(writer: Writer, length: usize) -> Result<()> {
     let mut buf = unsafe { Leb128Buf::<10>::new() };
     buf.write_u64(length as u64);
     writer.write_all(buf.as_bytes())
 }
 
-#[doc(hidden)]
-pub fn encode_struct<T: Encoder>(this: &T, writer: &mut dyn Write, id: u16) -> Result<()> {
-    encode_header(writer, id.into(), 9)?;
-    T::encode(this, writer)
+// ------------------------------------------------------------------------
+
+pub trait FieldEncoder {
+    fn encode(&self, writer: Writer, id: u16) -> Result<()>;
+}
+
+pub trait Encode {
+    const TY: u8;
+    fn encode(&self, _: Writer) -> io::Result<()>;
+
+    fn encode_slice(writer: Writer, this: &[Self]) -> io::Result<()>
+    where
+        Self: Sized,
+    {
+        Self::encode_iter(writer, this.len(), this.iter())
+    }
+
+    fn encode_iter<'a, I>(writer: Writer, len: usize, this: I) -> io::Result<()>
+    where
+        I: Iterator<Item = &'a Self> + Clone,
+        Self: Sized + 'a,
+    {
+        encode_list_type(writer, len, Self::TY)?;
+
+        for val in this {
+            Self::encode(val, writer)?;
+        }
+        Ok(())
+    }
 }
 
 // ------------------------------------------------------------------------
 
-pub trait FieldEncoder {
-    fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()>;
-}
-
 impl FieldEncoder for bool {
-    fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
+    fn encode(&self, writer: Writer, id: u16) -> Result<()> {
         let ty = match self {
             false => 0,
             true => 1,
@@ -67,22 +91,8 @@ impl FieldEncoder for bool {
     }
 }
 
-impl FieldEncoder for u8 {
-    fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-        encode_header(writer, id.into(), 2)?;
-        writer.write_all(&[*self])
-    }
-}
-
-impl FieldEncoder for i8 {
-    fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
-        encode_header(writer, id.into(), 3)?;
-        writer.write_all(&[self.cast_unsigned()])
-    }
-}
-
 impl<T: FieldEncoder> FieldEncoder for Option<T> {
-    fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
+    fn encode(&self, writer: Writer, id: u16) -> Result<()> {
         match self {
             Some(val) => FieldEncoder::encode(val, writer, id),
             None => Ok(()),
@@ -90,65 +100,84 @@ impl<T: FieldEncoder> FieldEncoder for Option<T> {
     }
 }
 
-impl<T: ValueEncoder + ?Sized> FieldEncoder for T {
-    fn encode(&self, writer: &mut dyn Write, id: u16) -> Result<()> {
+impl<T: Encode + ?Sized> FieldEncoder for T {
+    fn encode(&self, writer: Writer, id: u16) -> Result<()> {
         encode_header(writer, id.into(), T::TY)?;
-        ValueEncoder::encode(self, writer)
+        Encode::encode(self, writer)
     }
 }
 
-// ------------------------------------------------------------------------
+// ------------------------------- Number ------------------------------------
 
-pub trait ValueEncoder {
-    const TY: u8;
-    fn encode(&self, writer: &mut dyn Write) -> Result<()>;
+impl Encode for u8 {
+    const TY: u8 = 2;
+    fn encode(&self, writer: Writer) -> io::Result<()> {
+        writer.write_all(&[*self])
+    }
+
+    fn encode_slice(writer: Writer, this: &[Self]) -> io::Result<()> {
+        encode_list_type(writer, this.len(), Self::TY)?;
+        writer.write_all(this)
+    }
 }
 
-impl ValueEncoder for f32 {
+impl Encode for i8 {
+    const TY: u8 = 3;
+    fn encode(&self, writer: Writer) -> io::Result<()> {
+        writer.write_all(&[self.cast_unsigned()])
+    }
+
+    fn encode_slice(writer: Writer, this: &[Self]) -> io::Result<()> {
+        encode_list_type(writer, this.len(), Self::TY)?;
+        writer.write_all(utils::u8_slice_from(this))
+    }
+}
+
+impl Encode for f32 {
     const TY: u8 = 4;
-    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+    fn encode(&self, writer: Writer) -> Result<()> {
         writer.write_all(&self.to_le_bytes())
     }
 }
 
-impl ValueEncoder for f64 {
+impl Encode for f64 {
     const TY: u8 = 5;
-    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+    fn encode(&self, writer: Writer) -> Result<()> {
         writer.write_all(&self.to_le_bytes())
     }
 }
 
-impl ValueEncoder for char {
+impl Encode for char {
     const TY: u8 = 6;
-    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+    fn encode(&self, writer: Writer) -> Result<()> {
         writer.write_all(&u32::from(*self).to_le_bytes())
     }
 }
 
 macro_rules! encode_for {
     [@uint: $($ty: ty),*] => [$(
-        impl ValueEncoder for $ty {
+        impl Encode for $ty {
             const TY: u8 = 6;
             #[inline]
-            fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+            fn encode(&self, writer: Writer) -> Result<()> {
                 encode_uint(writer, (*self).into())
             }
         }
     )*];
     [@int: $($ty: ty),*] => [$(
-        impl ValueEncoder for $ty {
+        impl Encode for $ty {
             const TY: u8 = 7;
             #[inline]
-            fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+            fn encode(&self, writer: Writer) -> Result<()> {
                 encode_int(writer, (*self).into())
             }
         }
     )*];
     [@string: $($ty: ty),*] => [$(
-        impl ValueEncoder for $ty {
+        impl Encode for $ty {
             const TY: u8 = 8;
             #[inline]
-            fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+            fn encode(&self, writer: Writer) -> Result<()> {
                 encode_bytes(writer, self.as_bytes())
             }
         }
@@ -167,55 +196,34 @@ encode_for! {
 
 // --------------------------------- List ----------------------------------
 
-impl<Bytes: AsRef<[u8]>> ValueEncoder for BitSet<Bytes> {
+impl<Bytes: AsRef<[u8]>> Encode for BitSet<Bytes> {
     const TY: u8 = 11;
-    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+    fn encode(&self, writer: Writer) -> Result<()> {
         encode_list_type(writer, self.len(), 1)?;
         writer.write_all(self.as_bytes())
     }
 }
 
-impl ValueEncoder for [bool] {
+impl Encode for [bool] {
     const TY: u8 = 11;
-    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+    fn encode(&self, writer: Writer) -> Result<()> {
         let bs: BitSet<Vec<u8>> = BitSet::from(self);
-        ValueEncoder::encode(&bs, writer)
-    }
-}
-
-impl ValueEncoder for [u8] {
-    const TY: u8 = 11;
-    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
-        encode_list_type(writer, self.len(), 2)?;
-        writer.write_all(self)
-    }
-}
-
-impl ValueEncoder for [i8] {
-    const TY: u8 = 11;
-    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
-        encode_list_type(writer, self.len(), 3)?;
-        writer.write_all(utils::u8_slice_from(self))
+        Encode::encode(&bs, writer)
     }
 }
 
 macro_rules! encode_list {
     [$($ty: ty),*] => [$(
-        impl<T: ValueEncoder> ValueEncoder for $ty {
+        impl<T: Encode> Encode for $ty {
             const TY: u8 = 11;
-            fn encode(&self, writer: &mut dyn Write) -> Result<()> {
-                encode_list_type(writer, self.len(), T::TY)?;
-                for val in self {
-                    ValueEncoder::encode(val, writer)?;
-                }
-                Ok(())
+            fn encode(&self, writer: Writer) -> Result<()> {
+                T::encode_iter(writer, self.len(), self.iter())
             }
         }
     )*];
 }
 
 encode_list! {
-    [T],
     std::collections::HashSet<T>,
     std::collections::BTreeSet<T>,
     std::collections::LinkedList<T>,
@@ -223,25 +231,32 @@ encode_list! {
     std::collections::BinaryHeap<T>
 }
 
-impl<T> ValueEncoder for Vec<T>
-where
-    [T]: ValueEncoder,
-{
+impl<T: Encode> Encode for [T] {
     const TY: u8 = 11;
-    #[inline]
-    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
-        <[T] as ValueEncoder>::encode(self, writer)
+    fn encode(&self, writer: Writer) -> Result<()> {
+        T::encode_slice(writer, self)
     }
 }
 
-impl<T, const N: usize> ValueEncoder for [T; N]
+impl<T> Encode for Vec<T>
 where
-    [T]: ValueEncoder,
+    [T]: Encode,
 {
     const TY: u8 = 11;
     #[inline]
-    fn encode(&self, writer: &mut dyn Write) -> Result<()> {
-        <[T] as ValueEncoder>::encode(self, writer)
+    fn encode(&self, writer: Writer) -> Result<()> {
+        <[T] as Encode>::encode(self, writer)
+    }
+}
+
+impl<T, const N: usize> Encode for [T; N]
+where
+    [T]: Encode,
+{
+    const TY: u8 = 11;
+    #[inline]
+    fn encode(&self, writer: Writer) -> Result<()> {
+        <[T] as Encode>::encode(self, writer)
     }
 }
 
@@ -249,9 +264,9 @@ where
 
 macro_rules! encode_map {
     [$($ty: ty),*] => [$(
-        impl<K: ValueEncoder, V: ValueEncoder> ValueEncoder for $ty {
+        impl<K: Encode, V: Encode> Encode for $ty {
             const TY: u8 = 12;
-            fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+            fn encode(&self, writer: Writer) -> Result<()> {
                 encode_length(writer, 2)?; // Columns len
                 encode_length(writer, self.len())?; // Values len
 
@@ -279,11 +294,11 @@ encode_map! {
 
 macro_rules! deref_impl {
     [$($ty: ty),*] => [$(
-        impl<T: ?Sized + ValueEncoder> ValueEncoder for $ty {
+        impl<T: ?Sized + Encode> Encode for $ty {
             const TY: u8 = T::TY;
             #[inline]
-            fn encode(&self, writer: &mut dyn Write) -> Result<()> {
-                ValueEncoder::encode(&**self, writer)
+            fn encode(&self, writer: Writer) -> Result<()> {
+                Encode::encode(&**self, writer)
             }
         }
     )*]
@@ -293,14 +308,16 @@ deref_impl! {
     &T, &mut T, Box<T>
 }
 
+// --------------------------------- Other ----------------------------------
+
 macro_rules! tuples {
     [Len: $len:tt $($name:tt : $idx:tt)*] => {
-        impl<$($name,)*> ValueEncoder for ($($name,)*)
+        impl<$($name,)*> Encode for ($($name,)*)
         where
             $($name: FieldEncoder,)*
         {
             const TY: u8 = 9;
-            fn encode(&self, writer: &mut dyn Write) -> Result<()> {
+            fn encode(&self, writer: Writer) -> Result<()> {
                 encode_length(writer, $len)?;
                 $($name::encode(&self.$idx, writer, $idx)?;)*
                 Ok(())
@@ -308,8 +325,6 @@ macro_rules! tuples {
         }
     }
 }
-
-// --------------------------------- Other ----------------------------------
 
 tuples! { Len: 1 T0:0 }
 tuples! { Len: 2 T0:0 T1:1 }

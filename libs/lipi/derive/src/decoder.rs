@@ -46,7 +46,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
 
     let mut t = TokenStream::new();
     quote!(t, {
-        impl <#lifetime, #params> #crate_path::Decoder<'decode> for #ident #ty_generics #where_clause {
+        impl <#lifetime, #params> #crate_path::Decode<'decode> for #ident #ty_generics #where_clause {
             fn decode(e: &#crate_path::Entries<'decode>) -> #crate_path::Result<Self> {
                 Ok(Self { #body })
             }

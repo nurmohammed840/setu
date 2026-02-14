@@ -21,7 +21,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                 .count();
 
             quote!(t, {
-                #crate_path::encoder::encode_length(w, #field_count)?;
+                #crate_path::__private::encode_length(w, #field_count)?;
             });
 
             for field in fields {
@@ -55,7 +55,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                     };
 
                     quote!(t, {
-                        #crate_path::encoder::FieldEncoder::encode(#ref_symbol self.#ident, w, #key)?;
+                        #crate_path::__private::FieldEncoder::encode(#ref_symbol self.#ident, w, #key)?;
                     });
                 }
             }
@@ -68,16 +68,11 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
 
     let mut t = TokenStream::new();
     quote!(t, {
-        impl #impl_generics #crate_path::Encoder for #ident #ty_generics #where_clause {
+        impl #impl_generics #crate_path::Encode for #ident #ty_generics #where_clause {
+            const TY: u8 = 9;
             fn encode(&self, w: &mut dyn ::std::io::Write) -> ::std::io::Result<()> {
                 #body
                 ::std::io::Result::Ok(())
-            }
-        }
-
-        impl #impl_generics #crate_path::encoder::FieldEncoder for #ident #ty_generics #where_clause {
-            fn encode(&self, w: &mut dyn ::std::io::Write, id: u16) -> ::std::io::Result<()> {
-                #crate_path::encoder::encode_struct(self, w, id)
             }
         }
     });

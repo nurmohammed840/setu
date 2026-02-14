@@ -1,6 +1,6 @@
-use lipi::{Decoder, Encoder, Entries};
+use lipi::{Decode, Encode, Entries};
 
-#[derive(Encoder, Decoder, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub struct Types<'a> {
     #[key = 1]
     boolen: bool,
@@ -75,7 +75,7 @@ pub struct Types<'a> {
     // map: HashMap<u32, User>,
 }
 
-#[derive(Encoder, Debug, Decoder, Clone, PartialEq)]
+#[derive(Encode, Debug, Decode, Clone, PartialEq)]
 struct User {
     // #[key = 0]
     // id: Vec<u8>,

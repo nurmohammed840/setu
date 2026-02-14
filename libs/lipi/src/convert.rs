@@ -39,7 +39,7 @@ where
 
 impl<'v, 'de, T> ConvertFrom<&'v Value<'de>> for T
 where
-    T: Decoder<'de>,
+    T: Decode<'de>,
 {
     fn convert_from(value: &'v Value<'de>) -> Result<Self, ConvertError> {
         match value {
@@ -136,7 +136,7 @@ convert! {
 
 impl<'v, 'de, T> ConvertFrom<&'v List<'de>> for T
 where
-    T: Decoder<'de>,
+    T: Decode<'de>,
 {
     fn convert_from(_list: &'v List<'de>) -> Result<Self, ConvertError> {
         todo!()
@@ -162,7 +162,7 @@ where
 
 macro_rules! tuples {
     [$($name:tt : $idx:tt)*] => {
-        impl<'de, $($name,)*> Decoder<'de> for ($($name,)*)
+        impl<'de, $($name,)*> Decode<'de> for ($($name,)*)
         where
             $($name: for<'v> ConvertFrom<&'v Value<'de>>,)*
         {
@@ -195,7 +195,7 @@ tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 T11:11 T12:12
 
 macro_rules! impl_map {
     [$map_ty:tt : $($bound:path),*] => {
-        impl<'de, K, V> Decoder<'de> for $map_ty<K, V>
+        impl<'de, K, V> Decode<'de> for $map_ty<K, V>
         where
             K: $($bound+)*,
             Vec<K>: for<'v> ConvertFrom<&'v Value<'de>>,

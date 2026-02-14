@@ -1,13 +1,13 @@
 mod bit_set;
 mod convert;
 mod decoder;
+mod encoder;
 mod entries;
 mod print;
 mod utils;
 mod varint;
 mod zig_zag;
 
-pub mod encoder;
 pub mod errors;
 
 pub use lipi_macros::*;
@@ -21,11 +21,14 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 use std::io::{self, Write};
 
-pub trait Encoder {
-    fn encode(&self, _: &mut dyn Write) -> io::Result<()>;
+pub use encoder::Encode;
+
+#[doc(hidden)]
+pub mod __private {
+    pub use crate::encoder::{FieldEncoder, encode_length};
 }
 
-pub trait Decoder<'de>: Sized {
+pub trait Decode<'de>: Sized {
     fn parse(reader: &mut &'de [u8]) -> Result<Self> {
         Self::decode(&Entries::parse(reader)?)
     }
