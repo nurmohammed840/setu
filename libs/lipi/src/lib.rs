@@ -88,6 +88,30 @@ pub enum List<'de> {
     UnknownIII(Vec<&'de [u8]>),
 }
 
+impl List<'_> {
+    pub fn get(&self, idx: usize) -> Option<Value<'_>> {
+        match self {
+            List::Bool(bit_set) => bit_set.get(idx).map(Value::Bool),
+            List::U8(items) => items.get(idx).copied().map(Value::U8),
+            List::I8(items) => items.get(idx).copied().map(Value::I8),
+            List::F32(items) => items.get(idx).copied().map(Value::F32),
+            List::F64(items) => items.get(idx).copied().map(Value::F64),
+            List::UInt(items) => items.get(idx).copied().map(Value::UInt),
+            List::Int(items) => items.get(idx).copied().map(Value::Int),
+            List::Str(items) => items.get(idx).copied().map(Value::Str),
+            // ---
+            List::Struct(items) => items.get(idx).cloned().map(Value::Struct),
+            List::Union(items) => items.get(idx).cloned().map(Box::new).map(Value::Union),
+            List::List(items) => items.get(idx).cloned().map(Value::List),
+            List::Table(items) => items.get(idx).cloned().map(Value::Table),
+            // ---
+            List::UnknownI(items) => items.get(idx).copied().map(Value::UnknownI),
+            List::UnknownII(items) => items.get(idx).copied().map(Value::UnknownII),
+            List::UnknownIII(items) => items.get(idx).copied().map(Value::UnknownII),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Table<'de>(pub(crate) Vec<(u16, List<'de>)>);
 

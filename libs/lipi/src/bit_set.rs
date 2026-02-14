@@ -28,12 +28,15 @@ impl<Bytes: AsRef<[u8]>> BitSet<Bytes> {
 
     #[inline]
     pub fn has(&self, index: usize) -> bool {
+        self.get(index).unwrap_or_default()
+    }
+
+    #[inline]
+    pub fn get(&self, index: usize) -> Option<bool> {
         let slot_idx = index / u8::BITS as usize;
         let mask = 1 << (index % u8::BITS as usize);
-        self.slots
-            .as_ref()
-            .get(slot_idx)
-            .is_some_and(|slot| slot & mask != 0)
+        let slot = self.slots.as_ref().get(slot_idx)?;
+        Some(slot & mask != 0)
     }
 }
 
