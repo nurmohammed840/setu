@@ -50,10 +50,6 @@ pub fn encode_length(writer: Writer, length: usize) -> Result<()> {
 
 // ------------------------------------------------------------------------
 
-pub trait FieldEncoder {
-    fn encode(&self, writer: Writer, id: u16) -> Result<()>;
-}
-
 pub trait Encode {
     const TY: u8;
     fn encode(&self, _: Writer) -> io::Result<()>;
@@ -65,14 +61,14 @@ pub trait Encode {
         Self::encode_iter(writer, this.len(), this.iter())
     }
 
-    fn encode_iter<'a, I>(writer: Writer, len: usize, this: I) -> io::Result<()>
+    fn encode_iter<'a, I>(writer: Writer, len: usize, iter: I) -> io::Result<()>
     where
         I: Iterator<Item = &'a Self> + Clone,
         Self: Sized + 'a,
     {
         encode_list_type(writer, len, Self::TY)?;
 
-        for val in this {
+        for val in iter {
             Self::encode(val, writer)?;
         }
         Ok(())
@@ -80,6 +76,33 @@ pub trait Encode {
 }
 
 // ------------------------------------------------------------------------
+
+pub trait EnumEncoder {
+    fn encode(&self, writer: Writer, id: u16) -> Result<()>;
+}
+
+impl EnumEncoder for bool {
+    fn encode(&self, writer: Writer, id: u16) -> Result<()> {
+        let ty = match self {
+            false => 0,
+            true => 1,
+        };
+        encode_header(writer, id.into(), ty)
+    }
+}
+
+impl<T: Encode + ?Sized> EnumEncoder for T {
+    fn encode(&self, writer: Writer, id: u16) -> Result<()> {
+        encode_header(writer, id.into(), T::TY)?;
+        Encode::encode(self, writer)
+    }
+}
+
+// ------------------------------------------------------------------------
+
+pub trait FieldEncoder {
+    fn encode(&self, writer: Writer, id: u16) -> Result<()>;
+}
 
 impl FieldEncoder for bool {
     fn encode(&self, writer: Writer, id: u16) -> Result<()> {

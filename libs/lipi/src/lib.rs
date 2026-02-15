@@ -25,7 +25,7 @@ pub use encoder::Encode;
 
 #[doc(hidden)]
 pub mod __private {
-    pub use crate::encoder::{FieldEncoder, encode_length};
+    pub use crate::encoder::*;
 }
 
 pub trait Decode<'de>: Sized {

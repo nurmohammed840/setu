@@ -59,9 +59,73 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                     });
                 }
             }
+            quote!(t, { ::std::io::Result::Ok(()) });
         }
-        Data::Enum(_) => todo!(),
-        Data::Union(_) => todo!(),
+        Data::Enum(DataEnum { variants, .. }) => {
+            let encode_field = quote(|t| {
+                for variant in variants {
+                    let Variant {
+                        ident,
+                        fields,
+                        discriminant,
+                        ..
+                    } = variant;
+
+                    let mut get_discriminant = || -> Option<&Expr> {
+                        match discriminant {
+                            Some((_, expr)) => Some(expr),
+                            None => {
+                                let loc = variant.span().start();
+                                let err = Error::new(
+                                    variant.span(),
+                                    format!("missing key at line: {:?}", loc.line),
+                                );
+                                let err = err.to_compile_error();
+                                quote!(t, {
+                                   _ => { #err ::std::todo!() }
+                                });
+                                None
+                            }
+                        }
+                    };
+
+                    match fields {
+                        Fields::Named(fields) => {
+                            let err = Error::new(fields.span(), format!("unsupported {{ .. }}"));
+                            let err = err.to_compile_error();
+                            quote!(t, {
+                                Self::#ident { .. } => { #err ::std::todo!() }
+                            });
+                        }
+                        Fields::Unnamed(FieldsUnnamed { unnamed, .. }) => {
+                            if let Some(key) = get_discriminant() {
+                                let mut iter = unnamed.iter();
+                                match iter.next() {
+                                    None => {
+                                        quote!(t, { Self::#ident() => ::lipi::__private::EnumEncoder::encode(&false, w, #key), });
+                                    }
+                                    Some(_) => {
+                                        quote!(t, { Self::#ident(val) => ::lipi::__private::EnumEncoder::encode(val, w, #key), });
+                                    }
+                                }
+                            }
+                        }
+                        Fields::Unit => {
+                            if let Some(key) = get_discriminant() {
+                                quote!(t, { Self::#ident => ::lipi::__private::EnumEncoder::encode(&false, w, #key), });
+                            }
+                        }
+                    }
+                }
+            });
+
+            quote!(t, {
+                match self {
+                    #encode_field
+                }
+            });
+        }
+        Data::Union(_) => unimplemented!(),
     });
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
@@ -72,7 +136,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
             const TY: u8 = 9;
             fn encode(&self, w: &mut dyn ::std::io::Write) -> ::std::io::Result<()> {
                 #body
-                ::std::io::Result::Ok(())
+
             }
         }
     });
