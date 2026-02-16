@@ -140,7 +140,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
     quote!(t, {
         impl #impl_generics #crate_path::Encode for #ident #ty_generics #where_clause {
             const TY: u8 = #ty;
-            fn encode(&self, w: &mut dyn ::std::io::Write) -> ::std::io::Result<()> {
+            fn encode(&self, w: &mut (impl ::std::io::Write + ?::std::marker::Sized)) -> ::std::io::Result<()> {
                 #body
 
             }

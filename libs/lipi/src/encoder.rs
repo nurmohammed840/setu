@@ -5,9 +5,7 @@ use super::*;
 use std::{io::Result, u32};
 use varint::{LEB128, Leb128Buf};
 
-type Writer<'a> = &'a mut dyn Write;
-
-fn encode_header(writer: Writer, num: u32, ty: u8) -> Result<()> {
+fn encode_header(writer: &mut (impl Write + ?Sized), num: u32, ty: u8) -> Result<()> {
     if num < 15 {
         writer.write_all(&[(num as u8) << 4 | ty])
     } else {
@@ -18,23 +16,23 @@ fn encode_header(writer: Writer, num: u32, ty: u8) -> Result<()> {
     }
 }
 
-fn encode_bytes(writer: Writer, bytes: &[u8]) -> Result<()> {
+fn encode_bytes(writer: &mut (impl Write + ?Sized), bytes: &[u8]) -> Result<()> {
     encode_length(writer, bytes.len())?;
     writer.write_all(bytes)
 }
 
-fn encode_uint(writer: Writer, num: u64) -> Result<()> {
+fn encode_uint(writer: &mut (impl Write + ?Sized), num: u64) -> Result<()> {
     let mut buf = unsafe { Leb128Buf::<10>::new() };
     buf.write_u64(num);
     writer.write_all(buf.as_bytes())
 }
 
 #[inline]
-fn encode_int(writer: Writer, num: i64) -> Result<()> {
+fn encode_int(writer: &mut (impl Write + ?Sized), num: i64) -> Result<()> {
     encode_uint(writer, zig_zag::into_u64(num))
 }
 
-fn encode_list_type(writer: Writer, len: usize, ty: u8) -> Result<()> {
+fn encode_list_type(writer: &mut (impl Write + ?Sized), len: usize, ty: u8) -> Result<()> {
     let len = u32::try_from(len).map_err(io::Error::other)?;
     encode_header(writer, len, ty)
 }
@@ -42,7 +40,7 @@ fn encode_list_type(writer: Writer, len: usize, ty: u8) -> Result<()> {
 // ------------------------------------------------------------------------
 
 #[doc(hidden)]
-pub fn encode_length(writer: Writer, length: usize) -> Result<()> {
+pub fn encode_length(writer: &mut (impl Write + ?Sized), length: usize) -> Result<()> {
     let mut buf = unsafe { Leb128Buf::<10>::new() };
     buf.write_u64(length as u64);
     writer.write_all(buf.as_bytes())
@@ -52,16 +50,16 @@ pub fn encode_length(writer: Writer, length: usize) -> Result<()> {
 
 pub trait Encode {
     const TY: u8;
-    fn encode(&self, _: Writer) -> io::Result<()>;
+    fn encode(&self, _: &mut (impl Write + ?Sized)) -> io::Result<()>;
 
-    fn encode_slice(writer: Writer, this: &[Self]) -> io::Result<()>
+    fn encode_slice(writer: &mut (impl Write + ?Sized), this: &[Self]) -> io::Result<()>
     where
         Self: Sized,
     {
         Self::encode_iter(writer, this.len(), this.iter())
     }
 
-    fn encode_iter<'a, I>(writer: Writer, len: usize, iter: I) -> io::Result<()>
+    fn encode_iter<'a, I>(writer: &mut (impl Write + ?Sized), len: usize, iter: I) -> io::Result<()>
     where
         I: Iterator<Item = &'a Self> + Clone,
         Self: Sized + 'a,
@@ -78,11 +76,11 @@ pub trait Encode {
 // ------------------------------------------------------------------------
 
 pub trait EnumEncoder {
-    fn encode(&self, writer: Writer, id: u16) -> Result<()>;
+    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()>;
 }
 
 impl EnumEncoder for bool {
-    fn encode(&self, writer: Writer, id: u16) -> Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
         let ty = match self {
             false => 0,
             true => 1,
@@ -92,7 +90,7 @@ impl EnumEncoder for bool {
 }
 
 impl<T: Encode + ?Sized> EnumEncoder for T {
-    fn encode(&self, writer: Writer, id: u16) -> Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
         encode_header(writer, id.into(), T::TY)?;
         Encode::encode(self, writer)
     }
@@ -101,11 +99,11 @@ impl<T: Encode + ?Sized> EnumEncoder for T {
 // ------------------------------------------------------------------------
 
 pub trait FieldEncoder {
-    fn encode(&self, writer: Writer, id: u16) -> Result<()>;
+    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()>;
 }
 
 impl FieldEncoder for bool {
-    fn encode(&self, writer: Writer, id: u16) -> Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
         let ty = match self {
             false => 0,
             true => 1,
@@ -115,7 +113,7 @@ impl FieldEncoder for bool {
 }
 
 impl<T: FieldEncoder> FieldEncoder for Option<T> {
-    fn encode(&self, writer: Writer, id: u16) -> Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
         match self {
             Some(val) => FieldEncoder::encode(val, writer, id),
             None => Ok(()),
@@ -124,7 +122,7 @@ impl<T: FieldEncoder> FieldEncoder for Option<T> {
 }
 
 impl<T: Encode + ?Sized> FieldEncoder for T {
-    fn encode(&self, writer: Writer, id: u16) -> Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
         encode_header(writer, id.into(), T::TY)?;
         Encode::encode(self, writer)
     }
@@ -134,11 +132,11 @@ impl<T: Encode + ?Sized> FieldEncoder for T {
 
 impl Encode for u8 {
     const TY: u8 = 2;
-    fn encode(&self, writer: Writer) -> io::Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> io::Result<()> {
         writer.write_all(&[*self])
     }
 
-    fn encode_slice(writer: Writer, this: &[Self]) -> io::Result<()> {
+    fn encode_slice(writer: &mut (impl Write + ?Sized), this: &[Self]) -> io::Result<()> {
         encode_list_type(writer, this.len(), Self::TY)?;
         writer.write_all(this)
     }
@@ -146,11 +144,11 @@ impl Encode for u8 {
 
 impl Encode for i8 {
     const TY: u8 = 3;
-    fn encode(&self, writer: Writer) -> io::Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> io::Result<()> {
         writer.write_all(&[self.cast_unsigned()])
     }
 
-    fn encode_slice(writer: Writer, this: &[Self]) -> io::Result<()> {
+    fn encode_slice(writer: &mut (impl Write + ?Sized), this: &[Self]) -> io::Result<()> {
         encode_list_type(writer, this.len(), Self::TY)?;
         writer.write_all(utils::u8_slice_from(this))
     }
@@ -158,21 +156,21 @@ impl Encode for i8 {
 
 impl Encode for f32 {
     const TY: u8 = 4;
-    fn encode(&self, writer: Writer) -> Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
         writer.write_all(&self.to_le_bytes())
     }
 }
 
 impl Encode for f64 {
     const TY: u8 = 5;
-    fn encode(&self, writer: Writer) -> Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
         writer.write_all(&self.to_le_bytes())
     }
 }
 
 impl Encode for char {
     const TY: u8 = 6;
-    fn encode(&self, writer: Writer) -> Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
         writer.write_all(&u32::from(*self).to_le_bytes())
     }
 }
@@ -182,7 +180,7 @@ macro_rules! encode_for {
         impl Encode for $ty {
             const TY: u8 = 6;
             #[inline]
-            fn encode(&self, writer: Writer) -> Result<()> {
+            fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
                 encode_uint(writer, (*self).into())
             }
         }
@@ -191,7 +189,7 @@ macro_rules! encode_for {
         impl Encode for $ty {
             const TY: u8 = 7;
             #[inline]
-            fn encode(&self, writer: Writer) -> Result<()> {
+            fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
                 encode_int(writer, (*self).into())
             }
         }
@@ -200,7 +198,7 @@ macro_rules! encode_for {
         impl Encode for $ty {
             const TY: u8 = 8;
             #[inline]
-            fn encode(&self, writer: Writer) -> Result<()> {
+            fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
                 encode_bytes(writer, self.as_bytes())
             }
         }
@@ -221,7 +219,7 @@ encode_for! {
 
 impl<Bytes: AsRef<[u8]>> Encode for BitSet<Bytes> {
     const TY: u8 = 11;
-    fn encode(&self, writer: Writer) -> Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
         encode_list_type(writer, self.len(), 1)?;
         writer.write_all(self.as_bytes())
     }
@@ -229,7 +227,7 @@ impl<Bytes: AsRef<[u8]>> Encode for BitSet<Bytes> {
 
 impl Encode for [bool] {
     const TY: u8 = 11;
-    fn encode(&self, writer: Writer) -> Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
         let bs: BitSet<Vec<u8>> = BitSet::from(self);
         Encode::encode(&bs, writer)
     }
@@ -239,7 +237,7 @@ macro_rules! encode_list {
     [$($ty: ty),*] => [$(
         impl<T: Encode> Encode for $ty {
             const TY: u8 = 11;
-            fn encode(&self, writer: Writer) -> Result<()> {
+            fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
                 T::encode_iter(writer, self.len(), self.iter())
             }
         }
@@ -256,7 +254,7 @@ encode_list! {
 
 impl<T: Encode> Encode for [T] {
     const TY: u8 = 11;
-    fn encode(&self, writer: Writer) -> Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
         T::encode_slice(writer, self)
     }
 }
@@ -267,7 +265,7 @@ where
 {
     const TY: u8 = 11;
     #[inline]
-    fn encode(&self, writer: Writer) -> Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
         <[T] as Encode>::encode(self, writer)
     }
 }
@@ -278,7 +276,7 @@ where
 {
     const TY: u8 = 11;
     #[inline]
-    fn encode(&self, writer: Writer) -> Result<()> {
+    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
         <[T] as Encode>::encode(self, writer)
     }
 }
@@ -289,7 +287,7 @@ macro_rules! encode_map {
     [$($ty: ty),*] => [$(
         impl<K: Encode, V: Encode> Encode for $ty {
             const TY: u8 = 12;
-            fn encode(&self, writer: Writer) -> Result<()> {
+            fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
                 encode_length(writer, 2)?; // Columns len
                 encode_length(writer, self.len())?; // Values len
 
@@ -320,7 +318,7 @@ macro_rules! deref_impl {
         impl<T: ?Sized + Encode> Encode for $ty {
             const TY: u8 = T::TY;
             #[inline]
-            fn encode(&self, writer: Writer) -> Result<()> {
+            fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
                 Encode::encode(&**self, writer)
             }
         }
@@ -340,7 +338,7 @@ macro_rules! tuples {
             $($name: FieldEncoder,)*
         {
             const TY: u8 = 9;
-            fn encode(&self, writer: Writer) -> Result<()> {
+            fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
                 encode_length(writer, $len)?;
                 $($name::encode(&self.$idx, writer, $idx)?;)*
                 Ok(())
