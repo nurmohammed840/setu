@@ -1,9 +1,16 @@
 use crate::{Value, convert::ConvertFrom, errors};
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Entry<'de> {
     pub key: u16,
     pub value: Value<'de>,
+}
+
+impl<'de> std::fmt::Debug for Entry<'de> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Union({}): ", self.key)?;
+        self.value.fmt(f)
+    }
 }
 
 #[derive(Clone, Default)]

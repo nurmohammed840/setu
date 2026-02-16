@@ -11,6 +11,12 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
         ..
     } = input;
 
+    let ty = match data {
+        Data::Struct(_) => 9u8,
+        Data::Enum(_) => 10,
+        Data::Union(_) => unimplemented!(),
+    };
+
     let body = quote(|t| match data {
         Data::Struct(DataStruct { fields, .. }) => {
             let mut seen: HashSet<&Expr> = HashSet::new();
@@ -133,7 +139,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
     let mut t = TokenStream::new();
     quote!(t, {
         impl #impl_generics #crate_path::Encode for #ident #ty_generics #where_clause {
-            const TY: u8 = 9;
+            const TY: u8 = #ty;
             fn encode(&self, w: &mut dyn ::std::io::Write) -> ::std::io::Result<()> {
                 #body
 
