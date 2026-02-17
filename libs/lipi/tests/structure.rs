@@ -1,6 +1,6 @@
-use lipi::{Decode, Encode, Entries};
+use lipi::*;
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+#[derive(Encode, /* Decode, */ Clone, Debug, PartialEq)]
 pub struct Types<'a> {
     #[key = 1]
     boolen: bool,
@@ -75,7 +75,7 @@ pub struct Types<'a> {
     // map: HashMap<u32, User>,
 }
 
-#[derive(Encode, Debug, Decode, Clone, PartialEq)]
+#[derive(Encode, Debug, /* Decode, */ Clone, PartialEq)]
 struct User {
     // #[key = 0]
     // id: Vec<u8>,
@@ -150,10 +150,5 @@ impl<'a> Types<'a> {
         let mut buf = Vec::new();
         self.encode(&mut buf).unwrap();
         buf
-    }
-
-    #[allow(dead_code)]
-    pub fn from_bytes(mut buf: &'a [u8]) -> lipi::Result<Self> {
-        Self::decode(&Entries::parse(&mut buf)?)
     }
 }
