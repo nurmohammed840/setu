@@ -4,12 +4,16 @@ use std::fmt;
 #[derive(Debug)]
 pub struct UnexpectedEof {
     /// Number of additional bytes required.
-    pub size: usize,
+    pub needed: usize,
 }
 impl std::error::Error for UnexpectedEof {}
 impl fmt::Display for UnexpectedEof {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "unexpected end of file: needed {} more bytes", self.size)
+        write!(
+            f,
+            "unexpected end of file: needed {} more bytes",
+            self.needed
+        )
     }
 }
 
@@ -22,12 +26,48 @@ impl fmt::Display for VarIntError {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct InvalidType {
+    pub found: crate::decode::DataType,
+    pub expected: crate::decode::DataType,
+}
+impl std::error::Error for InvalidType {}
+impl fmt::Display for InvalidType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "invalid type: found {:?}, expected {:?}",
+            self.found, self.expected
+        )
+    }
+}
+
+impl InvalidType {
+    pub fn error(found: crate::decode::DataType, expected: crate::decode::DataType) -> crate::Error {
+        Box::new(Self { found, expected })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RequiredField {
+    pub name: &'static str,
+}
+
+impl std::error::Error for RequiredField {}
+impl fmt::Display for RequiredField {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "missing required field `{}`", self.name)
+    }
+}
+
 #[derive(Debug)]
-pub struct ParseError;
+pub struct ParseError {
+    pub error: crate::Error,
+}
 impl std::error::Error for ParseError {}
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("invalid type tag: `0`")
+        fmt::Display::fmt(&self.error, f)
     }
 }
 

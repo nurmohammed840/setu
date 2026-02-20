@@ -1,5 +1,6 @@
 mod bit_set;
 mod convert;
+pub mod decode;
 mod decoder;
 mod encoder;
 mod entries;

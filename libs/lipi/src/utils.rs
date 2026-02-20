@@ -4,7 +4,7 @@ use crate::{Result, errors};
 
 pub fn read_byte(buf: &mut &[u8]) -> Result<u8> {
     if buf.is_empty() {
-        return Err(errors::UnexpectedEof { size: 1 }.into());
+        return Err(errors::UnexpectedEof { needed: 1 }.into());
     }
     unsafe {
         let byte = *buf.get_unchecked(0);
@@ -19,7 +19,7 @@ pub fn read_buf<const N: usize>(reader: &mut &[u8]) -> Result<[u8; N]> {
 
 pub fn read_bytes<'de>(reader: &mut &'de [u8], len: usize) -> Result<&'de [u8]> {
     if len > reader.len() {
-        return Err(errors::UnexpectedEof { size: len }.into());
+        return Err(errors::UnexpectedEof { needed: len }.into());
     }
     unsafe {
         let slice = reader.get_unchecked(..len);

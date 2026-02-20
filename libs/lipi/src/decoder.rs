@@ -51,7 +51,7 @@ fn parse_list<'de>(reader: &mut &'de [u8]) -> Result<List<'de>> {
 
 fn parse_list_values<'de>(reader: &mut &'de [u8], len: usize, ty: u8) -> Result<List<'de>> {
     match ty {
-        0 => Err(errors::ParseError.into()),
+        0 => todo!(),
         1 => parse_packed_booleans(reader, len).map(List::Bool),
 
         2 => utils::read_bytes(reader, len).map(List::U8),
