@@ -78,14 +78,29 @@ pub fn parse_str<'de>(reader: &mut &'de [u8]) -> Result<&'de str> {
 // -----------------------------------------------------------------
 
 pub trait Decode<'de>: Sized {
-    fn decode(_: &mut &'de [u8]) -> Result<Self> {
-        unimplemented!()
+    const TY: DataType;
+
+    fn decode(_: &mut &'de [u8]) -> Result<Self>;
+
+    fn decode_field(ty: DataType, reader: &mut &'de [u8]) -> Result<Self> {
+        ty.expected(Self::TY)?;
+        Self::decode(reader)
     }
 
-    fn decode_field(ty: DataType, reader: &mut &'de [u8]) -> Result<Self>;
+    fn decode_vec(reader: &mut &'de [u8]) -> Result<Vec<Self>> {
+        let (len, ty) = parse_header(reader)?;
+        ty.expected(Self::TY)?;
+        utils::try_collect(usize::try_from(len)?, || Self::decode(reader))
+    }
 }
 
 impl Decode<'_> for bool {
+    const TY: DataType = DataType::True;
+
+    fn decode(_: &mut &[u8]) -> Result<Self> {
+        unimplemented!()
+    }
+
     fn decode_field(ty: DataType, _: &mut &[u8]) -> Result<Self> {
         match ty {
             DataType::False => Ok(false),
@@ -96,6 +111,8 @@ impl Decode<'_> for bool {
 }
 
 impl Decode<'_> for f32 {
+    const TY: DataType = DataType::F32;
+
     fn decode(reader: &mut &[u8]) -> Result<Self> {
         utils::read_buf(reader).map(f32::from_le_bytes)
     }
@@ -113,6 +130,8 @@ impl Decode<'_> for f32 {
 }
 
 impl Decode<'_> for f64 {
+    const TY: DataType = DataType::F64;
+
     fn decode(reader: &mut &[u8]) -> Result<Self> {
         utils::read_buf(reader).map(f64::from_le_bytes)
     }
@@ -126,6 +145,20 @@ impl Decode<'_> for f64 {
             DataType::UInt => u32::decode(reader).map(Self::from),
             DataType::Int => i32::decode(reader).map(Self::from),
             _ => Err(errors::InvalidType::error(ty, DataType::F64)),
+        }
+    }
+}
+
+impl Decode<'_> for char {
+    const TY: DataType = DataType::UInt;
+    fn decode(reader: &mut &[u8]) -> Result<Self> {
+        Ok(char::try_from(u32::decode(reader)?)?)
+    }
+    fn decode_field(ty: DataType, reader: &mut &[u8]) -> Result<Self> {
+        match ty {
+            DataType::U8 => Ok(char::try_from(u8::decode(reader)? as u32)?),
+            DataType::UInt => Self::decode(reader),
+            _ => Err(errors::InvalidType::error(ty, DataType::UInt)),
         }
     }
 }
@@ -150,6 +183,8 @@ where
 macro_rules! decode_num {
     [$($ty:ty: $expected:path { $decode:item })*] => [$(
         impl Decode<'_> for $ty {
+            const TY: DataType = $expected;
+
             $decode
 
             fn decode_field(ty: DataType, reader: &mut &[u8]) -> Result<Self> {
@@ -205,24 +240,28 @@ decode_num! {
 }
 
 impl<'de> Decode<'de> for &'de str {
+    const TY: DataType = DataType::Str;
+
     fn decode(reader: &mut &'de [u8]) -> Result<Self> {
         parse_str(reader)
-    }
-
-    fn decode_field(ty: DataType, reader: &mut &'de [u8]) -> Result<Self> {
-        ty.expected(DataType::Str)?;
-        Self::decode(reader)
     }
 }
 
 impl Decode<'_> for String {
+    const TY: DataType = DataType::Str;
+
     fn decode(reader: &mut &[u8]) -> Result<Self> {
         parse_str(reader).map(String::from)
     }
+}
 
-    fn decode_field(ty: DataType, reader: &mut &[u8]) -> Result<Self> {
-        ty.expected(DataType::Str)?;
-        Self::decode(reader)
+// -----------------------------------------------------------------
+
+impl<'de, T: Decode<'de>> Decode<'de> for Vec<T> {
+    const TY: DataType = DataType::List;
+
+    fn decode(reader: &mut &'de [u8]) -> Result<Self> {
+        T::decode_vec(reader)
     }
 }
 
@@ -300,6 +339,8 @@ mod tests {
     }
 
     impl<'de> Decode<'de> for User {
+        const TY: DataType = DataType::Struct;
+
         fn decode(reader: &mut &'de [u8]) -> Result<Self> {
             let mut name: Option<String> = None;
             let mut id = None;
