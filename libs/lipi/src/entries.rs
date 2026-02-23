@@ -1,4 +1,4 @@
-use crate::{Value, convert::ConvertFrom, errors};
+use crate::Value;
 
 #[derive(Clone)]
 pub struct Entry<'de> {
@@ -45,15 +45,15 @@ impl<'de> Entries<'de> {
         self.0.push(Entry { key, value });
     }
 
-    pub fn get_and_convert<'v, T>(&'v self, k: u16) -> Result<T, errors::ConvertError>
-    where
-        T: ConvertFrom<Option<&'v Value<'de>>>,
-    {
-        T::convert_from(self.get(k)).map_err(|mut err| {
-            err.key = Some(k);
-            err
-        })
-    }
+    // pub fn get_and_convert<'v, T>(&'v self, k: u16) -> Result<T, errors::ConvertError>
+    // where
+    //     T: ConvertFrom<Option<&'v Value<'de>>>,
+    // {
+    //     T::convert_from(self.get(k)).map_err(|mut err| {
+    //         err.key = Some(k);
+    //         err
+    //     })
+    // }
 
     #[inline]
     pub fn is_empty(&self) -> bool {

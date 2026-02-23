@@ -265,6 +265,49 @@ impl<'de, T: Decode<'de>> Decode<'de> for Vec<T> {
     }
 }
 
+impl<'de, T: Decode<'de>> Decode<'de> for std::collections::VecDeque<T> {
+    const TY: DataType = DataType::List;
+
+    fn decode(reader: &mut &'de [u8]) -> Result<Self> {
+        T::decode_vec(reader).map(Self::from)
+    }
+}
+
+impl<'de, T: Decode<'de>, const N: usize> Decode<'de> for [T; N] {
+    const TY: DataType = DataType::List;
+
+    fn decode(reader: &mut &'de [u8]) -> Result<Self> {
+        let arr = T::decode_vec(reader)?;
+        match Self::try_from(arr) {
+            Ok(val) => Ok(val),
+            Err(arr) => Err(Box::new(errors::InvalidArrayLen {
+                expected: N,
+                found: arr.len(),
+            })),
+        }
+    }
+}
+
+// -----------------------------------------------------------------
+
+impl<'de, K, V> Decode<'de> for std::collections::HashMap<K, V>
+where
+    K: Decode<'de>,
+    V: Decode<'de>,
+{
+    const TY: DataType = DataType::Table;
+
+    fn decode(reader: &mut &'de [u8]) -> Result<Self> {
+        let col_len = parse_length(reader)?;
+        let vals_len = parse_length(reader)?;
+
+        // let (s, ty) = parse_header(reader)?;
+
+
+        todo!()
+    }
+}
+
 // -----------------------------------------------------------------
 
 pub struct FieldDecoder<'c, 'de> {

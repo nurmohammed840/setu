@@ -36,6 +36,7 @@ pub fn u8_slice_from(data: &[i8]) -> &[u8] {
     unsafe { slice::from_raw_parts(data.as_ptr().cast(), data.len()) }
 }
 
+#[allow(dead_code)]
 pub fn try_convert_into_vec<T, M>(items: &[T]) -> Result<Vec<M>, M::Error>
 where
     T: Clone,
@@ -44,6 +45,7 @@ where
     try_convert_vec_from(items, |t| M::try_from(t.clone()))
 }
 
+#[allow(dead_code)]
 pub fn try_convert_vec_from<'a, T, M, E>(
     items: &'a [T],
     f: fn(&'a T) -> Result<M, E>,

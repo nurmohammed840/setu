@@ -1,4 +1,4 @@
-use crate::{List, Value};
+// use crate::{List, Value};
 use std::fmt;
 
 #[derive(Debug)]
@@ -43,8 +43,28 @@ impl fmt::Display for InvalidType {
 }
 
 impl InvalidType {
-    pub fn error(found: crate::decode::DataType, expected: crate::decode::DataType) -> crate::Error {
+    pub fn error(
+        found: crate::decode::DataType,
+        expected: crate::decode::DataType,
+    ) -> crate::Error {
         Box::new(Self { found, expected })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct InvalidArrayLen {
+    pub expected: usize,
+    pub found: usize,
+}
+
+impl std::error::Error for InvalidArrayLen {}
+impl fmt::Display for InvalidArrayLen {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "invalid array size: expected {}, found {}",
+            self.expected, self.found
+        )
     }
 }
 
@@ -71,65 +91,65 @@ impl fmt::Display for ParseError {
     }
 }
 
-impl List<'_> {
-    fn type_name(&self) -> &str {
-        match self {
-            List::Bool(_) => "[boolean]",
-            List::I8(_) => "[i8]",
-            List::U8(_) => "[u8]",
-            List::F32(_) => "[f32]",
-            List::F64(_) => "[f64]",
-            List::Int(_) => "[int]",
-            List::UInt(_) => "[uint]",
-            List::Str(_) => "[string]",
-            List::Struct(_) => "[struct]",
-            List::List(_) => "[...]",
-            List::Table(_) => "[table]",
-            List::Union(_) => "[union]",
-            // ---
-            List::UnknownI(_) => "[unknown I]",
-            List::UnknownII(_) => "[unknown II]",
-            List::UnknownIII(_) => "[unknown III]",
-        }
-    }
+// impl List<'_> {
+//     fn type_name(&self) -> &str {
+//         match self {
+//             List::Bool(_) => "[boolean]",
+//             List::I8(_) => "[i8]",
+//             List::U8(_) => "[u8]",
+//             List::F32(_) => "[f32]",
+//             List::F64(_) => "[f64]",
+//             List::Int(_) => "[int]",
+//             List::UInt(_) => "[uint]",
+//             List::Str(_) => "[string]",
+//             List::Struct(_) => "[struct]",
+//             List::List(_) => "[...]",
+//             List::Table(_) => "[table]",
+//             List::Union(_) => "[union]",
+//             // ---
+//             List::UnknownI(_) => "[unknown I]",
+//             List::UnknownII(_) => "[unknown II]",
+//             List::UnknownIII(_) => "[unknown III]",
+//         }
+//     }
 
-    pub(crate) fn _invalid_type(&self, expected: &str) -> ConvertError {
-        ConvertError::new(format!(
-            "expected `{expected}`, found `{}`",
-            self.type_name()
-        ))
-    }
-}
+//     pub(crate) fn _invalid_type(&self, expected: &str) -> ConvertError {
+//         ConvertError::new(format!(
+//             "expected `{expected}`, found `{}`",
+//             self.type_name()
+//         ))
+//     }
+// }
 
-impl Value<'_> {
-    fn type_name(&self) -> &str {
-        match self {
-            Value::Bool(_) => "boolean",
-            Value::I8(_) => "i8",
-            Value::U8(_) => "u8",
-            Value::F32(_) => "f32",
-            Value::F64(_) => "f64",
-            Value::Int(_) => "int",
-            Value::UInt(_) => "uint",
-            Value::Str(_) => "string",
-            Value::Struct(_) => "struct",
-            Value::List(list) => list.type_name(),
-            Value::Table(_) => "table",
-            Value::Union(_) => "union",
-            // ---
-            Value::UnknownI(_) => "unknown I",
-            Value::UnknownII(_) => "unknown II",
-            Value::UnknownIII(_) => "unknown III",
-        }
-    }
+// impl Value<'_> {
+//     fn type_name(&self) -> &str {
+//         match self {
+//             Value::Bool(_) => "boolean",
+//             Value::I8(_) => "i8",
+//             Value::U8(_) => "u8",
+//             Value::F32(_) => "f32",
+//             Value::F64(_) => "f64",
+//             Value::Int(_) => "int",
+//             Value::UInt(_) => "uint",
+//             Value::Str(_) => "string",
+//             Value::Struct(_) => "struct",
+//             Value::List(list) => list.type_name(),
+//             Value::Table(_) => "table",
+//             Value::Union(_) => "union",
+//             // ---
+//             Value::UnknownI(_) => "unknown I",
+//             Value::UnknownII(_) => "unknown II",
+//             Value::UnknownIII(_) => "unknown III",
+//         }
+//     }
 
-    pub(crate) fn invalid_type(&self, expected: &str) -> ConvertError {
-        ConvertError::new(format!(
-            "expected `{expected}`, found `{}`",
-            self.type_name()
-        ))
-    }
-}
+//     pub(crate) fn invalid_type(&self, expected: &str) -> ConvertError {
+//         ConvertError::new(format!(
+//             "expected `{expected}`, found `{}`",
+//             self.type_name()
+//         ))
+//     }
+// }
 
 pub struct ConvertError {
     pub key: Option<u16>,

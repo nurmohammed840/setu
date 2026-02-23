@@ -1,5 +1,8 @@
 mod bit_set;
-mod convert;
+
+pub mod convert;
+pub mod value;
+
 pub mod decode;
 mod decoder;
 mod encoder;
@@ -14,7 +17,6 @@ pub mod errors;
 pub use lipi_macros::*;
 
 pub use bit_set::BitSet;
-pub use convert::ConvertFrom;
 pub use entries::{Entries, Entry};
 
 pub type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
