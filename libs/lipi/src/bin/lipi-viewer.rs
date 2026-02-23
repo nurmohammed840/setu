@@ -45,19 +45,20 @@ fn main() -> Result {
     Ok(())
 }
 
-fn parse_and_print_entries(data: Vec<u8>) {
-    let mut buf = &data[..];
-    match lipi::Entries::parse(&mut buf) {
-        Ok(entries) => println!("{entries}"),
-        Err(error) => {
-            let remaining = buf.len();
-            let offset = data.len() - remaining;
+fn parse_and_print_entries(_data: Vec<u8>) {
+    // let mut buf = &data[..];
+    // match lipi::Entries::parse(&mut buf) {
+    //     Ok(entries) => println!("{entries}"),
+    //     Err(error) => {
+    //         let remaining = buf.len();
+    //         let offset = data.len() - remaining;
 
-            eprintln!(
-                "\nfailed to parse; offset: {offset} (0x{offset:X}); remaining bytes: {remaining}"
-            );
-            eprintln!("{error:#?}");
-            process::exit(1);
-        }
-    }
+    //         eprintln!(
+    //             "\nfailed to parse; offset: {offset} (0x{offset:X}); remaining bytes: {remaining}"
+    //         );
+    //         eprintln!("{error:#?}");
+    //         process::exit(1);
+    //     }
+    // }
+    todo!()
 }

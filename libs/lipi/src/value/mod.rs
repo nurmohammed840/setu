@@ -1,27 +1,30 @@
 mod entries;
+mod list;
+mod table;
 
-// #[derive(Clone)]
-// pub enum Value<'de> {
-//     Bool(bool),
+#[derive(Clone)]
+pub enum Value {
+    Bool(bool),
 
-//     U8(u8),
-//     I8(i8),
+    U8(u8),
+    I8(i8),
 
-//     F32(f32),
-//     F64(f64),
+    F32(f32),
+    F64(f64),
 
-//     UInt(u64),
-//     Int(i64),
+    UInt(u64),
+    Int(i64),
 
-//     Str(&'de str),
+    Str(Box<str>),
 
-//     Struct(Entries<'de>),
-//     Union(Box<Entry<'de>>),
-//     List(List<'de>),
-//     Table(Table<'de>),
+    // Struct(Entries<'de>),
+    // Union(Box<Entry<'de>>),
+    // List(List<'de>),
+    // Table(Table<'de>),
 
-//     // ---------------
-//     UnknownI(&'de [u8]),
-//     UnknownII(&'de [u8]),
-//     UnknownIII(&'de [u8]),
-// }
+    // ---------------
+    
+    UnknownI(Box<[u8]>),
+    UnknownII(Box<[u8]>),
+    UnknownIII(Box<[u8]>),
+}

@@ -28,8 +28,8 @@ impl fmt::Display for VarIntError {
 
 #[derive(Debug, Clone)]
 pub struct InvalidType {
-    pub found: crate::decode::DataType,
-    pub expected: crate::decode::DataType,
+    pub found: crate::convert::DataType,
+    pub expected: crate::convert::DataType,
 }
 impl std::error::Error for InvalidType {}
 impl fmt::Display for InvalidType {
@@ -44,8 +44,8 @@ impl fmt::Display for InvalidType {
 
 impl InvalidType {
     pub fn error(
-        found: crate::decode::DataType,
-        expected: crate::decode::DataType,
+        found: crate::convert::DataType,
+        expected: crate::convert::DataType,
     ) -> crate::Error {
         Box::new(Self { found, expected })
     }
