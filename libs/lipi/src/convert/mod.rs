@@ -1,3 +1,5 @@
+pub mod encoder;
+
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DataType {
@@ -23,6 +25,16 @@ pub enum DataType {
     UnknownI = 13,
     UnknownII = 14,
     UnknownIII = 15,
+}
+
+impl From<bool> for DataType {
+    #[inline]
+    fn from(value: bool) -> Self {
+        match value {
+            false => DataType::False,
+            true => DataType::True,
+        }
+    }
 }
 
 impl DataType {
