@@ -1,3 +1,6 @@
+use crate::errors;
+
+pub mod decoder;
 pub mod encoder;
 
 #[repr(u8)]
@@ -41,5 +44,15 @@ impl DataType {
     #[inline]
     pub fn code(self) -> u8 {
         self as u8
+    }
+
+    pub fn expected(self, expected: Self) -> Result<(), errors::InvalidType> {
+        if self == expected {
+            return Ok(());
+        }
+        Err(errors::InvalidType {
+            found: self,
+            expected,
+        })
     }
 }

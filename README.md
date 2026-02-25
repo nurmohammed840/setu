@@ -1,19 +1,4 @@
-A high performance
-[Remote Procedure Call (RPC)](https://en.wikipedia.org/wiki/Remote_procedure_call)
-system.
-
-### Usage
-
-Add this to your `Cargo.toml` file.
-
-```toml
-[dependencies]
-frpc = { git = "https://github.com/nurmohammed840/frpc" }
-frpc-transport = { git = "https://github.com/nurmohammed840/frpc" }
-
-# Required for codegen
-frpc-codegen-client = { git = "https://github.com/nurmohammed840/frpc" }
-```
+# 🚧 The bridge is under construction 🚧
 
 ### Example
 
@@ -131,25 +116,3 @@ for await (const ev of sse.get_events(7)({ signal: task.signal })) {
   console.log(ev);
 }
 ```
-
-It's that easy!
-
-See more
-[examples](https://github.com/nurmohammed840/frpc/tree/main/examples/src)
-
-### Motivation
-
-The idea behind any RPC system is to communicate locally or remotely without
-writing any remote interactions.
-
-This is usually done by generation some glue code, also known as
-[Stub](https://en.wikipedia.org/wiki/Stub_(distributed_computing)), which is
-responsible for network communication, conversion types and serializing function
-parameters. Stub usually generatied from
-[Domain Specific Language (DSL)](https://en.wikipedia.org/wiki/Domain-specific_language),
-for example [gRPC](https://grpc.io/) use
-[Protocol Buffers](https://protobuf.dev/), which describe an interface.
-
-This library doesn't use any
-[Interface Description Language (IDL)](https://en.wikipedia.org/wiki/Interface_description_language),
-and the interface is described from the Rust codebase using macros.
