@@ -5,28 +5,28 @@ use crate::BitSet;
 
 #[derive(Clone)]
 pub enum List {
-    Bool(BitSet<Box<[u8]>>),
+    Bool(Box<BitSet<Array<u8>>>),
 
-    U8(Box<[u8]>),
-    I8(Box<[i8]>),
+    U8(Array<u8>),
+    I8(Array<i8>),
 
-    F32(Vec<f32>),
-    F64(Vec<f64>),
+    F32(Array<f32>),
+    F64(Array<f64>),
 
-    UInt(Vec<u64>),
-    Int(Vec<i64>),
+    UInt(Array<u64>),
+    Int(Array<i64>),
 
-    Str(Vec<Box<str>>),
+    Str(Array<Box<str>>),
 
-    Struct(Vec<Entries>),
-    Union(Vec<Entry>),
-    List(Vec<List>),
-    Table(Vec<Table>),
+    Struct(Array<Struct>),
+    Union(Array<Entry>),
+    List(Array<List>),
+    Table(Array<Table>),
 
     // ---------------
-    UnknownI(Vec<Box<[u8]>>),
-    UnknownII(Vec<Box<[u8]>>),
-    UnknownIII(Vec<Box<[u8]>>),
+    UnknownI(Array<Box<[u8]>>),
+    UnknownII(Array<Box<[u8]>>),
+    UnknownIII(Array<Box<[u8]>>),
 }
 
 impl fmt::Debug for List {

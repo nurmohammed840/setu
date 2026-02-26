@@ -7,35 +7,19 @@ pub struct Entry {
 }
 
 #[derive(Clone, Default)]
-pub struct Entries(Vec<Entry>);
+pub struct Struct(pub Array<Entry>);
 
-impl From<Vec<Entry>> for Entries {
-    #[inline]
-    fn from(value: Vec<Entry>) -> Self {
-        Self(value)
+impl<T: Into<Array<Entry>>> From<T> for Struct {
+    fn from(value: T) -> Self {
+        Self(value.into())
     }
 }
 
-impl Entries {
-    #[inline]
-    pub fn new() -> Self {
-        Self(Vec::with_capacity(8))
-    }
-
-    #[inline]
-    pub fn with_capacity(capacity: usize) -> Self {
-        Self(Vec::with_capacity(capacity))
-    }
-
+impl Struct {
     pub fn get(&self, k: u16) -> Option<&Value> {
         self.0
             .iter()
             .find_map(|Entry { key, value }| (*key == k).then_some(value))
-    }
-
-    #[inline]
-    pub fn insert(&mut self, key: u16, value: Value) {
-        self.0.push(Entry { key, value });
     }
 
     #[inline]
@@ -60,7 +44,7 @@ impl fmt::Debug for Entry {
     }
 }
 
-impl fmt::Display for Entries {
+impl fmt::Display for Struct {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for Entry { key, value } in self.iter() {
             writeln!(f, "{key}: {value:#?}")?;
@@ -69,7 +53,7 @@ impl fmt::Display for Entries {
     }
 }
 
-impl fmt::Debug for Entries {
+impl fmt::Debug for Struct {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_map()
             .entries(self.iter().map(|Entry { key, value }| (key, value)))

@@ -1,28 +1,9 @@
 use super::*;
 
 #[derive(Clone)]
-pub struct Table(pub(crate) Vec<(u16, List)>);
-
-impl Default for Table {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+pub struct Table(pub Array<(u16, List)>);
 
 impl Table {
-    pub fn new() -> Self {
-        Table(Vec::with_capacity(8))
-    }
-
-    pub fn with_capacity(capacity: usize) -> Self {
-        Table(Vec::with_capacity(capacity))
-    }
-
-    #[inline]
-    pub fn insert(&mut self, key: u16, value: List) {
-        self.0.push((key, value));
-    }
-
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()

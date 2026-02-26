@@ -1,12 +1,15 @@
 use crate::utils;
 
 #[derive(Debug, Clone)]
-pub struct BitSet<Bytes> {
+pub struct BitSet<Bytes: ?Sized> {
     len: usize,
     slots: Bytes,
 }
 
-impl<Bytes: AsRef<[u8]>> BitSet<Bytes> {
+impl<Bytes> BitSet<Bytes>
+where
+    Bytes: AsRef<[u8]> + ?Sized,
+{
     #[inline]
     pub fn len(&self) -> usize {
         self.len
@@ -43,7 +46,7 @@ impl<Bytes: AsRef<[u8]>> BitSet<Bytes> {
 impl<Bools, Bytes> From<Bools> for BitSet<Bytes>
 where
     Bools: AsRef<[bool]>,
-    Bytes: From<Vec<u8>>,
+    Bytes: From<Vec<u8>> + ?Sized,
 {
     fn from(value: Bools) -> Self {
         let bools = value.as_ref();
@@ -61,7 +64,10 @@ where
     }
 }
 
-impl<Bytes: AsMut<[u8]>> BitSet<Bytes> {
+impl<Bytes> BitSet<Bytes>
+where
+    Bytes: AsMut<[u8]> + ?Sized,
+{
     pub fn clear(&mut self) {
         for slot in self.slots.as_mut() {
             *slot = 0;

@@ -4,13 +4,17 @@ mod entries;
 mod list;
 mod table;
 
-pub use entries::{Entries, Entry};
+pub use entries::{Struct, Entry};
 pub use list::List;
 pub use table::Table;
 
+type Array<T> = Box<[T]>;
+use crate::convert::DataType;
+
 #[derive(Clone)]
 pub enum Value {
-    Bool(bool),
+    False,
+    True,
 
     U8(u8),
     I8(i8),
@@ -23,15 +27,37 @@ pub enum Value {
 
     Str(Box<str>),
 
-    Struct(Entries),
+    Struct(Struct),
     Union(Box<Entry>),
     List(List),
     Table(Table),
-
     // ---------------
-    UnknownI(Box<[u8]>),
-    UnknownII(Box<[u8]>),
-    UnknownIII(Box<[u8]>),
+    UnknownI(Array<u8>),
+    UnknownII(Array<u8>),
+    UnknownIII(Array<u8>),
+}
+
+impl Value {
+    fn data_type(&self) -> DataType {
+        match self {
+            Value::False => DataType::False,
+            Value::True => DataType::True,
+            Value::U8(_) => DataType::I8,
+            Value::I8(_) => DataType::I8,
+            Value::F32(_) => DataType::F32,
+            Value::F64(_) => DataType::F64,
+            Value::UInt(_) => DataType::UInt,
+            Value::Int(_) => DataType::Int,
+            Value::Str(_) => DataType::Str,
+            Value::Struct(_) => DataType::Struct,
+            Value::Union(_) => DataType::Union,
+            Value::List(_) => DataType::List,
+            Value::Table(_) => DataType::Table,
+            Value::UnknownI(_) => DataType::UnknownI,
+            Value::UnknownII(_) => DataType::UnknownII,
+            Value::UnknownIII(_) => DataType::UnknownIII,
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -43,6 +69,9 @@ impl fmt::Display for Value {
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Value::False => f.write_str("false"),
+            Value::True => f.write_str("true"),
+
             Value::Int(val) => val.fmt(f),
             Value::UInt(val) => write!(f, "{val}u",),
             Value::Str(val) => val.fmt(f),
@@ -52,7 +81,6 @@ impl fmt::Debug for Value {
 
             Value::F32(val) => write!(f, "{val:#?}f"),
             Value::F64(val) => val.fmt(f),
-            Value::Bool(val) => val.fmt(f),
             Value::Struct(items) => items.fmt(f),
             Value::Union(union) => union.fmt(f),
             Value::List(list) => list.fmt(f),
