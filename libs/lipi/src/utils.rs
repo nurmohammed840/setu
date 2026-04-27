@@ -36,7 +36,6 @@ pub fn u8_slice_from(data: &[i8]) -> &[u8] {
     unsafe { slice::from_raw_parts(data.as_ptr().cast(), data.len()) }
 }
 
-#[allow(dead_code)]
 pub fn try_convert_into_vec<T, M>(items: &[T]) -> Result<Vec<M>, M::Error>
 where
     T: Clone,
@@ -45,7 +44,6 @@ where
     try_convert_vec_from(items, |t| M::try_from(t.clone()))
 }
 
-#[allow(dead_code)]
 pub fn try_convert_vec_from<'a, T, M, E>(
     items: &'a [T],
     f: fn(&'a T) -> Result<M, E>,
@@ -61,11 +59,6 @@ pub fn try_convert_vec_from<'a, T, M, E>(
     Ok(arr)
 }
 
-#[inline]
-pub fn bool_packed_len(len: usize) -> usize {
-    (len + 7) / 8
-}
-
 pub fn try_collect<T, E>(len: usize, mut f: impl FnMut() -> Result<T, E>) -> Result<Vec<T>, E> {
     let mut arr = Vec::<T>::with_capacity(len);
     for idx in 0..len {
@@ -76,6 +69,11 @@ pub fn try_collect<T, E>(len: usize, mut f: impl FnMut() -> Result<T, E>) -> Res
         }
     }
     Ok(arr)
+}
+
+#[inline]
+pub fn bool_packed_len(len: usize) -> usize {
+    (len + 7) / 8
 }
 
 #[cfg(test)]

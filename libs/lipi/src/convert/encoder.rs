@@ -28,7 +28,7 @@ pub fn encode_uint(writer: &mut (impl Write + ?Sized), num: u64) -> Result<()> {
 
 #[inline]
 pub fn encode_int(writer: &mut (impl Write + ?Sized), num: i64) -> Result<()> {
-    encode_uint(writer, zig_zag::into_u64(num))
+    encode_uint(writer, zig_zag::zigzag_encode(num))
 }
 
 pub fn encode_list_type(

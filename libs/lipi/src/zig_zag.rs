@@ -1,29 +1,32 @@
-pub fn into_u64(num: i64) -> u64 {
+pub fn zigzag_encode(num: i64) -> u64 {
     ((num << 1) ^ (num >> 63)) as u64
 }
 
-pub fn from_u64(num: u64) -> i64 {
+pub fn zigzag_decode(num: u64) -> i64 {
     ((num >> 1) as i64) ^ -((num & 1) as i64)
 }
 
-#[test]
 #[cfg(test)]
-fn test_zig_zag_encoding() {
-    assert_eq!(into_u64(0), 0);
-    assert_eq!(into_u64(-1), 1);
-    assert_eq!(into_u64(1), 2);
-    assert_eq!(into_u64(-2), 3);
-    assert_eq!(into_u64(2), 4);
+mod tests {
+    use super::*;
 
-    assert_eq!(from_u64(0), 0);
-    assert_eq!(from_u64(1), -1);
-    assert_eq!(from_u64(2), 1);
-    assert_eq!(from_u64(3), -2);
-    assert_eq!(from_u64(4), 2);
+    fn check_zig_zag(actual: i64, encoded: u64) {
+        assert_eq!(zigzag_encode(actual), encoded);
+        assert_eq!(zigzag_decode(encoded), actual);
+    }
 
-    assert_eq!(into_u64(i64::MIN), u64::MAX);
-    assert_eq!(into_u64(i64::MAX), u64::MAX - 1);
+    #[test]
+    fn test_zig_zag_encoding() {
+        check_zig_zag(0, 0);
+        check_zig_zag(-1, 1);
+        check_zig_zag(1, 2);
+        check_zig_zag(-2, 3);
+        check_zig_zag(2, 4);
 
-    assert_eq!(from_u64(u64::MAX), i64::MIN);
-    assert_eq!(from_u64(u64::MAX - 1), i64::MAX);
+        check_zig_zag(i64::MIN, u64::MAX);
+        check_zig_zag(i64::MAX, u64::MAX - 1);
+
+        check_zig_zag(i32::MIN.into(), u32::MAX.into());
+        check_zig_zag(i32::MAX.into(), (u32::MAX - 1).into());
+    }
 }
