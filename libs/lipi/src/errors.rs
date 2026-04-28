@@ -50,29 +50,29 @@ impl InvalidType {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct InvalidArrayLen {
-    pub expected: usize,
-    pub found: usize,
-}
-error! {
-    InvalidArrayLen;
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "invalid array size: expected {}, found {}",
-            self.expected, self.found
-        )
-    }
-}
+// #[derive(Debug, Clone)]
+// pub struct InvalidArrayLen {
+//     pub expected: usize,
+//     pub found: usize,
+// }
+// error! {
+//     InvalidArrayLen;
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         write!(
+//             f,
+//             "invalid array size: expected {}, found {}",
+//             self.expected, self.found
+//         )
+//     }
+// }
 
-#[derive(Debug, Clone)]
-pub struct RequiredField {
-    pub name: &'static str,
-}
-error! {
-    RequiredField;
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "missing required field `{}`", self.name)
-    }
-}
+// #[derive(Debug, Clone)]
+// pub struct RequiredField {
+//     pub name: &'static str,
+// }
+// error! {
+//     RequiredField;
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         write!(f, "missing required field `{}`", self.name)
+//     }
+// }

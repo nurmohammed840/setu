@@ -26,7 +26,7 @@ pub fn parse_packed_booleans<'de>(reader: &mut &'de [u8], len: usize) -> Result<
 
 pub fn parse_bytes<'de>(reader: &mut &'de [u8]) -> Result<&'de [u8]> {
     let len = parse_length(reader)?;
-    utils::read_bytes(reader, len)
+    Ok(utils::read_bytes(reader, len)?)
 }
 
 pub fn parse_str<'de>(reader: &mut &'de [u8]) -> Result<&'de str> {
