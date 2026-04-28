@@ -209,19 +209,20 @@ encode_for! {
 
 // --------------------------------- List ----------------------------------
 
-impl<Bytes: AsRef<[u8]>> Encode for BitSet<Bytes> {
-    const TY: DataType = DataType::List;
-    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
-        encode_list_type(writer, self.len(), DataType::True)?;
-        writer.write_all(self.as_bytes())
-    }
-}
+// impl<Bytes: AsRef<[u8]>> Encode for BitSet<Bytes> {
+//     const TY: DataType = DataType::List;
+//     fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
+//         encode_list_type(writer, self.len(), DataType::True)?;
+//         writer.write_all(self.as_bytes())
+//     }
+// }
 
 impl Encode for [bool] {
     const TY: DataType = DataType::List;
     fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
-        let bs: BitSet<Vec<u8>> = BitSet::from(self);
-        Encode::encode(&bs, writer)
+        // let bs: BitSet<Vec<u8>> = BitSet::from(self);
+        // Encode::encode(&bs, writer)
+        todo!()
     }
 }
 

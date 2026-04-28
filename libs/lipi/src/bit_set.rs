@@ -1,85 +1,59 @@
 use crate::utils;
 
-#[derive(Debug, Clone)]
-pub struct BitSet<Bytes: ?Sized> {
-    len: usize,
-    slots: Bytes,
+pub trait BitSet {
+    fn capacity(&self) -> usize;
+    fn is_empty(&self) -> bool;
+    fn has(&self, index: usize) -> bool;
+    fn get(&self, index: usize) -> Option<bool>;
 }
 
-impl<Bytes> BitSet<Bytes>
+pub trait BitSetMut {
+    fn clear(&mut self);
+    fn set(&mut self, index: usize) -> Result<bool, usize>;
+    fn remove(&mut self, index: usize) -> Option<bool>;
+}
+
+impl<Bytes> BitSet for Bytes
 where
     Bytes: AsRef<[u8]> + ?Sized,
 {
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.len
+    fn capacity(&self) -> usize {
+        self.as_ref().len() * 8
+    }
+
+    fn is_empty(&self) -> bool {
+        self.as_ref().iter().all(|&slot| slot == 0)
     }
 
     #[inline]
-    pub fn as_bytes(&self) -> &[u8] {
-        self.slots.as_ref()
-    }
-
-    #[inline]
-    pub fn capacity(&self) -> usize {
-        self.as_bytes().len() * 8
-    }
-
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.as_bytes().iter().all(|&slot| slot == 0)
-    }
-
-    #[inline]
-    pub fn has(&self, index: usize) -> bool {
+    fn has(&self, index: usize) -> bool {
         self.get(index).unwrap_or_default()
     }
 
     #[inline]
-    pub fn get(&self, index: usize) -> Option<bool> {
+    fn get(&self, index: usize) -> Option<bool> {
         let slot_idx = index / u8::BITS as usize;
         let mask = 1 << (index % u8::BITS as usize);
-        let slot = self.as_bytes().get(slot_idx)?;
+        let slot = self.as_ref().get(slot_idx)?;
         Some(slot & mask != 0)
     }
 }
 
-impl<Bools, Bytes> From<Bools> for BitSet<Bytes>
-where
-    Bools: AsRef<[bool]>,
-    Bytes: From<Vec<u8>> + ?Sized,
-{
-    fn from(bools: Bools) -> Self {
-        let bools = bools.as_ref();
-        let mut this = BitSet::<Vec<_>>::new(bools.len());
-
-        for (idx, &bool) in bools.iter().enumerate() {
-            if bool {
-                let _ = this.set(idx);
-            }
-        }
-        BitSet {
-            len: this.len,
-            slots: Bytes::from(this.slots),
-        }
-    }
-}
-
-impl<Bytes> BitSet<Bytes>
+impl<Bytes> BitSetMut for Bytes
 where
     Bytes: AsMut<[u8]> + ?Sized,
 {
-    pub fn clear(&mut self) {
-        for slot in self.slots.as_mut() {
+    fn clear(&mut self) {
+        for slot in self.as_mut() {
             *slot = 0;
         }
     }
 
     #[inline]
-    pub fn set(&mut self, index: usize) -> Result<bool, usize> {
+    fn set(&mut self, index: usize) -> Result<bool, usize> {
         let slot_idx = index / u8::BITS as usize;
         let mask = 1 << (index % u8::BITS as usize);
-        let slot = self.slots.as_mut().get_mut(slot_idx).ok_or(slot_idx)?;
+        let slot = self.as_mut().get_mut(slot_idx).ok_or(slot_idx)?;
 
         let old_value = *slot & mask != 0;
         *slot |= mask;
@@ -87,10 +61,10 @@ where
     }
 
     #[inline]
-    pub fn remove(&mut self, index: usize) -> Option<bool> {
+    fn remove(&mut self, index: usize) -> Option<bool> {
         let slot_idx = index / u8::BITS as usize;
         let mask = 1 << (index % u8::BITS as usize);
-        let slot = self.slots.as_mut().get_mut(slot_idx)?;
+        let slot = self.as_mut().get_mut(slot_idx)?;
 
         let old_value = *slot & mask != 0;
         *slot &= !mask;
@@ -98,82 +72,73 @@ where
     }
 }
 
-impl<T: AsRef<[u8]>> BitSet<T> {
-    pub fn from_parts(len: usize, bytes: T) -> Self {
-        Self { len, slots: bytes }
-    }
+fn bitvec(len: usize) -> Vec<u8> {
+    vec![0; utils::bool_packed_len(len)]
 }
 
-impl BitSet<Box<[u8]>> {
-    pub fn new(len: usize) -> Self {
-        Self {
-            len,
-            slots: vec![0; utils::bool_packed_len(len)].into_boxed_slice(),
+fn bitvec_from(bools: &[bool]) -> Vec<u8> {
+    let mut bv = bitvec(bools.len());
+    for (idx, &bool) in bools.iter().enumerate() {
+        if bool {
+            let _ = bv.set(idx);
         }
     }
-
-    pub fn from_packed(bytes: Box<[u8]>) -> Self {
-        Self {
-            len: bytes.len() * 8,
-            slots: bytes,
-        }
-    }
+    bv
 }
 
-impl BitSet<Vec<u8>> {
-    pub fn new(len: usize) -> Self {
-        Self {
-            len,
-            slots: vec![0; utils::bool_packed_len(len)],
-        }
+fn bitvec_into(len: usize, bitvec: &[u8]) -> Vec<bool> {
+    let mut out = Vec::with_capacity(len);
+    for i in 0..len {
+        out.push(BitSet::has(bitvec, i));
     }
-
-    pub fn from_packed(bytes: Vec<u8>) -> Self {
-        Self {
-            len: bytes.len() * 8,
-            slots: bytes,
-        }
-    }
-}
-
-impl<Bytes: AsRef<[u8]>> From<BitSet<Bytes>> for Vec<bool> {
-    fn from(bitset: BitSet<Bytes>) -> Self {
-        let mut out = Vec::with_capacity(bitset.len);
-        for i in 0..bitset.len {
-            out.push(bitset.has(i));
-        }
-        out
-    }
+    out
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::bit_set::BitSet;
-    use std::borrow::Cow;
+    use super::*;
 
     #[test]
     fn create_bit_set() {
-        let bs_1 = BitSet::<Box<[u8]>>::from(&[true, false]);
-        let bs_2 = BitSet::<Cow<[u8]>>::from(&[true, false]);
-        assert_eq!(bs_1.as_bytes(), bs_2.as_bytes());
+        let bs_1 = bitvec_from(&[true, false]);
+        let bs_2 = bitvec_from(&[true, false]);
+        assert_eq!(bs_1, bs_2);
 
-        let mut bs_3 = BitSet::<Vec<u8>>::new(2);
+        let mut bs_3 = bitvec(2);
         bs_3.set(0).unwrap();
-        assert_eq!(bs_1.as_bytes(), bs_3.as_bytes());
+        assert_eq!(bs_1, bs_3);
+    }
+
+    #[test]
+    fn get_behavior() {
+        let mut bs = bitvec(8);
+
+        assert_eq!(bs.get(8), None);
+
+        bs.set(0).unwrap();
+        bs.set(7).unwrap();
+        assert_eq!(bs.get(0), Some(true));
+        assert_eq!(bs.get(7), Some(true));
+
+        assert_eq!(bs.get(999), None);
+
+        assert!(!bs.is_empty());
+        bs.clear();
+        assert!(bs.is_empty());
     }
 
     #[test]
     fn has_and_is_lsb_first() {
-        let mut bs = BitSet::<Vec<u8>>::new(8);
+        let mut bs = bitvec(8);
 
         bs.set(0).unwrap();
-        assert_eq!(bs.as_bytes(), &[0b0000_0001]);
+        assert_eq!(bs, &[0b0000_0001]);
 
         bs.set(1).unwrap();
-        assert_eq!(bs.as_bytes(), &[0b0000_0011]);
+        assert_eq!(bs, &[0b0000_0011]);
 
         bs.set(7).unwrap();
-        assert_eq!(bs.as_bytes(), &[0b1000_0011]);
+        assert_eq!(bs, &[0b1000_0011]);
 
         assert!(bs.has(0));
         assert!(bs.has(1));
@@ -183,7 +148,7 @@ mod tests {
 
     #[test]
     fn insert_and_returns_old_value() {
-        let mut bs = BitSet::<Vec<u8>>::new(16);
+        let mut bs = bitvec(16);
 
         assert_eq!(bs.set(3), Ok(false));
         assert!(bs.has(3));
@@ -194,27 +159,27 @@ mod tests {
 
     #[test]
     fn remove_and_returns_old_value() {
-        let mut bs = BitSet::<Vec<u8>>::new(16);
+        let mut bs = bitvec(16);
 
-        assert_eq!(bs.remove(5), Some(false));
+        assert_eq!(BitSetMut::remove(&mut bs, 5), Some(false));
         assert!(!bs.has(5));
 
         assert_eq!(bs.set(5).unwrap(), false);
         assert!(bs.has(5));
 
-        assert_eq!(bs.remove(5), Some(true));
+        assert_eq!(BitSetMut::remove(&mut bs, 5), Some(true));
         assert!(!bs.has(5));
     }
 
     #[test]
     fn out_of_bounds_insert_and_remove() {
-        let mut bs = BitSet::<Vec<u8>>::new(8);
+        let mut bs = bitvec(8);
 
         // slots.len() == 1, so index 8 => slot_idx 1 (OOB)
         let err = bs.set(8).unwrap_err();
         assert_eq!(err, 1);
 
-        assert_eq!(bs.remove(8), None);
+        assert_eq!(BitSetMut::remove(&mut bs, 8), None);
 
         assert_eq!(bs.has(8), false);
         assert_eq!(bs.has(9999), false);
@@ -228,8 +193,8 @@ mod tests {
             true,  // third byte partially used
         ];
 
-        let bs = BitSet::<Vec<u8>>::from(&input);
-        let output: Vec<bool> = Vec::from(bs);
+        let bs = bitvec_from(&input);
+        let output: Vec<bool> = bitvec_into(input.len(), &bs);
 
         assert_eq!(output, input);
     }
@@ -237,7 +202,7 @@ mod tests {
     #[test]
     fn cross_byte_boundaries() {
         // boundary at 8 bits
-        let mut bs = BitSet::<Vec<u8>>::new(16);
+        let mut bs = bitvec(16);
 
         bs.set(7).unwrap();
         bs.set(8).unwrap();
@@ -249,6 +214,6 @@ mod tests {
 
         // byte0: bit7 set => 0b1000_0000
         // byte1: bit0 + bit7 set => 0b1000_0001
-        assert_eq!(bs.as_bytes(), &[0b1000_0000, 0b1000_0001]);
+        assert_eq!(bs, &[0b1000_0000, 0b1000_0001]);
     }
 }

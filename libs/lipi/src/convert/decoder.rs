@@ -19,9 +19,10 @@ pub fn parse_header(reader: &mut &[u8]) -> Result<(u64, DataType)> {
     Ok((id, unsafe { std::mem::transmute(ty) }))
 }
 
-pub fn parse_packed_booleans<'de>(reader: &mut &'de [u8], len: usize) -> Result<BitSet<&'de [u8]>> {
+pub fn parse_packed_booleans<'de>(reader: &mut &'de [u8], len: usize) -> Result<&'de [u8]> {
     let packed = utils::read_bytes(reader, utils::bool_packed_len(len))?;
-    Ok(BitSet::from_parts(len, packed))
+    todo!()
+    // Ok(BitSet::from_parts(len, packed))
 }
 
 pub fn parse_bytes<'de>(reader: &mut &'de [u8]) -> Result<&'de [u8]> {
