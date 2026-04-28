@@ -1,6 +1,6 @@
 // Run: `cargo run -r --example bench`
 
-use frpc::{databuf::Decode, Return};
+use frpc::{Return, databuf::Decode};
 use std::{io::Write, time::Instant};
 
 const ITER: u32 = 10000000;
@@ -67,10 +67,10 @@ impl frpc::Transport for DummyTransport {
     async fn unary(
         &mut self,
         _poll: impl FnMut(
-                &mut std::task::Context,
-                &mut dyn std::io::Write,
-            ) -> std::task::Poll<std::io::Result<()>>
-            + Send,
+            &mut std::task::Context,
+            &mut dyn std::io::Write,
+        ) -> std::task::Poll<std::io::Result<()>>
+        + Send,
     ) {
         todo!()
     }
@@ -78,10 +78,10 @@ impl frpc::Transport for DummyTransport {
     async fn server_stream(
         &mut self,
         _poll: impl FnMut(
-                &mut std::task::Context,
-                &mut dyn std::io::Write,
-            ) -> std::task::Poll<std::io::Result<bool>>
-            + Send,
+            &mut std::task::Context,
+            &mut dyn std::io::Write,
+        ) -> std::task::Poll<std::io::Result<bool>>
+        + Send,
     ) {
         todo!()
     }

@@ -84,27 +84,36 @@ mod tests {
     fn test_bool_packed_len() {
         assert_eq!(0_u8.div_ceil(8), 0);
         assert_eq!(1_u8.div_ceil(8), 1);
+        assert_eq!(7_u8.div_ceil(8), 1);
         assert_eq!(8_u8.div_ceil(8), 1);
         assert_eq!(9_u8.div_ceil(8), 2);
+        assert_eq!(15u8.div_ceil(8), 2);
         assert_eq!(16u8.div_ceil(8), 2);
+        assert_eq!(17u8.div_ceil(8), 3);
 
-        for len in 0..=256 as usize {
+        for len in 0..=1000 as usize {
             assert_eq!(len.div_ceil(8), bool_packed_len(len));
         }
     }
 
     #[test]
     fn test_read_byte() {
-        let mut buf = [1; 1].as_slice();
-        assert_eq!(read_byte(&mut buf).unwrap(), 1);
+        let mut buf: &[u8] = &[42, 24];
+        assert_eq!(read_byte(&mut buf).unwrap(), 42);
+
+        assert_eq!(buf, &[24]);
+        assert_eq!(read_byte(&mut buf).unwrap(), 24);
 
         assert_eq!(buf, &[]);
+        assert!(read_byte(&mut buf).is_err());
+
+        let mut buf: &[u8] = &[];
         assert!(read_byte(&mut buf).is_err());
     }
 
     #[test]
     fn test_read_bytes() {
-        let mut buf = [1, 2, 3].as_slice();
+        let mut buf: &[u8] = &[1, 2, 3];
         assert_eq!(read_bytes(&mut buf, 2).unwrap(), &[1, 2]);
 
         assert_eq!(buf, &[3]);
@@ -115,6 +124,8 @@ mod tests {
         assert_eq!(read_bytes(&mut buf, 1).unwrap(), &[3]);
 
         assert_eq!(buf, &[]);
+        assert_eq!(read_bytes(&mut buf, 0).unwrap(), &[]);
+
         assert!(read_bytes(&mut buf, 1).is_err());
     }
 
@@ -129,6 +140,9 @@ mod tests {
 
     #[test]
     fn test_try_collect() {
+        let items = try_collect::<(), ()>(0, || unreachable!()).unwrap();
+        assert!(items.is_empty());
+
         let mut i = 0;
         let items = try_collect::<_, ()>(3, || {
             i += 1;
@@ -138,6 +152,23 @@ mod tests {
 
         let values = try_convert_vec_from(&items, |s| s.parse::<i32>()).unwrap();
         assert_eq!(values, [1, 2, 3]);
+    }
+
+    #[test]
+    fn test_try_collect_error() {
+        let mut i = 0;
+
+        let result = try_collect::<_, &str>(5, || {
+            i += 1;
+            if i == 3 {
+                Err("fail")
+            } else {
+                Ok(i.to_string())
+            }
+        });
+
+        assert!(result.is_err());
+        assert_eq!(i, 3);
     }
 
     #[test]

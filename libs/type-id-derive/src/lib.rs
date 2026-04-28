@@ -1,6 +1,7 @@
 use quote2::{
+    IntoTokens, Quote, Token,
     proc_macro2::{Delimiter, Group},
-    quote, IntoTokens, Quote, Token,
+    quote,
 };
 use syn::{
     __private::{Span, TokenStream2 as TokenStream},

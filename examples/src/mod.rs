@@ -11,7 +11,7 @@ pub use stateful::User;
 pub fn codegen_init() {
     #[cfg(debug_assertions)]
     {
-        use frpc_codegen_client::{typescript, Config};
+        use frpc_codegen_client::{Config, typescript};
         Config {
             typescript: Some(typescript::Config {
                 out_dir: "./examples/out/".into(),

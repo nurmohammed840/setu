@@ -1,4 +1,4 @@
-use frpc::{sse, Output};
+use frpc::{Output, sse};
 
 fn buffers() -> impl Output {
     sse!({

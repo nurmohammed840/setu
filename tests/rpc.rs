@@ -5,7 +5,7 @@ mod echo;
 mod sse;
 mod validate;
 
-use frpc_transport_http::{http::HeaderValue, Ctx, Incoming, Request, Response, Server};
+use frpc_transport_http::{Ctx, Incoming, Request, Response, Server, http::HeaderValue};
 use std::{
     collections::HashSet,
     io::Result,
@@ -21,7 +21,7 @@ use sse::SSETest;
 use validate::ValidateTest;
 
 fn codegen() {
-    use frpc_codegen_client::{typescript, Config};
+    use frpc_codegen_client::{Config, typescript};
     let time = Instant::now();
 
     Config {
