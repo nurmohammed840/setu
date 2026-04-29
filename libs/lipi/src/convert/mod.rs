@@ -46,6 +46,7 @@ impl DataType {
         self as u8
     }
 
+    #[inline]
     pub fn expected(self, expected: Self) -> Result<(), errors::InvalidType> {
         if self == expected {
             return Ok(());

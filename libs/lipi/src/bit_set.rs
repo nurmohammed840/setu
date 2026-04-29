@@ -72,11 +72,11 @@ where
     }
 }
 
-fn bitvec(len: usize) -> Vec<u8> {
+pub fn bitvec(len: usize) -> Vec<u8> {
     vec![0; utils::bool_packed_len(len)]
 }
 
-fn bitvec_from(bools: &[bool]) -> Vec<u8> {
+pub fn bitvec_from(bools: &[bool]) -> Vec<u8> {
     let mut bv = bitvec(bools.len());
     for (idx, &bool) in bools.iter().enumerate() {
         if bool {
@@ -86,7 +86,7 @@ fn bitvec_from(bools: &[bool]) -> Vec<u8> {
     bv
 }
 
-fn bitvec_into(len: usize, bitvec: &[u8]) -> Vec<bool> {
+pub fn bitvec_into(len: usize, bitvec: &[u8]) -> Vec<bool> {
     let mut out = Vec::with_capacity(len);
     for i in 0..len {
         out.push(BitSet::has(bitvec, i));

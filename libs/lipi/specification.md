@@ -2,6 +2,12 @@
 
 # Header
 
+Headers are used to encode a number and type. the number can represent different things depending on the context:
+- The length of a `List` and its element type.
+- The field number in a `Struct`, `Union` or `Column`. 
+
+Field numbers are used as keys that identify fields, Similar to JSON property names but encoded as numbers.
+
 For numbers in the range `0..14`, the number is stored directly in the header and fits in a single byte.
 
 ```
@@ -208,12 +214,14 @@ In Lipi, data is encoded as a `Struct`, where each field carries the type inform
 `Struct` is encoded as a **length-prefixed sequence of fields**, `length` is the number of fields in the struct.
 
 ```
-┌──────────────────┬──────────────────┐
-| length (varint)  |  Field, ...      |
-└──────────────────┴──────────────────┘
+┌───────────────────────┬──────────────────┐
+| Field count (varint)  |  Field, ...      |
+└───────────────────────┴──────────────────┘
 ```
 
-Each **Field** is encoded as a **Header** followed by its **Value**.
+## Field
+
+Each **Field** is encoded as **Header** (field id and type) followed by its **Value**.
 
 ```
 ┌──────────┬───────────┐
@@ -265,16 +273,18 @@ A `List` in Lipi is encoded as a **length-prefixed** sequence of values,
 | `12`  | Map, `Array<Object>` | `{ "key1": "value1", ... }` |
 
 ```
-┌────────────────────────┬───────────────────────┬────────────────────┐
-|  columns len (varint)  |  values len (varint)  |     Column, ...    |
-└────────────────────────┴───────────────────────┴────────────────────┘
+┌─────────────────────────┬──────────────────────┬────────────────────┐
+|  column_count (varint)  |  row_count (varint)  |     Column, ...    |
+└─────────────────────────┴──────────────────────┴────────────────────┘
 ```
 
-Column:
+
+## Column
+
+Column header encodes the column id and type, followed by values for that column.
 
 ```
-┌──────────┬─────────────────┐
-|  Header  |   Value, ...    |
-└──────────┴─────────────────┘
+┌──────────┬───────────────────────────┐
+|  Header  |   Value, ... (row_count)  |
+└──────────┴───────────────────────────┘
 ```
-
