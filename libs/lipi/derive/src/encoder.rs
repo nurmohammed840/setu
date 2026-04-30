@@ -11,11 +11,15 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
         ..
     } = input;
 
-    let ty = match data {
-        Data::Struct(_) => 9u8,
-        Data::Enum(_) => 10,
+    let ty = quote(|t| match data {
+        Data::Struct(_) => {
+            quote!(t, { ::lipi::convert::DataType::Struct });
+        }
+        Data::Enum(_) => {
+            quote!(t, { ::lipi::convert::DataType::Union });
+        }
         Data::Union(_) => unimplemented!(),
-    };
+    });
 
     let body = quote(|t| match data {
         Data::Struct(DataStruct { fields, .. }) => {
@@ -27,7 +31,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                 .count();
 
             quote!(t, {
-                #crate_path::__private::encode_length(w, #field_count)?;
+                #crate_path::convert::encoder::encode_length(w, #field_count)?;
             });
 
             for field in fields {
@@ -61,7 +65,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                     };
 
                     quote!(t, {
-                        #crate_path::__private::FieldEncoder::encode(#ref_symbol self.#ident, w, #key)?;
+                        #crate_path::convert::encoder::FieldEncoder::encode(#ref_symbol self.#ident, w, #key)?;
                     });
                 }
             }
@@ -77,6 +81,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                         ..
                     } = variant;
 
+                    #[allow(unused_mut)] // Incorrect warning: closure mutates `t`
                     let mut get_discriminant = || -> Option<&Expr> {
                         match discriminant {
                             Some((_, expr)) => Some(expr),
@@ -108,17 +113,17 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                                 let mut iter = unnamed.iter();
                                 match iter.next() {
                                     None => {
-                                        quote!(t, { Self::#ident() => ::lipi::__private::EnumEncoder::encode(&false, w, #key), });
+                                        quote!(t, { Self::#ident() => ::lipi::convert::encoder::EnumEncoder::encode(&false, w, #key), });
                                     }
                                     Some(_) => {
-                                        quote!(t, { Self::#ident(val) => ::lipi::__private::EnumEncoder::encode(val, w, #key), });
+                                        quote!(t, { Self::#ident(val) => ::lipi::convert::encoder::EnumEncoder::encode(val, w, #key), });
                                     }
                                 }
                             }
                         }
                         Fields::Unit => {
                             if let Some(key) = get_discriminant() {
-                                quote!(t, { Self::#ident => ::lipi::__private::EnumEncoder::encode(&false, w, #key), });
+                                quote!(t, { Self::#ident => ::lipi::convert::encoder::EnumEncoder::encode(&false, w, #key), });
                             }
                         }
                     }
@@ -139,10 +144,9 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
     let mut t = TokenStream::new();
     quote!(t, {
         impl #impl_generics #crate_path::Encode for #ident #ty_generics #where_clause {
-            const TY: u8 = #ty;
+            const TY: ::lipi::convert::DataType = #ty;
             fn encode(&self, w: &mut (impl ::std::io::Write + ?::std::marker::Sized)) -> ::std::io::Result<()> {
                 #body
-
             }
         }
     });

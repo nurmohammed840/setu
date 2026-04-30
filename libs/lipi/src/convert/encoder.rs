@@ -53,6 +53,7 @@ pub fn encode_list_len_and_ty(
 
 pub trait Encode {
     const TY: DataType;
+
     fn encode(&self, _: &mut (impl Write + ?Sized)) -> io::Result<()>;
 
     fn encode_slice(writer: &mut (impl Write + ?Sized), this: &[Self]) -> io::Result<()>
@@ -281,7 +282,7 @@ macro_rules! encode_map {
                 // Note that self.len() == .keys().len() == self.values().len(); since it's a map
 
                 // first column
-                encode_field_id_and_ty(writer, 0, K::TY)?; // column id & ty 
+                encode_field_id_and_ty(writer, 0, K::TY)?; // column id & ty
                 for key in self.keys() {
                     K::encode(key, writer)?; // values for first column
                 }

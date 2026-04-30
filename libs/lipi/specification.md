@@ -4,9 +4,9 @@
 
 Headers are used to encode a number and type. the number can represent different things depending on the context:
 - The length of a `List` and its element type.
-- The field number in a `Struct`, `Union` or `Column`. 
+- The id number in a `Field`, `Union` or `Column`.
 
-Field numbers are used as keys that identify fields, Similar to JSON property names but encoded as numbers.
+Field numbers are used as identifier (key), Similar to JSON property names but encoded as numbers.
 
 For numbers in the range `0..14`, the number is stored directly in the header and fits in a single byte.
 
@@ -224,9 +224,9 @@ In Lipi, data is encoded as a `Struct`, where each field carries the type inform
 Each **Field** is encoded as **Header** (field id and type) followed by its **Value**.
 
 ```
-┌──────────┬───────────┐
-|  Header  |   Value   |
-└──────────┴───────────┘
+┌───────────────────────┬───────────┐
+| Field id, ty (Header) |   Value   |
+└───────────────────────┴───────────┘
 ```
 
 The field header contains the field **key** (as an integer) and a **4-bit type tag**. 
@@ -261,9 +261,9 @@ A `List` in Lipi is encoded as a **length-prefixed** sequence of values,
 `Header` encodes the **length** of the list and the value **type**.
 
 ```
-┌──────────┬─────────────────┐
-|  Header  |   Value, ...    |
-└──────────┴─────────────────┘
+┌───────────────────────┬─────────────────┐
+| List len, ty (Header) |   Value, ...    |
+└───────────────────────┴─────────────────┘
 ```
 
 # Table
@@ -284,7 +284,7 @@ A `List` in Lipi is encoded as a **length-prefixed** sequence of values,
 Column header encodes the column id and type, followed by values for that column.
 
 ```
-┌──────────┬───────────────────────────┐
-|  Header  |   Value, ... (row_count)  |
-└──────────┴───────────────────────────┘
+┌─────────────────────┬───────────────────────────┐
+| Col id, ty (Header) |   Value, ... (row_count)  |
+└─────────────────────┴───────────────────────────┘
 ```
