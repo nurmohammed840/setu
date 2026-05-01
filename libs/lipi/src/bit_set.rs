@@ -86,7 +86,7 @@ pub fn bitvec_from(bools: &[bool]) -> Vec<u8> {
     bv
 }
 
-pub fn bitvec_into(len: usize, bitvec: &[u8]) -> Vec<bool> {
+pub fn bitvec_to_bools(len: usize, bitvec: &[u8]) -> Vec<bool> {
     let mut out = Vec::with_capacity(len);
     for i in 0..len {
         out.push(BitSet::has(bitvec, i));
@@ -194,7 +194,7 @@ mod tests {
         ];
 
         let bs = bitvec_from(&input);
-        let output: Vec<bool> = bitvec_into(input.len(), &bs);
+        let output: Vec<bool> = bitvec_to_bools(input.len(), &bs);
 
         assert_eq!(output, input);
     }

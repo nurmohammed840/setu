@@ -31,7 +31,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                 .count();
 
             quote!(t, {
-                #crate_path::convert::encoder::encode_length(w, #field_count)?;
+                #crate_path::convert::encoder::encode_len(w, #field_count)?;
             });
 
             for field in fields {

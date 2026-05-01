@@ -31,12 +31,12 @@ pub fn encode_int(writer: &mut (impl Write + ?Sized), num: i64) -> Result<()> {
 }
 
 #[inline]
-pub fn encode_length(writer: &mut (impl Write + ?Sized), len: usize) -> Result<()> {
+pub fn encode_len(writer: &mut (impl Write + ?Sized), len: usize) -> Result<()> {
     encode_uint(writer, len as u64)
 }
 
 pub fn encode_bytes(writer: &mut (impl Write + ?Sized), bytes: &[u8]) -> Result<()> {
-    encode_length(writer, bytes.len())?;
+    encode_len(writer, bytes.len())?;
     writer.write_all(bytes)
 }
 
@@ -277,8 +277,8 @@ macro_rules! encode_map {
         impl<K: Encode, V: Encode> Encode for $ty {
             const TY: DataType = DataType::Table;
             fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
-                encode_length(writer, 2)?; // Column count
-                encode_length(writer, self.len())?; // row count
+                encode_len(writer, 2)?; // Column count
+                encode_len(writer, self.len())?; // row count
                 // Note that self.len() == .keys().len() == self.values().len(); since it's a map
 
                 // first column
@@ -332,7 +332,7 @@ macro_rules! tuples {
         {
             const TY: DataType = DataType::Struct;
             fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
-                encode_length(writer, $len)?; // field count
+                encode_len(writer, $len)?; // field count
                 $($name::encode(&self.$idx, writer, $idx)?;)*
                 Ok(())
             }
