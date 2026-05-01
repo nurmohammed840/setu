@@ -2,6 +2,7 @@ use super::DataType;
 use crate::bit_set;
 use crate::varint::{LEB128, Leb128Buf};
 use crate::{utils, zig_zag};
+use std::collections::{BTreeMap, HashMap};
 use std::io::{self, Result, Write};
 
 pub fn encode_field_id_and_ty(
@@ -124,6 +125,29 @@ impl<T: Encode + ?Sized> FieldEncoder for T {
     }
 }
 
+// ------------------------------- Macros ------------------------------------
+
+macro_rules! encode {
+    [$( $( $ty:ty ),* = $dt:tt ($self:tt, $w:tt) $encode:block)*] => [$(
+        $(
+            impl Encode for $ty {
+                const TY: DataType = DataType::$dt;
+                #[inline] fn encode(&$self, $w: &mut (impl Write + ?Sized)) -> Result<()> $encode
+            }
+        )*
+    )*];
+}
+
+macro_rules! encode_types {
+    [$( $ty:ty = $dt:tt $([ $( $param:tt )* ])? $(where {$( $where:tt )*} )? ($self:tt, $w:tt) $encode:block )*] => [$(
+        impl <$($($param)*)?> Encode for $ty
+        $(where $( $where )* )? {
+            const TY: DataType = DataType::$dt;
+            #[inline] fn encode(&$self, $w: &mut (impl Write + ?Sized)) -> Result<()> $encode
+        }
+    )*];
+}
+
 // ------------------------------- Number ------------------------------------
 
 impl Encode for u8 {
@@ -150,76 +174,40 @@ impl Encode for i8 {
     }
 }
 
-impl Encode for f32 {
-    const TY: DataType = DataType::F32;
-    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
+encode! {
+    f32 = F32 (self, writer) {
         writer.write_all(&self.to_le_bytes())
     }
-}
 
-impl Encode for f64 {
-    const TY: DataType = DataType::F64;
-    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
+    f64 = F64 (self, writer) {
         writer.write_all(&self.to_le_bytes())
     }
-}
 
-impl Encode for char {
-    const TY: DataType = DataType::UInt;
-    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
+    u16, u32, u64 = UInt (self, writer) {
+        encode_uint(writer, (*self).into())
+    }
+
+    i16, i32, i64 = Int (self, writer) {
+        encode_int(writer, (*self).into())
+    }
+
+    char = UInt (self, writer) {
         encode_uint(writer, u32::from(*self).into())
     }
-}
 
-macro_rules! encode_for {
-    [@uint: $($ty: ty),*] => [$(
-        impl Encode for $ty {
-            const TY: DataType = DataType::UInt;
-            #[inline]
-            fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
-                encode_uint(writer, (*self).into())
-            }
-        }
-    )*];
-    [@int: $($ty: ty),*] => [$(
-        impl Encode for $ty {
-            const TY: DataType = DataType::Int;
-            #[inline]
-            fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
-                encode_int(writer, (*self).into())
-            }
-        }
-    )*];
-    [@string: $($ty: ty),*] => [$(
-        impl Encode for $ty {
-            const TY: DataType = DataType::Str;
-            #[inline]
-            fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
-                encode_bytes(writer, self.as_bytes())
-            }
-        }
-    )*];
-}
+    str, String = Str (self, writer) {
+        encode_bytes(writer, self.as_bytes())
+    }
 
-encode_for! {
-    @uint: u16, u32, u64
-}
-encode_for! {
-    @int: i16, i32, i64
-}
-encode_for! {
-    @string: str, String
-}
+    // --------------------------------- List ----------------------------------
 
-// --------------------------------- List ----------------------------------
-
-impl Encode for [bool] {
-    const TY: DataType = DataType::List;
-    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
+    [bool] = List (self, writer) {
         encode_list_len_and_ty(writer, self.len(), DataType::True)?;
         writer.write_all(&bit_set::bitvec_from(self))
     }
 }
+
+// --------------------------------- List ----------------------------------
 
 macro_rules! encode_list {
     [$($ty: ty),*] => [$(
@@ -240,67 +228,58 @@ encode_list! {
     std::collections::BinaryHeap<T>
 }
 
-impl<T: Encode> Encode for [T] {
-    const TY: DataType = DataType::List;
-    #[inline]
-    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
+encode_types! {
+    [T] = List [T: Encode] (self, writer) {
         T::encode_slice(writer, self)
     }
-}
 
-impl<T> Encode for Vec<T>
-where
-    [T]: Encode,
-{
-    const TY: DataType = DataType::List;
-    #[inline]
-    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
+    Vec<T> = List [T] where { [T]: Encode } (self, writer) {
         <[T] as Encode>::encode(self, writer)
     }
-}
 
-impl<T, const N: usize> Encode for [T; N]
-where
-    [T]: Encode,
-{
-    const TY: DataType = DataType::List;
-    #[inline]
-    fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
+    [T; N] = List [T, const N: usize] where { [T]: Encode } (self, writer) {
         <[T] as Encode>::encode(self, writer)
+    }
+
+    // --------------------------------- Table ----------------------------------
+
+    HashMap<K, V> = Table [K: Encode, V: Encode] (self, writer) {
+        encode_map(writer, self.len(), || self.keys(), || self.values())
+    }
+
+    BTreeMap<K, V> = Table [K: Encode, V: Encode] (self, writer) {
+        encode_map(writer, self.len(), || self.keys(), || self.values())
     }
 }
 
 // --------------------------------- Table ----------------------------------
 
-macro_rules! encode_map {
-    [$($ty: ty),*] => [$(
-        impl<K: Encode, V: Encode> Encode for $ty {
-            const TY: DataType = DataType::Table;
-            fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
-                encode_len(writer, 2)?; // Column count
-                encode_len(writer, self.len())?; // row count
-                // Note that self.len() == .keys().len() == self.values().len(); since it's a map
+fn encode_map<'a, K, V, Keys, Vals>(
+    writer: &mut (impl Write + ?Sized),
+    len: usize,
+    keys: impl FnOnce() -> Keys,
+    vals: impl FnOnce() -> Vals,
+) -> Result<()>
+where
+    K: Encode + 'a,
+    V: Encode + 'a,
+    Keys: Iterator<Item = &'a K>,
+    Vals: Iterator<Item = &'a V>,
+{
+    encode_len(writer, 2)?; // Column count
+    encode_len(writer, len)?; // row count
 
-                // first column
-                encode_field_id_and_ty(writer, 0, K::TY)?; // column id & ty
-                for key in self.keys() {
-                    K::encode(key, writer)?; // values for first column
-                }
+    encode_field_id_and_ty(writer, 0, K::TY)?; // column id & ty
+    for key in keys() {
+        K::encode(key, writer)?; // values for first column
+    }
 
-                // second column
-                encode_field_id_and_ty(writer, 1, V::TY)?;
-                for value in self.values() {
-                    V::encode(value, writer)?;
-                }
-                Ok(())
-            }
-        }
-    )*];
-}
-
-encode_map! {
-    std::collections::HashMap<K, V>,
-    std::collections::BTreeMap<K, V>
+    // second column
+    encode_field_id_and_ty(writer, 1, V::TY)?;
+    for val in vals() {
+        V::encode(val, writer)?;
+    }
+    Ok(())
 }
 
 // --------------------------------- Deref ----------------------------------

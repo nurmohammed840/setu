@@ -11,7 +11,7 @@ macro_rules! assert_or_err {
 }
 
 macro_rules! error {
-    [$name:ty = ($self: tt, $f:tt) $item:block] => {
+    [$name:ty = ($self:tt, $f:tt) $item:block] => {
         impl std::error::Error for $name {}
         impl fmt::Display for $name {
             fn fmt(&$self, $f: &mut fmt::Formatter<'_>) -> fmt::Result $item
