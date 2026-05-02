@@ -41,33 +41,11 @@ pub fn decode_list_len_and_ty(reader: &mut &[u8]) -> Result<(usize, DataType)> {
     Ok((usize::try_from(len)?, ty))
 }
 
-// fn decode_or_convert<T>(ty: DataType, expected: DataType, reader: &mut &[u8]) -> Result<T>
-// where
-//     T: TryFrom<u8> + TryFrom<i8> + TryFrom<u64> + TryFrom<i64>,
-//     <T as TryFrom<u8>>::Error: std::error::Error + Send + Sync + 'static,
-//     <T as TryFrom<i8>>::Error: std::error::Error + Send + Sync + 'static,
-//     <T as TryFrom<u64>>::Error: std::error::Error + Send + Sync + 'static,
-//     <T as TryFrom<i64>>::Error: std::error::Error + Send + Sync + 'static,
-// {
-//     match ty {
-//         DataType::U8 => Ok(T::try_from(u8::decode(reader)?)?),
-//         DataType::I8 => Ok(T::try_from(i8::decode(reader)?)?),
-//         DataType::UInt => Ok(T::try_from(u64::decode(reader)?)?),
-//         DataType::Int => Ok(T::try_from(i64::decode(reader)?)?),
-//         _ => Err(errors::InvalidType::error(ty, expected)),
-//     }
-// }
-
 // -----------------------------------------------------------------------------
 
 pub trait Decode<'de>: Sized {
     const TY: DataType;
     fn decode(reader: &mut &'de [u8]) -> Result<Self>;
-
-    fn decode_or_convert(ty: DataType, reader: &mut &'de [u8]) -> Result<Self> {
-        ty.expected(Self::TY)?;
-        Self::decode(reader)
-    }
 
     fn decode_vec(reader: &mut &'de [u8]) -> Result<Vec<Self>> {
         let (len, ty) = decode_list_len_and_ty(reader)?;
@@ -304,14 +282,80 @@ where
     Err(format!("invalid column id: expected `0` or `1`, found {col_id}").into())
 }
 
+// ------------------------------------- tuples ---------------------------------------
+
+macro_rules! tuples {
+    [$( $name:tt : $idx:tt) *] => {
+        impl <'de, $($name,)*> Decode<'de> for ($($name,)*)
+        where
+            $($name: FieldDecoder<'de>,)*
+        {
+            const TY: DataType = DataType::Struct;
+            #[allow(non_snake_case)]
+            fn decode(reader: &mut &'de [u8]) -> Result<Self> {
+                $(let mut $name: Option<_> = None;)*
+
+                let mut fd = FieldInfoDecoder::new(reader)?;
+                while let Some((key, ty)) = fd.next_field_id_and_ty()? {
+                    match key {
+                        $($idx => $name = fd.decode(ty, concat!("tuple ", $idx))?,)*
+                        _ => {}
+                    }
+                }
+
+                Ok((
+                    $(Optional::convert($name, concat!("tuple ", $idx))?,)*
+                ))
+            }
+        }
+    }
+}
+
+tuples! { T0:0 }
+tuples! { T0:0 T1:1 }
+tuples! { T0:0 T1:1 T2:2 }
+tuples! { T0:0 T1:1 T2:2 T3:3 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 T11:11 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 T11:11 T12:12 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 T11:11 T12:12 T13:13 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 T11:11 T12:12 T13:13 T14:14 }
+
 // ---------------------------------------------------------------------------------
 
-pub struct FieldDecoder<'c, 'de> {
+pub trait FieldDecoder<'de>: Sized {
+    fn decode_field(reader: &mut &'de [u8], ty: DataType) -> Result<Self>;
+}
+
+impl FieldDecoder<'_> for bool {
+    #[inline]
+    fn decode_field(_: &mut &'_ [u8], ty: DataType) -> Result<Self> {
+        Ok(bool::try_from(ty)?)
+    }
+}
+
+impl<'de, T> FieldDecoder<'de> for T
+where
+    T: Decode<'de>,
+{
+    fn decode_field(reader: &mut &'de [u8], ty: DataType) -> Result<Self> {
+        ty.expected(T::TY)?;
+        T::decode(reader)
+    }
+}
+
+pub struct FieldInfoDecoder<'c, 'de> {
     pub reader: &'c mut &'de [u8],
     len: usize,
 }
 
-impl<'c, 'de> FieldDecoder<'c, 'de> {
+impl<'c, 'de> FieldInfoDecoder<'c, 'de> {
     #[inline]
     pub fn new(reader: &'c mut &'de [u8]) -> Result<Self> {
         let len = decode_len(reader)?;
@@ -328,8 +372,17 @@ impl<'c, 'de> FieldDecoder<'c, 'de> {
     }
 
     #[inline]
-    pub fn decode<T: Decode<'de>>(&mut self) -> Result<Option<T>> {
-        T::decode(self.reader).map(Some)
+    pub fn decode<T>(
+        &mut self,
+        ty: DataType,
+        name: &'static str,
+    ) -> Result<Option<T>, errors::FieldError>
+    where
+        T: FieldDecoder<'de>,
+    {
+        T::decode_field(self.reader, ty)
+            .map(Some)
+            .map_err(|error| errors::FieldError { ty, name, error })
     }
 
     #[inline]
@@ -353,63 +406,11 @@ impl<T> Optional<T> for Option<T> {
 
 impl<T> Optional<T> for T {
     type Error = errors::RequiredField;
+    #[inline]
     fn convert(val: Option<T>, name: &'static str) -> Result<Self, Self::Error> {
         match val {
             Some(val) => Ok(val),
             None => Err(errors::RequiredField { name }),
-        }
-    }
-}
-
-impl Decode<'_> for bool {
-    const TY: DataType = DataType::True;
-
-    fn decode(_: &mut &'_ [u8]) -> Result<Self> {
-        todo!()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #![allow(warnings)]
-
-    use super::*;
-    use crate::errors::RequiredField;
-
-    struct User {
-        // 1
-        name: Option<String>,
-        // 2
-        id: u64,
-        // 3
-        is_admin: bool,
-    }
-
-    impl<'de> Decode<'de> for User {
-        const TY: DataType = DataType::Struct;
-
-        fn decode(reader: &mut &'de [u8]) -> Result<Self> {
-            let mut name: Option<String> = None;
-            let mut id = None;
-            let mut is_admin = None;
-
-            let mut fd = FieldDecoder::new(reader)?;
-
-            while let Some((key, ty)) = fd.next_field_id_and_ty()? {
-                match key {
-                    1 => name = fd.decode()?,
-                    2 => id = fd.decode()?,
-                    3 => is_admin = fd.decode()?,
-                    // Unknown Field
-                    _ => {}
-                }
-            }
-
-            Ok(Self {
-                name: Optional::convert(name, "name")?,
-                id: Optional::convert(id, "id")?,
-                is_admin: Optional::convert(is_admin, "is_admin")?,
-            })
         }
     }
 }

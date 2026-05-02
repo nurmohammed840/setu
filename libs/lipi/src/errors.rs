@@ -74,8 +74,22 @@ error! {
 pub struct RequiredField {
     pub name: &'static str,
 }
+
 error! {
     RequiredField = (self, f) {
         write!(f, "missing required field `{}`", self.name)
+    }
+}
+
+#[derive(Debug)]
+pub struct FieldError {
+    pub ty: DataType,
+    pub name: &'static str,
+    pub error: crate::Error,
+}
+
+error! {
+    FieldError = (self, f) {
+        write!(f, "error decoding field `{}` of type {:?}: {}", self.name, self.ty, self.error)
     }
 }

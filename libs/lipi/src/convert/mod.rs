@@ -40,6 +40,21 @@ impl From<bool> for DataType {
     }
 }
 
+impl TryFrom<DataType> for bool {
+    type Error = errors::InvalidType;
+    #[inline]
+    fn try_from(value: DataType) -> Result<Self, Self::Error> {
+        match value {
+            DataType::False => Ok(false),
+            DataType::True => Ok(true),
+            _ => Err(errors::InvalidType {
+                found: value,
+                expected: DataType::True,
+            }),
+        }
+    }
+}
+
 impl DataType {
     #[inline]
     pub fn code(self) -> u8 {
