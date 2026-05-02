@@ -38,22 +38,23 @@ The stored number is encoded as a VarInt and represents the value `(Number - 15)
 
 The field header contains a 4-bit `Type` tag (`0..=15`) which defines how the field value is encoded.
 
-|    Tag    | Type                                     |
-| :-------: | ---------------------------------------- |
-|    `0`    | `false`                                  |
-|    `1`    | `true`                                   |
-|    `2`    | `u8`                                     |
-|    `3`    | `i8`                                     |
-|    `4`    | `f32`                                    |
-|    `5`    | `f64`                                    |
-|    `6`    | `UInt` (unsigned VarInt / ULEB128)       |
-|    `7`    | `Int` (signed VarInt / ZigZag + ULEB128) |
-|    `8`    | `String`                                 |
-|    `9`    | `Struct`                                 |
-|   `10`    | `Union`                                  |
-|   `11`    | `List`                                   |
-|   `12`    | `Table`                                  |
-| `13..=15` | Reserved / other types                   |
+|   Tag    | Type                                     |
+| :------: | ---------------------------------------- |
+|   `0`    | `false`                                  |
+|   `1`    | `true`                                   |
+|   `2`    | `u8`                                     |
+|   `3`    | `i8`                                     |
+|   `4`    | `f32`                                    |
+|   `5`    | `f64`                                    |
+|   `6`    | `UInt` (unsigned VarInt / ULEB128)       |
+|   `7`    | `Int` (signed VarInt / ZigZag + ULEB128) |
+|   `8`    | `String`                                 |
+|   `9`    | `Struct`                                 |
+|   `10`   | `StructEnd`                              |
+|   `11`   | `Union`                                  |
+|   `12`   | `List`                                   |
+|   `13`   | `Table`                                  |
+| `14, 15` | Reserved / other types                   |
 
 **Note:** Boolean types `0` (`false`) and `1` (`true`) are encoded entirely in the header and have no value bytes.
 
@@ -214,9 +215,9 @@ In Lipi, data is encoded as a `Struct`, where each field carries the type inform
 `Struct` is encoded as a **length-prefixed sequence of fields**, `length` is the number of fields in the struct.
 
 ```
-┌───────────────────────┬──────────────────┐
-| Field count (varint)  |  Field, ...      |
-└───────────────────────┴──────────────────┘
+┌──────────────┬──────────────────────────────────────────┐
+|  Field, ...  |   Field id = 0, ty = StructEnd (Header)  |
+└──────────────┴──────────────────────────────────────────┘
 ```
 
 ## Field
@@ -239,7 +240,7 @@ This allows fields to be encoded in any order and enables forward and backward-c
 
 |  Tag  |                               Type                               |                       Value                       |
 | :---: | :--------------------------------------------------------------: | :-----------------------------------------------: |
-| `10`  | Enum, [Tagged union](https://en.wikipedia.org/wiki/Tagged_union) | `{ type: 1, ch: 'H' }`, `{ type: 2, msg: "..." }` |
+| `11`  | Enum, [Tagged union](https://en.wikipedia.org/wiki/Tagged_union) | `{ type: 1, ch: 'H' }`, `{ type: 2, msg: "..." }` |
 
 A `Union` is encoded like a `Struct`, but contains exactly one field.
 
@@ -255,7 +256,7 @@ it is used to represent enums ([tagged union](https://en.wikipedia.org/wiki/Tagg
 
 |  Tag  |     Type     |    Value    |
 | :---: | :----------: | :---------: |
-| `11`  | Array, Bytes | `[1, 2, 3]` |
+| `12`  | Array, Bytes | `[1, 2, 3]` |
 
 A `List` in Lipi is encoded as a **length-prefixed** sequence of values,
 `Header` encodes the **length** of the list and the value **type**.
@@ -270,7 +271,7 @@ A `List` in Lipi is encoded as a **length-prefixed** sequence of values,
 
 |  Tag  |         Type         |            Value            |
 | :---: | :------------------: | :-------------------------: |
-| `12`  | Map, `Array<Object>` | `{ "key1": "value1", ... }` |
+| `13`  | Map, `Array<Object>` | `{ "key1": "value1", ... }` |
 
 ```
 ┌─────────────────────────┬──────────────────────┬────────────────────┐

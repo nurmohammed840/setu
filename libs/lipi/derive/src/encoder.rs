@@ -13,10 +13,10 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
 
     let ty = quote(|t| match data {
         Data::Struct(_) => {
-            quote!(t, { ::lipi::convert::DataType::Struct });
+            quote!(t, { #crate_path::DataType::Struct });
         }
         Data::Enum(_) => {
-            quote!(t, { ::lipi::convert::DataType::Union });
+            quote!(t, { #crate_path::DataType::Union });
         }
         Data::Union(_) => unimplemented!(),
     });
@@ -24,15 +24,6 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
     let body = quote(|t| match data {
         Data::Struct(DataStruct { fields, .. }) => {
             let mut seen: HashSet<&Expr> = HashSet::new();
-
-            let field_count = fields
-                .iter()
-                .filter_map(|field| crate::utils::get_attr(field, key_attr))
-                .count();
-
-            quote!(t, {
-                #crate_path::convert::encoder::encode_len(w, #field_count)?;
-            });
 
             for field in fields {
                 if let Some(key) = crate::utils::get_attr(field, key_attr) {
@@ -65,11 +56,14 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                     };
 
                     quote!(t, {
-                        #crate_path::convert::encoder::FieldEncoder::encode(#ref_symbol self.#ident, w, #key)?;
+                        #crate_path::encoder::FieldEncoder::encode(#ref_symbol self.#ident, w, #key)?;
                     });
                 }
             }
-            quote!(t, { ::std::io::Result::Ok(()) });
+
+            quote!(t, {
+                ::std::io::Write::write_all(w, &[#crate_path::DataType::StructEnd.code()])
+            });
         }
         Data::Enum(DataEnum { variants, .. }) => {
             let encode_field = quote(|t| {
@@ -113,17 +107,17 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                                 let mut iter = unnamed.iter();
                                 match iter.next() {
                                     None => {
-                                        quote!(t, { Self::#ident() => ::lipi::convert::encoder::EnumEncoder::encode(&false, w, #key), });
+                                        quote!(t, { Self::#ident() => #crate_path::encoder::EnumEncoder::encode(&false, w, #key), });
                                     }
                                     Some(_) => {
-                                        quote!(t, { Self::#ident(val) => ::lipi::convert::encoder::EnumEncoder::encode(val, w, #key), });
+                                        quote!(t, { Self::#ident(val) => #crate_path::encoder::EnumEncoder::encode(val, w, #key), });
                                     }
                                 }
                             }
                         }
                         Fields::Unit => {
                             if let Some(key) = get_discriminant() {
-                                quote!(t, { Self::#ident => ::lipi::convert::encoder::EnumEncoder::encode(&false, w, #key), });
+                                quote!(t, { Self::#ident => #crate_path::encoder::EnumEncoder::encode(&false, w, #key), });
                             }
                         }
                     }
@@ -144,7 +138,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
     let mut t = TokenStream::new();
     quote!(t, {
         impl #impl_generics #crate_path::Encode for #ident #ty_generics #where_clause {
-            const TY: ::lipi::convert::DataType = #ty;
+            const TY: #crate_path::DataType = #ty;
             fn encode(&self, w: &mut (impl ::std::io::Write + ?::std::marker::Sized)) -> ::std::io::Result<()> {
                 #body
             }

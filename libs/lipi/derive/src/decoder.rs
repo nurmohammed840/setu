@@ -12,18 +12,65 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
 
     let body = quote(|t| match data {
         Data::Struct(DataStruct { fields, .. }) => {
-            for field in fields {
-                match crate::utils::get_attr(field, key_attr) {
-                    Some(key) => {
-                        let key_name = &field.ident;
-                        quote!(t, { #key_name: e.get_and_convert(#key)?, });
-                    }
-                    None => {
-                        let key_name = &field.ident;
-                        quote!(t, { #key_name: ::std::default::Default::default(), });
+            let fields = fields
+                .iter()
+                .map(|field| {
+                    let name = field.ident.as_ref();
+                    (
+                        name,
+                        crate::utils::get_attr(field, key_attr)
+                            .map(|key| (key, name.map(|s| s.to_string()).unwrap_or_default())),
+                    )
+                })
+                .collect::<Vec<_>>();
+
+            let field_decoder = quote(|t| {
+                for (name, key) in &fields {
+                    if let Some((key, name_str)) = key {
+                        quote!(t, {
+                            #key => #name = ___obj___.decode(___ty___, #name_str)?,
+                        });
                     }
                 }
+            });
+
+            let field_bind = quote(|t| {
+                for (name, key) in &fields {
+                    match key {
+                        Some((_, name_str)) => {
+                            quote!(t, {
+                                #name: #crate_path::decoder::Optional::convert(#name, #name_str)?,
+                            });
+                        }
+                        None => {
+                            quote!(t, {
+                                #name: ::std::default::Default::default(),
+                            });
+                        }
+                    }
+                }
+            });
+
+            for (name, key) in &fields {
+                if let Some(_) = key {
+                    quote!(t, {
+                        let mut #name = ::std::option::Option::None;
+                    });
+                }
             }
+
+            quote!(t, {
+                let mut ___obj___ = #crate_path::decoder::FieldInfoDecoder::new(___r___)?;
+
+                while let Some((___key___, ___ty___)) = ___obj___.next_field_id_and_ty()? {
+                    match ___key___ {
+                        #field_decoder
+                        _ => todo!()
+                    }
+                }
+
+                Ok(Self { #field_bind })
+            });
         }
         Data::Enum(_) => {}
         Data::Union(_) => todo!(),
@@ -47,8 +94,9 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
     let mut t = TokenStream::new();
     quote!(t, {
         impl <#lifetime, #params> #crate_path::Decode<'decode> for #ident #ty_generics #where_clause {
-            fn decode(e: &#crate_path::Entries<'decode>) -> #crate_path::Result<Self> {
-                Ok(Self { #body })
+            const TY: #crate_path::DataType = #crate_path::DataType::Struct;
+            fn decode(___r___: &mut &#lifetime [u8]) -> #crate_path::Result<Self> {
+                #body
             }
         }
     });

@@ -4,8 +4,8 @@ mod bit_set;
 mod utils;
 mod varint;
 mod zig_zag;
+mod convert;
 
-pub mod convert;
 pub mod errors;
 
 pub use convert::*;

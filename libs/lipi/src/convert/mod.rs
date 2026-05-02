@@ -21,13 +21,14 @@ pub enum DataType {
     Str = 8,
 
     Struct = 9,
-    Union = 10,
-    List = 11,
-    Table = 12,
+    StructEnd = 10,
 
-    UnknownI = 13,
-    UnknownII = 14,
-    UnknownIII = 15,
+    Union = 11,
+    List = 12,
+    Table = 13,
+
+    UnknownI = 14,
+    UnknownII = 15,
 }
 
 impl From<bool> for DataType {

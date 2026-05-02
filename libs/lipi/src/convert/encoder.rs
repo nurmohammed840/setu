@@ -310,10 +310,9 @@ macro_rules! tuples {
             $($name: FieldEncoder,)*
         {
             const TY: DataType = DataType::Struct;
-            fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
-                encode_len(writer, $len)?; // field count
+            fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
                 $($name::encode(&self.$idx, writer, $idx)?;)*
-                Ok(())
+                writer.write_all(&[DataType::StructEnd.code()])
             }
         }
     }

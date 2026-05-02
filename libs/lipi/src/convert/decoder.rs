@@ -352,23 +352,23 @@ where
 
 pub struct FieldInfoDecoder<'c, 'de> {
     pub reader: &'c mut &'de [u8],
-    len: usize,
 }
 
 impl<'c, 'de> FieldInfoDecoder<'c, 'de> {
     #[inline]
     pub fn new(reader: &'c mut &'de [u8]) -> Result<Self> {
-        let len = decode_len(reader)?;
-        Ok(Self { reader, len })
+        Ok(Self { reader })
     }
 
     #[inline]
     pub fn next_field_id_and_ty(&mut self) -> Result<Option<(u64, DataType)>> {
-        if self.len == 0 {
+        let (id, ty) = decode_field_id_and_ty(self.reader)?;
+
+        if ty == DataType::StructEnd {
             return Ok(None);
         }
-        self.len -= 1;
-        decode_field_id_and_ty(self.reader).map(Some)
+
+        Ok(Some((id, ty)))
     }
 
     #[inline]
@@ -381,13 +381,8 @@ impl<'c, 'de> FieldInfoDecoder<'c, 'de> {
         T: FieldDecoder<'de>,
     {
         T::decode_field(self.reader, ty)
-            .map(Some)
             .map_err(|error| errors::FieldError { ty, name, error })
-    }
-
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.len
+            .map(Some)
     }
 }
 
@@ -404,7 +399,10 @@ impl<T> Optional<T> for Option<T> {
     }
 }
 
-impl<T> Optional<T> for T {
+impl<'de, T> Optional<T> for T
+where
+    T: FieldDecoder<'de>,
+{
     type Error = errors::RequiredField;
     #[inline]
     fn convert(val: Option<T>, name: &'static str) -> Result<Self, Self::Error> {
