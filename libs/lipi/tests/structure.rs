@@ -1,6 +1,6 @@
 use lipi::*;
 
-#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+#[derive(Encode, Decode,  Clone, Debug, PartialEq)]
 pub struct User {
     #[key = 0]
     id: u32,
@@ -28,6 +28,6 @@ fn check_msg<T: Encode + for<'a> Decode<'a>>(msg: &T, mut raw: &[u8]) -> T {
     let mut buf = vec![];
     msg.encode(&mut buf).unwrap();
     assert_eq!(buf, raw);
-    
+
     T::decode(&mut raw).unwrap()
 }

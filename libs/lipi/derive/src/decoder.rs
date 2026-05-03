@@ -65,7 +65,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                 while let Some((___key___, ___ty___)) = ___obj___.next_field_id_and_ty()? {
                     match ___key___ {
                         #field_decoder
-                        _ => todo!()
+                        _ => ___obj___.skip_field(___key___, ___ty___)?
                     }
                 }
 

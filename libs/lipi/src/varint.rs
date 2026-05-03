@@ -27,6 +27,7 @@ pub trait LEB128 {
     }
 }
 
+#[inline]
 pub fn read_u64(reader: &mut &[u8]) -> Result<u64> {
     let mut result = 0;
     let mut shift = 0;

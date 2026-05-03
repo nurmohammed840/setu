@@ -2,6 +2,7 @@ use std::slice;
 
 use crate::{Result, errors};
 
+#[inline]
 pub fn read_byte(buf: &mut &[u8]) -> Result<u8, errors::UnexpectedEof> {
     if buf.is_empty() {
         return Err(errors::UnexpectedEof { needed: 1 });
@@ -13,10 +14,12 @@ pub fn read_byte(buf: &mut &[u8]) -> Result<u8, errors::UnexpectedEof> {
     }
 }
 
+#[inline]
 pub fn read_buf<const N: usize>(reader: &mut &[u8]) -> Result<[u8; N], errors::UnexpectedEof> {
     read_bytes(reader, N).map(|bytes| bytes.try_into().unwrap())
 }
 
+#[inline]
 pub fn read_bytes<'de>(
     reader: &mut &'de [u8],
     len: usize,
@@ -31,10 +34,12 @@ pub fn read_bytes<'de>(
     }
 }
 
+#[inline]
 pub fn i8_slice_from(bytes: &[u8]) -> &[i8] {
     unsafe { slice::from_raw_parts(bytes.as_ptr().cast(), bytes.len()) }
 }
 
+#[inline]
 pub fn u8_slice_from(data: &[i8]) -> &[u8] {
     unsafe { slice::from_raw_parts(data.as_ptr().cast(), data.len()) }
 }

@@ -66,7 +66,7 @@ Optional values in a `List` are represented using a structured type.
 
 ### Reserved / Other Types
 
-Type tags `13..=15` are **unused by Lipi**. Decoders **MUST** ignore unknown types and skip the next `N` bytes, where `N` is specified by the length prefix.
+Type tags `14, 15` are **unused by Lipi**. Decoders **MUST** ignore unknown types and skip the next `N` bytes, where `N` is specified by the length prefix.
 
 ```
 ┌──────────────────┬───────────────────┐
@@ -89,15 +89,18 @@ but **MUST** read exactly `N` bytes before continuing with the next field.
 - **Field values (in a struct)**: Encoded directly in the **field header**. No additional bytes are used.
 - **List values (in a `Vec<bool>`)**: The boolean values are packed into bytes, **8 values per byte**.
 
+In packed representation, the header encodes the length and the type = `1`, followed by the packed boolean payload.  
+Type = `0` **MUST NOT** be used, And will be considered malformed data. 
+
 ```
-┌──────────────────┬───────────────────┐
-| length (varint)  |  bytes (packed)   |
-└──────────────────┴───────────────────┘
+┌────────────────────────────┬───────────────────┐
+| List len, ty = 1 (Header)  |  bytes (packed)   |
+└────────────────────────────┴───────────────────┘
 ```
 
 `length` is the number of boolean values, **NOT** the number of bytes in the packed representation.
 
-Decoders **MUST** read the next `N` bytes as the packed boolean payload, where `N` is computed from `length`:
+Decoders **MUST** read the next `N = (length + 7) / 8` bytes as the packed boolean payload, where `N` is computed from `length`:
 
 ```rust
 N = (length + 7) / 8
@@ -242,12 +245,12 @@ This allows fields to be encoded in any order and enables forward and backward-c
 | :---: | :--------------------------------------------------------------: | :-----------------------------------------------: |
 | `11`  | Enum, [Tagged union](https://en.wikipedia.org/wiki/Tagged_union) | `{ type: 1, ch: 'H' }`, `{ type: 2, msg: "..." }` |
 
-A `Union` is encoded like a `Struct`, but contains exactly one field.
+A `Union` is like a `Struct`, but contains exactly one field.
 
 ```
-┌──────────┬───────────┐
-|  Header  |   Value   |
-└──────────┴───────────┘
+┌──────────┐
+|  Field   |
+└──────────┘
 ```
 
 it is used to represent enums ([tagged union](https://en.wikipedia.org/wiki/Tagged_union)).
@@ -289,3 +292,5 @@ Column header encodes the column id and type, followed by values for that column
 | Col id, ty (Header) |   Value, ... (row_count)  |
 └─────────────────────┴───────────────────────────┘
 ```
+
+Note: When the column type is `bool`, the boolean values are packed into bytes, **8 values per byte**.

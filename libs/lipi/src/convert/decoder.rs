@@ -179,6 +179,12 @@ decode! {
         Ok(array?)
     }
 
+    Vec<bool> = List (reader) {
+        let (len, ty) = decode_list_len_and_ty(reader)?;
+        ty.expected(DataType::True)?;
+        decode_packed_bools(reader, len)
+    }
+
     Vec<T> = List [T: Decode<'de>] (reader) {
         T::decode_vec(reader)
     }
@@ -360,11 +366,14 @@ impl<'c, 'de> FieldInfoDecoder<'c, 'de> {
         Ok(Self { reader })
     }
 
-    #[inline]
     pub fn next_field_id_and_ty(&mut self) -> Result<Option<(u64, DataType)>> {
         let (id, ty) = decode_field_id_and_ty(self.reader)?;
 
         if ty == DataType::StructEnd {
+            assert_or_err!(
+                id == 0,
+                format!("invalid struct end field id ({id}), expected `0`")
+            );
             return Ok(None);
         }
 

@@ -1,5 +1,7 @@
 use crate::errors;
 
+mod skip;
+
 pub mod decoder;
 pub mod encoder;
 

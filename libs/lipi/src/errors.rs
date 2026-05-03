@@ -93,3 +93,15 @@ error! {
         write!(f, "error decoding field `{}` of type {:?}: {}", self.name, self.ty, self.error)
     }
 }
+
+#[derive(Debug)]
+pub struct SkipFieldError {
+    pub id: u64,
+    pub error: crate::Error,
+}
+
+error! {
+    SkipFieldError = (self, f) {
+        write!(f, "error skipping field with id {}: {}", self.id, self.error)
+    }
+}
