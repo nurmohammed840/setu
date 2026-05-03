@@ -8,28 +8,28 @@ Headers are used to encode a number and type. the number can represent different
 
 Field numbers are used as identifier (key), Similar to JSON property names but encoded as numbers.
 
-For numbers in the range `0..14`, the number is stored directly in the header and fits in a single byte.
+For numbers in the range `0..=14`, the number is stored directly in the header and fits in a single byte.
 
 ```
-7         3          0
-┌─────────┬──────────┐
-│   Num   │   Type   │
-└─────────┴──────────┘
+7        3        0
++--------+--------+
+|  Num   |  Type  |
++--------+--------+
 
-Type    → bits 0..4 (4 bits)
-Number  → bits 4..8 (4 bits)
+Type   -> bits 0..=3 (4 bits)
+Number -> bits 4..=7 (4 bits)
 ```
 
 ## Extended Header (Field Number ≥ 15)
 
-If the number does not fit in 4 bits (`0..14`), the value `15` (`0b1111`) is stored in the `Num` field to indicate an extended header.
+If the number does not fit in 4 bits (`0..=14`), the value `15` (`0b1111`) is stored in the `Num` field to indicate an extended header.
 
 ```
-7          3           0
-┌──────────┬───────────┬─────────────────────────────┐
-│   1111   │   Type    │    Number (varint - 15)     |
-└──────────┴───────────┘─────────────────────────────┘
-0                      7                             N
+7        3        0
++--------+--------+-----------------------+
+|  1111  |  Type  |  Number (varint - 15) |
++--------+--------+-----------------------+
+0                 7                       N
 ```
 
 The stored number is encoded as a VarInt and represents the value `(Number - 15)`
@@ -69,9 +69,9 @@ Optional values in a `List` are represented using a structured type.
 Type tags `14, 15` are **unused by Lipi**. Decoders **MUST** ignore unknown types and skip the next `N` bytes, where `N` is specified by the length prefix.
 
 ```
-┌──────────────────┬───────────────────┐
-| length (varint)  |  raw bytes        |
-└──────────────────┴───────────────────┘
++-------------------+-----------------+
+|  length (varint)  |    raw bytes    |
++-------------------+-----------------+
 ```
 
 Decoders **MAY** use these type tags to determine how to decode the next `N` bytes,
@@ -93,9 +93,9 @@ In packed representation, the header encodes the length and the type = `1`, foll
 Type = `0` **MUST NOT** be used, And will be considered malformed data. 
 
 ```
-┌────────────────────────────┬───────────────────┐
-| List len, ty = 1 (Header)  |  bytes (packed)   |
-└────────────────────────────┴───────────────────┘
++----------------------------+-------------------+
+| List len, ty = 1 (Header)  |   bytes (packed)  |
++----------------------------+-------------------+
 ```
 
 `length` is the number of boolean values, **NOT** the number of bytes in the packed representation.
@@ -198,9 +198,9 @@ fn from_zig_zag(n: u64) -> i64 = (n >>> 1) ^ - (n & 1)
 String is encoded as a length-prefixed sequence of UTF-8 bytes.
 
 ```
-┌──────────────────┬───────────────────┐
-| length (varint)  |  UTF-8 bytes      |
-└──────────────────┴───────────────────┘
++------------------+-------------------+
+| length (varint)  |    UTF-8 bytes    |
++------------------+-------------------+
 ```
 
 - The **length** is encoded as a **VarInt (LEB128)**.
@@ -218,19 +218,26 @@ In Lipi, data is encoded as a `Struct`, where each field carries the type inform
 `Struct` is encoded as a **length-prefixed sequence of fields**, `length` is the number of fields in the struct.
 
 ```
-┌──────────────┬──────────────────────────────────────────┐
-|  Field, ...  |   Field id = 0, ty = StructEnd (Header)  |
-└──────────────┴──────────────────────────────────────────┘
++--------------+-----------------------------------------+
+|  Field, ...  |  Field id = 0, ty = StructEnd (Header)  |
++--------------+-----------------------------------------+
 ```
+
+Last header with type `StructEnd` (type tag `10`) indicates the end of the struct fields.  
+And the field id **MUST** be `0`.
+
+Unlike other structural types (`Vec<T>`), where the length is used to determine how many values to read.  
+We cannot use this technique for `Struct`, because fields can be optional (omitted).  
+The number of fields isn’t known in advance. So encoding requires additional passes to determine it.
 
 ## Field
 
 Each **Field** is encoded as **Header** (field id and type) followed by its **Value**.
 
 ```
-┌───────────────────────┬───────────┐
++-----------------------+-----------+
 | Field id, ty (Header) |   Value   |
-└───────────────────────┴───────────┘
++-----------------------+-----------+
 ```
 
 The field header contains the field **key** (as an integer) and a **4-bit type tag**. 
@@ -248,9 +255,9 @@ This allows fields to be encoded in any order and enables forward and backward-c
 A `Union` is like a `Struct`, but contains exactly one field.
 
 ```
-┌──────────┐
-|  Field   |
-└──────────┘
++---------+
+|  Field  |
++---------+
 ```
 
 it is used to represent enums ([tagged union](https://en.wikipedia.org/wiki/Tagged_union)).
@@ -265,9 +272,9 @@ A `List` in Lipi is encoded as a **length-prefixed** sequence of values,
 `Header` encodes the **length** of the list and the value **type**.
 
 ```
-┌───────────────────────┬─────────────────┐
-| List len, ty (Header) |   Value, ...    |
-└───────────────────────┴─────────────────┘
++-----------------------+-----------------+
+| List len, ty (Header) |    Value, ...   |
++-----------------------+-----------------+
 ```
 
 # Table
@@ -277,9 +284,9 @@ A `List` in Lipi is encoded as a **length-prefixed** sequence of values,
 | `13`  | Map, `Array<Object>` | `{ "key1": "value1", ... }` |
 
 ```
-┌─────────────────────────┬──────────────────────┬────────────────────┐
-|  column_count (varint)  |  row_count (varint)  |     Column, ...    |
-└─────────────────────────┴──────────────────────┴────────────────────┘
++-------------------------+----------------------+--------------------+
+| column_count (varint)   | row_count (varint)   |    Column, ...     |
++-------------------------+----------------------+--------------------+
 ```
 
 
@@ -288,9 +295,9 @@ A `List` in Lipi is encoded as a **length-prefixed** sequence of values,
 Column header encodes the column id and type, followed by values for that column.
 
 ```
-┌─────────────────────┬───────────────────────────┐
++---------------------+---------------------------+
 | Col id, ty (Header) |   Value, ... (row_count)  |
-└─────────────────────┴───────────────────────────┘
++---------------------+---------------------------+
 ```
 
-Note: When the column type is `bool`, the boolean values are packed into bytes, **8 values per byte**.
+Note: When the column type is `1 as bool`, the boolean values are packed into bytes, **8 values per byte**.
