@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
 mod bit_set;
+mod convert;
 mod utils;
 mod varint;
 mod zig_zag;
-mod convert;
 
 pub mod errors;
 

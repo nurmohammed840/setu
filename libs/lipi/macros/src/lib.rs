@@ -6,9 +6,15 @@ pub fn encoder(input: TokenStream) -> TokenStream {
     lipi_derive::encoder::expand(&syn::parse_macro_input!(input), crate_path(), "key").into()
 }
 
-#[proc_macro_derive(Decode, attributes(key))]
+#[proc_macro_derive(Decode, attributes(key, default, foo))]
 pub fn decoder(input: TokenStream) -> TokenStream {
-    lipi_derive::decoder::expand(&syn::parse_macro_input!(input), crate_path(), "key").into()
+    lipi_derive::decoder::expand(
+        &syn::parse_macro_input!(input),
+        crate_path(),
+        "key",
+        "default",
+    )
+    .into()
 }
 
 fn crate_path() -> quote2::proc_macro2::TokenStream {

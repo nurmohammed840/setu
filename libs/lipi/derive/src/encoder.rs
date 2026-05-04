@@ -3,8 +3,8 @@ use quote2::{Quote, ToTokens, quote};
 use std::collections::HashSet;
 use syn::{spanned::Spanned, *};
 
-use crate::errors;
 use crate::utils::data_ty;
+use crate::{errors, utils};
 use errors::to_compile_error;
 
 pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> TokenStream {
@@ -20,7 +20,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
             let mut seen: HashSet<&Expr> = HashSet::new();
 
             for field in fields {
-                if let Some(key) = crate::utils::get_attr(field, key_attr) {
+                if let Some(key) = utils::get_attr(&field.attrs, key_attr) {
                     match seen.get(key) {
                         Some(key_0) => {
                             let loc = key.span().start();

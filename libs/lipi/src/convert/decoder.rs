@@ -407,7 +407,7 @@ impl<'c, 'de> FieldInfoDecoder<'c, 'de> {
 
 pub trait Optional<T>: Sized {
     type Error;
-    fn convert(val: Option<T>, _: &'static str) -> Result<Self, Self::Error>;
+    fn convert(val: Option<T>, name: &'static str) -> Result<Self, Self::Error>;
 }
 
 impl<T> Optional<T> for Option<T> {

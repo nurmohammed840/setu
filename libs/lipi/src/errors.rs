@@ -119,6 +119,6 @@ error! {
 }
 
 #[doc(hidden)]
-pub fn __unknown_field_err(id: u64, ty: DataType) -> crate::Error {
+pub fn __unknown_field(id: u64, ty: DataType) -> crate::Error {
     Box::new(UnknownField { id, ty })
 }

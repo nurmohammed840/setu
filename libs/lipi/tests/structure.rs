@@ -13,8 +13,9 @@ pub struct User {
 }
 
 #[repr(u16)]
-#[derive(Encode, Decode)]
+#[derive(Default, Encode, Decode)]
 pub enum Action {
+    #[default]
     Ping = 1,
     Print(u16) = 2,
 }

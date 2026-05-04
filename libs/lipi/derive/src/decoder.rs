@@ -2,11 +2,16 @@ use proc_macro2::{Span, TokenStream};
 use quote2::{Quote, quote};
 use syn::{spanned::Spanned, *};
 
-use crate::errors;
 use crate::utils::data_ty;
+use crate::{errors, utils};
 use errors::to_compile_error;
 
-pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> TokenStream {
+pub fn expand(
+    input: &DeriveInput,
+    crate_path: TokenStream,
+    key_attr: &str,
+    default_attr: &str,
+) -> TokenStream {
     let DeriveInput {
         ident,
         generics,
@@ -22,14 +27,15 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                     let name = field.ident.as_ref();
                     (
                         name,
-                        crate::utils::get_attr(field, key_attr)
+                        utils::get_attr(&field.attrs, key_attr)
                             .map(|key| (key, name.map(|s| s.to_string()).unwrap_or_default())),
+                        utils::get_attr_or_expr(&field.attrs, default_attr),
                     )
                 })
                 .collect::<Vec<_>>();
 
             let field_decoder = quote(|t| {
-                for (name, key) in &fields {
+                for (name, key, _) in &fields {
                     if let Some((key, name_str)) = key {
                         quote!(t, {
                             #key => #name = __obj__.decode(__ty__, #name_str)?,
@@ -39,23 +45,27 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
             });
 
             let field_bind = quote(|t| {
-                for (name, key) in &fields {
-                    match key {
-                        Some((_, name_str)) => {
-                            quote!(t, {
-                                #name: #crate_path::decoder::Optional::convert(#name, #name_str)?,
-                            });
+                for (name, key, default) in &fields {
+                    match default {
+                        Some(default) if default.is_empty() => {
+                            quote!(t, { #name: #name.unwrap_or_else(::std::default::Default::default), });
                         }
-                        None => {
-                            quote!(t, {
-                                #name: ::std::default::Default::default(),
-                            });
+                        Some(default) => {
+                            quote!(t, { #name: #name.unwrap_or_else(|| #default), });
                         }
+                        None => match key {
+                            Some((_, name_str)) => {
+                                quote!(t, { #name: #crate_path::decoder::Optional::convert(#name, #name_str)?, });
+                            }
+                            None => {
+                                quote!(t, { #name: ::std::default::Default::default(), });
+                            }
+                        },
                     }
                 }
             });
 
-            for (name, key) in &fields {
+            for (name, key, _) in &fields {
                 if let Some(_) = key {
                     quote!(t, {
                         let mut #name = ::std::option::Option::None;
@@ -131,13 +141,27 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                 }
             });
 
+            let has_default = variants
+                .iter()
+                .any(|v| utils::get_attr_or_expr(&v.attrs, default_attr).is_some());
+
+            let fallback = quote(|t| {
+                if has_default {
+                    quote!(t, { <Self as ::std::default::Default>::default() });
+                } else {
+                    quote!(t, {
+                        return Err(#crate_path::errors::__unknown_field(__id__, __ty__))
+                    });
+                }
+            });
+
             quote!(t, {
                 let (__id__, __ty__) = #crate_path::decoder::decode_field_id_and_ty(__r__)?;
                 let mut __obj__ = #crate_path::decoder::FieldInfoDecoder::new(__r__)?;
 
                 Ok(match __id__ {
                     #decode_enum_field
-                    _ => return Err(#crate_path::errors::__unknown_field_err(__id__, __ty__))
+                    _ => #fallback
                 })
             });
         }
