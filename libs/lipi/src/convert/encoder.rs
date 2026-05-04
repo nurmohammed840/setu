@@ -81,19 +81,19 @@ pub trait Encode {
 // ------------------------------------------------------------------------
 
 pub trait EnumEncoder {
-    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()>;
+    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u32) -> Result<()>;
 }
 
 impl EnumEncoder for bool {
-    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
-        encode_field_id_and_ty(writer, id.into(), DataType::from(*self))
+    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u32) -> Result<()> {
+        encode_field_id_and_ty(writer, id, DataType::from(*self))
     }
 }
 
 impl<T: Encode + ?Sized> EnumEncoder for T {
-    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
-        encode_field_id_and_ty(writer, id.into(), T::TY)?;
-        Encode::encode(self, writer)
+    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u32) -> Result<()> {
+        encode_field_id_and_ty(writer, id, T::TY)?;
+        T::encode(self, writer)
     }
 }
 
@@ -121,7 +121,7 @@ impl<T: FieldEncoder> FieldEncoder for Option<T> {
 impl<T: Encode + ?Sized> FieldEncoder for T {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
         encode_field_id_and_ty(writer, id.into(), T::TY)?;
-        Encode::encode(self, writer)
+        T::encode(self, writer)
     }
 }
 
@@ -290,7 +290,7 @@ macro_rules! deref_impl {
             const TY: DataType = T::TY;
             #[inline]
             fn encode(&self, writer: & mut (impl Write + ?Sized)) -> Result<()> {
-                Encode::encode(&**self, writer)
+                T::encode(&**self, writer)
             }
         }
     )*]

@@ -1,6 +1,6 @@
 use lipi::*;
 
-#[derive(Encode, Decode,  Clone, Debug, PartialEq)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub struct User {
     #[key = 0]
     id: u32,
@@ -10,6 +10,13 @@ pub struct User {
 
     #[key = 2]
     email: Option<String>,
+}
+
+#[repr(u16)]
+#[derive(Encode, Decode)]
+pub enum Action {
+    Ping = 1,
+    Print(u16) = 2,
 }
 
 #[test]

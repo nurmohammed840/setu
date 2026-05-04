@@ -381,6 +381,18 @@ impl<'c, 'de> FieldInfoDecoder<'c, 'de> {
     }
 
     #[inline]
+    pub fn decode_field<T>(
+        &mut self,
+        ty: DataType,
+        name: &'static str,
+    ) -> Result<T, errors::FieldError>
+    where
+        T: FieldDecoder<'de>,
+    {
+        T::decode_field(self.reader, ty).map_err(|error| errors::FieldError { ty, name, error })
+    }
+
+    #[inline]
     pub fn decode<T>(
         &mut self,
         ty: DataType,
@@ -389,9 +401,7 @@ impl<'c, 'de> FieldInfoDecoder<'c, 'de> {
     where
         T: FieldDecoder<'de>,
     {
-        T::decode_field(self.reader, ty)
-            .map_err(|error| errors::FieldError { ty, name, error })
-            .map(Some)
+        self.decode_field(ty, name).map(Some)
     }
 }
 

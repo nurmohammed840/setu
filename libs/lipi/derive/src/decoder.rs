@@ -1,6 +1,10 @@
 use proc_macro2::{Span, TokenStream};
 use quote2::{Quote, quote};
-use syn::*;
+use syn::{spanned::Spanned, *};
+
+use crate::errors;
+use crate::utils::data_ty;
+use errors::to_compile_error;
 
 pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> TokenStream {
     let DeriveInput {
@@ -28,7 +32,7 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                 for (name, key) in &fields {
                     if let Some((key, name_str)) = key {
                         quote!(t, {
-                            #key => #name = ___obj___.decode(___ty___, #name_str)?,
+                            #key => #name = __obj__.decode(__ty__, #name_str)?,
                         });
                     }
                 }
@@ -60,19 +64,83 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
             }
 
             quote!(t, {
-                let mut ___obj___ = #crate_path::decoder::FieldInfoDecoder::new(___r___)?;
+                let mut __obj__ = #crate_path::decoder::FieldInfoDecoder::new(__r__)?;
 
-                while let Some((___key___, ___ty___)) = ___obj___.next_field_id_and_ty()? {
-                    match ___key___ {
+                while let Some((__key__, __ty__)) = __obj__.next_field_id_and_ty()? {
+                    match __key__ {
                         #field_decoder
-                        _ => ___obj___.skip_field(___key___, ___ty___)?
+                        _ => __obj__.skip_field(__key__, __ty__)?
                     }
                 }
 
                 Ok(Self { #field_bind })
             });
         }
-        Data::Enum(_) => {}
+        Data::Enum(DataEnum { variants, .. }) => {
+            let decode_enum_field = quote(|t| {
+                for v in variants {
+                    match &v.discriminant {
+                        Some((_, key)) => {
+                            let name = &v.ident;
+                            match &v.fields {
+                                Fields::Unit => {
+                                    quote!(t, {
+                                        #key => { __obj__.skip_field_value(__ty__)?; Self::#name }
+                                    });
+                                }
+                                Fields::Unnamed(FieldsUnnamed { unnamed, .. }) => {
+                                    match unnamed.len() {
+                                        0 => {
+                                            quote!(t, {
+                                                #key => { __obj__.skip_field_value(__ty__)?; Self::#name() }
+                                            });
+                                        }
+                                        1 => {
+                                            let name_str = format!("{ident}::{name}");
+                                            quote!(t, {
+                                                #key => Self::#name(__obj__.decode_field(__ty__, #name_str)?),
+                                            });
+                                        }
+                                        count => {
+                                            let err = errors::exrta_fields(count, unnamed);
+                                            quote!(t, {
+                                                _ => { #err ::std::todo!() }
+                                            });
+                                        }
+                                    }
+                                }
+                                Fields::Named(fields) => {
+                                    let err = errors::invalid_enum_named_field(name, fields);
+                                    quote!(t, {
+                                        _ => { #err ::std::todo!() }
+                                    });
+                                }
+                            }
+                        }
+                        None => {
+                            let err_span = v.span();
+                            let err = to_compile_error(
+                                err_span,
+                                format!("missing key at line: {:?}", err_span.start().line),
+                            );
+                            quote!(t, {
+                                _ => { #err ::std::todo!() }
+                            });
+                        }
+                    }
+                }
+            });
+
+            quote!(t, {
+                let (__id__, __ty__) = #crate_path::decoder::decode_field_id_and_ty(__r__)?;
+                let mut __obj__ = #crate_path::decoder::FieldInfoDecoder::new(__r__)?;
+
+                Ok(match __id__ {
+                    #decode_enum_field
+                    _ => return Err(#crate_path::errors::__unknown_field_err(__id__, __ty__))
+                })
+            });
+        }
         Data::Union(_) => todo!(),
     });
 
@@ -91,11 +159,13 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
         }
     }
 
+    let ty = data_ty(data);
+
     let mut t = TokenStream::new();
     quote!(t, {
         impl <#lifetime, #params> #crate_path::Decode<'decode> for #ident #ty_generics #where_clause {
-            const TY: #crate_path::DataType = #crate_path::DataType::Struct;
-            fn decode(___r___: &mut &#lifetime [u8]) -> #crate_path::Result<Self> {
+            const TY: #crate_path::DataType = #crate_path::#ty;
+            fn decode(__r__: &mut &#lifetime [u8]) -> #crate_path::Result<Self> {
                 #body
             }
         }

@@ -3,6 +3,10 @@ use quote2::{Quote, ToTokens, quote};
 use std::collections::HashSet;
 use syn::{spanned::Spanned, *};
 
+use crate::errors;
+use crate::utils::data_ty;
+use errors::to_compile_error;
+
 pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> TokenStream {
     let DeriveInput {
         ident,
@@ -10,16 +14,6 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
         data,
         ..
     } = input;
-
-    let ty = quote(|t| match data {
-        Data::Struct(_) => {
-            quote!(t, { #crate_path::DataType::Struct });
-        }
-        Data::Enum(_) => {
-            quote!(t, { #crate_path::DataType::Union });
-        }
-        Data::Union(_) => unimplemented!(),
-    });
 
     let body = quote(|t| match data {
         Data::Struct(DataStruct { fields, .. }) => {
@@ -80,12 +74,11 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                         match discriminant {
                             Some((_, expr)) => Some(expr),
                             None => {
-                                let loc = variant.span().start();
-                                let err = Error::new(
-                                    variant.span(),
-                                    format!("missing key at line: {:?}", loc.line),
+                                let err_span = variant.span();
+                                let err = to_compile_error(
+                                    err_span,
+                                    format!("missing key at line: {:?}", err_span.start().line),
                                 );
-                                let err = err.to_compile_error();
                                 quote!(t, {
                                    _ => { #err ::std::todo!() }
                                 });
@@ -96,21 +89,25 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
 
                     match fields {
                         Fields::Named(fields) => {
-                            let err = Error::new(fields.span(), format!("unsupported {{ .. }}"));
-                            let err = err.to_compile_error();
+                            let err = errors::invalid_enum_named_field(ident, fields);
                             quote!(t, {
                                 Self::#ident { .. } => { #err ::std::todo!() }
                             });
                         }
                         Fields::Unnamed(FieldsUnnamed { unnamed, .. }) => {
                             if let Some(key) = get_discriminant() {
-                                let mut iter = unnamed.iter();
-                                match iter.next() {
-                                    None => {
+                                match unnamed.len() {
+                                    0 => {
                                         quote!(t, { Self::#ident() => #crate_path::encoder::EnumEncoder::encode(&false, w, #key), });
                                     }
-                                    Some(_) => {
+                                    1 => {
                                         quote!(t, { Self::#ident(val) => #crate_path::encoder::EnumEncoder::encode(val, w, #key), });
+                                    }
+                                    count => {
+                                        let err = errors::exrta_fields(count, unnamed);
+                                        quote!(t, {
+                                            Self::#ident(..) => { #err ::std::todo!() }
+                                        });
                                     }
                                 }
                             }
@@ -135,10 +132,12 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
 
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
+    let ty = data_ty(data);
+
     let mut t = TokenStream::new();
     quote!(t, {
         impl #impl_generics #crate_path::Encode for #ident #ty_generics #where_clause {
-            const TY: #crate_path::DataType = #ty;
+            const TY: #crate_path::DataType = #crate_path::#ty;
             fn encode(&self, w: &mut (impl ::std::io::Write + ?::std::marker::Sized)) -> ::std::io::Result<()> {
                 #body
             }

@@ -6,7 +6,7 @@ impl<'c, 'de> FieldInfoDecoder<'c, 'de> {
             .map_err(|error| errors::SkipFieldError { id, error }.into())
     }
 
-    fn skip_field_value(&mut self, ty: DataType) -> Result<()> {
+    pub fn skip_field_value(&mut self, ty: DataType) -> Result<()> {
         match ty {
             DataType::True | DataType::False => {}
             DataType::U8 | DataType::I8 => {

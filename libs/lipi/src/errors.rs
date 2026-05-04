@@ -105,3 +105,20 @@ error! {
         write!(f, "error skipping field with id {}: {}", self.id, self.error)
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct UnknownField {
+    pub id: u64,
+    pub ty: DataType,
+}
+
+error! {
+    UnknownField = (self, f) {
+        write!(f, "unknown field with id {} and type {:?}", self.id, self.ty)
+    }
+}
+
+#[doc(hidden)]
+pub fn __unknown_field_err(id: u64, ty: DataType) -> crate::Error {
+    Box::new(UnknownField { id, ty })
+}
