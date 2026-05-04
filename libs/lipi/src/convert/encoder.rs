@@ -76,6 +76,12 @@ pub trait Encode {
         }
         Ok(())
     }
+
+    fn to_bytes(&self) -> io::Result<Vec<u8>> {
+        let mut buf = Vec::new();
+        self.encode(&mut buf)?;
+        Ok(buf)
+    }
 }
 
 // ------------------------------------------------------------------------
