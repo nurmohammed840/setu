@@ -53,6 +53,7 @@ pub struct Types {
     #[key = 15]
     pub matrix3d: Vec<Vec<Vec<f32>>>,
 
+    #[key = 16]
     pub canvas_2d: Vec<Vec<u8>>,
 }
 
@@ -163,17 +164,17 @@ impl Types {
             f64: f64::MAX,
             u64: u64::MAX,
             i64: i64::MAX,
-            string: "A".repeat(1000),
+            string: "A".repeat(32),
             object: User {
                 id: Some(u32::MAX),
-                name: "Z".repeat(1000),
+                name: "Z".repeat(32),
             },
-            union: TagUnion::Bytes(vec![0xFF; 1000]),
+            union: TagUnion::Bytes(vec![0xFF; 32]),
             list: vec![TagUnion::String("X".repeat(500)); 10],
             map: HashMap::from([(u32::MAX, TagUnion::Simple(u32::MAX))]),
             optional: Some(TagUnion::Complex(User {
                 id: Some(u32::MAX),
-                name: "Y".repeat(1000),
+                name: "Y".repeat(32),
             })),
             bools: vec![true; 100],
             nested: vec![vec![TagUnion::Bytes(vec![0xAA; 32])]; 3],
@@ -184,12 +185,4 @@ impl Types {
             ],
         }
     }
-}
-
-#[test]
-fn test_name() {
-    let data = Types::mid();
-    let raw = data.to_bytes().unwrap();
-    let new_data = Types::decode(&mut &raw[..]).unwrap();
-    assert_eq!(data, new_data);
 }

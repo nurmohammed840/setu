@@ -1,11 +1,13 @@
 //! Run benchmark:
-//! 
+//!
 //! ```
 //! cd libs\lipi\
 //! cargo bench --bench basic
 //! ```
 
-mod data;
+mod data {
+    include!("../tests/data.rs");
+}
 
 use crate::data::Types;
 use criterion::{Criterion, criterion_group, criterion_main};
@@ -18,7 +20,7 @@ fn run_bench(c: &mut Criterion, name: &str, iter: impl FnMut() + Copy) {
 }
 
 fn benchmark(c: &mut Criterion) {
-    let data: (Types, Types, Types) = (Types::min(), Types::mid(), Types::max());
+    let data = (Types::min(), Types::mid(), Types::max());
 
     let raw = data.to_bytes().unwrap();
     assert_eq!(data, Data::decode(&mut &raw[..]).unwrap());
