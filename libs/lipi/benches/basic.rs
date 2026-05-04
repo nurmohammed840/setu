@@ -33,12 +33,6 @@ fn benchmark(c: &mut Criterion) {
         let new_data = Data::decode(&mut &raw[..]).unwrap();
         assert_eq!(new_data.2.bool, data.2.bool);
     });
-
-    run_bench(c, "encode and decode", || {
-        let raw = data.to_bytes().unwrap();
-        let new_data = Data::decode(&mut &raw[..]).unwrap();
-        assert_eq!(new_data.2.bool, data.2.bool);
-    });
 }
 
 criterion_group!(benches, benchmark);
