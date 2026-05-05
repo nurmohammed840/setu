@@ -1,8 +1,0 @@
-[package]
-name = "frpc-transport"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-frpc-transport-http = { path = "../../frpc/transport-http" }
-tokio = "1"
