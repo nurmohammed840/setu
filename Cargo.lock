@@ -956,6 +956,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "type-id-v2"
+version = "0.1.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "unicode-ident"
 version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"

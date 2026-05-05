@@ -104,7 +104,7 @@ mod tests {
     fn leb128_buf_bound_check() {
         let mut buf = unsafe { Leb128Buf::<4>::new() };
         assert_eq!(buf.len(), 0);
-        assert_eq!(buf.as_bytes(), &[]);
+        assert!(buf.as_bytes().is_empty());
 
         for i in 0..4 {
             buf.write_byte(i);

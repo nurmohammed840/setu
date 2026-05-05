@@ -23,6 +23,13 @@ impl Ignore {
 #[test]
 fn skip_struct() {
     let data = (data::Types::min(), data::Types::max());
-    let buf = Ignore::encode(data);
-    Ignore::decode(&mut buf.as_slice()).unwrap();
+    let mut buf = Ignore::encode(data);
+
+    let msg = b"Hello, World!";
+    buf.extend_from_slice(msg);
+
+    let mut encoded = buf.as_slice();
+    Ignore::decode(&mut encoded).unwrap();
+
+    assert_eq!(encoded, msg);
 }

@@ -112,7 +112,7 @@ mod tests {
         assert_eq!(buf, &[24]);
         assert_eq!(read_byte(&mut buf).unwrap(), 24);
 
-        assert_eq!(buf, &[]);
+        assert!(buf.is_empty());
         assert!(read_byte(&mut buf).is_err());
 
         let mut buf: &[u8] = &[];
@@ -128,11 +128,11 @@ mod tests {
         assert!(read_bytes(&mut buf, 2).is_err());
 
         assert_eq!(buf, &[3]);
-        assert_eq!(read_bytes(&mut buf, 0).unwrap(), &[]);
+        assert!(read_bytes(&mut buf, 0).unwrap().is_empty());
         assert_eq!(read_bytes(&mut buf, 1).unwrap(), &[3]);
 
-        assert_eq!(buf, &[]);
-        assert_eq!(read_bytes(&mut buf, 0).unwrap(), &[]);
+        assert!(buf.is_empty());
+        assert!(read_bytes(&mut buf, 0).unwrap().is_empty());
 
         assert!(read_bytes(&mut buf, 1).is_err());
     }
