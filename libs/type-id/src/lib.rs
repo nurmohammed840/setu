@@ -90,11 +90,20 @@ pub enum MapVariant {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Ident(pub String);
 
+impl<T: Into<String>> From<T> for Ident {
+    fn from(value: T) -> Self {
+        Ident(value.into())
+    }
+}
+
 macro_rules! discriminant {
     [$($id:tt : $ty:ty)*] => {
         #[derive(Debug, Clone, Hash)]
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-        pub enum Discriminant { $($id($ty)),* }
+        pub enum Discriminant { 
+            $($id($ty),)*
+            None 
+        }
         $(
             impl From<$ty> for Discriminant {
                 fn from(v: $ty) -> Self {
@@ -116,16 +125,16 @@ discriminant! {
     I64: i64
 }
 
-#[derive(Debug, Clone, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum Attribute {
-    Docs(String),
-}
-
 #[derive(Default, Debug, Clone, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Attributes {
-    pub data: Vec<Attribute>,
+    pub docs: String,
+}
+
+impl Attributes {
+    pub fn docs<T: Into<String>>(docs: T) -> Attributes {
+        Attributes { docs: docs.into() }
+    }
 }
 
 // ===========================================================
@@ -163,20 +172,44 @@ pub enum ComplexDataType {
     },
 }
 
+impl ComplexDataType {
+    pub fn as_struct(fields: Vec<(Attributes, StructField)>) -> Self {
+        Self::Struct { fields }
+    }
+
+    pub fn as_tuple(fields: Vec<(Attributes, Type)>) -> Self {
+        Self::Tuple { fields }
+    }
+
+    pub fn as_enum(fields: Vec<(Attributes, EnumField)>) -> Self {
+        Self::Enum { fields }
+    }
+}
+
 #[derive(Debug, Clone, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct EnumField {
     pub name: Ident,
     pub ty: EnumFieldType,
-    pub discriminant: Option<Discriminant>,
+    pub discriminant: Discriminant,
 }
 
 #[derive(Debug, Clone, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EnumFieldType {
     Unit,
-    Struct(Vec<StructField>),
-    Tuple(Vec<Type>),
+    Struct(Vec<(Attributes, StructField)>),
+    Tuple(Vec<(Attributes, Type)>),
+}
+
+impl EnumFieldType {
+    pub fn as_struct(fields: Vec<(Attributes, StructField)>) -> Self {
+        Self::Struct(fields)
+    }
+
+    pub fn as_tuple(fields: Vec<(Attributes, Type)>) -> Self {
+        Self::Tuple(fields)
+    }
 }
 
 #[derive(Debug, Clone, Hash)]
