@@ -55,7 +55,7 @@ pub fn expand(
                         }
                         None => match key {
                             Some((_, name_str)) => {
-                                quote!(t, { #name: #crate_path::decoder::Optional::convert(#name, #name_str)?, });
+                                quote!(t, { #name: __crate::decoder::Optional::convert(#name, #name_str)?, });
                             }
                             None => {
                                 quote!(t, { #name: ::std::default::Default::default(), });
@@ -74,7 +74,7 @@ pub fn expand(
             }
 
             quote!(t, {
-                let mut __obj__ = #crate_path::decoder::FieldInfoDecoder::new(__r__)?;
+                let mut __obj__ = __crate::decoder::FieldInfoDecoder::new(__r__)?;
 
                 while let Some((__key__, __ty__)) = __obj__.next_field_id_and_ty()? {
                     match __key__ {
@@ -150,14 +150,14 @@ pub fn expand(
                     quote!(t, { <Self as ::std::default::Default>::default() });
                 } else {
                     quote!(t, {
-                        return Err(#crate_path::errors::__unknown_field(__id__, __ty__))
+                        return Err(__crate::errors::__unknown_field(__id__, __ty__))
                     });
                 }
             });
 
             quote!(t, {
-                let (__id__, __ty__) = #crate_path::decoder::decode_field_id_and_ty(__r__)?;
-                let mut __obj__ = #crate_path::decoder::FieldInfoDecoder::new(__r__)?;
+                let (__id__, __ty__) = __crate::decoder::decode_field_id_and_ty(__r__)?;
+                let mut __obj__ = __crate::decoder::FieldInfoDecoder::new(__r__)?;
 
                 Ok(match __id__ {
                     #decode_enum_field
@@ -171,7 +171,7 @@ pub fn expand(
     let (_, ty_generics, where_clause) = generics.split_for_impl();
 
     // Add a bound `T: Decode<'de>` to every type parameter of `T`.
-    let bound: TypeParamBound = parse_quote!(#crate_path::Decode<'decode>);
+    let bound: TypeParamBound = parse_quote!(__crate::Decode<'decode>);
     let mut params = generics.params.clone();
     let mut lifetime = LifetimeParam::new(Lifetime::new("'decode", Span::call_site()));
 
@@ -187,12 +187,15 @@ pub fn expand(
 
     let mut t = TokenStream::new();
     quote!(t, {
-        impl <#lifetime, #params> #crate_path::Decode<'decode> for #ident #ty_generics #where_clause {
-            const TY: #crate_path::DataType = #crate_path::#ty;
-            fn decode(__r__: &mut &#lifetime [u8]) -> #crate_path::Result<Self> {
-                #body
+        const _: () = {
+            use #crate_path as __crate;
+            impl <#lifetime, #params> __crate::Decode<'decode> for #ident #ty_generics #where_clause {
+                const TY: __crate::DataType = __crate::#ty;
+                fn decode(__r__: &mut &#lifetime [u8]) -> __crate::Result<Self> {
+                    #body
+                }
             }
-        }
+        };
     });
     t
 }
