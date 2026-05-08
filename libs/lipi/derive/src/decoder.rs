@@ -21,54 +21,70 @@ pub fn expand(
 
     let body = quote(|t| match data {
         Data::Struct(DataStruct { fields, .. }) => {
-            let fields = fields
+            let struct_fields = fields
                 .iter()
-                .map(|field| {
-                    let name = field.ident.as_ref();
+                .enumerate()
+                .map(|(idx, field)| {
+                    let (alias, name) = match &field.ident {
+                        Some(name) => (name.clone(), Member::Named(name.clone())),
+                        None => (
+                            Ident::new(&format!("_{}", idx), field.span()),
+                            Member::Unnamed(Index {
+                                index: idx as u32,
+                                span: field.span(),
+                            }),
+                        ),
+                    };
                     (
-                        name,
-                        utils::get_attr(&field.attrs, key_attr)
-                            .map(|key| (key, name.map(|s| s.to_string()).unwrap_or_default())),
+                        alias,
+                        utils::get_attr(&field.attrs, key_attr).map(|key| {
+                            let name_str = match &field.ident {
+                                Some(name) => name.to_string(),
+                                None => idx.to_string(),
+                            };
+                            (key, name_str)
+                        }),
                         utils::get_attr_or_expr(&field.attrs, default_attr),
+                        name,
                     )
                 })
                 .collect::<Vec<_>>();
 
             let field_decoder = quote(|t| {
-                for (name, key, _) in &fields {
+                for (alias, key, _, _) in &struct_fields {
                     if let Some((key, name_str)) = key {
                         quote!(t, {
-                            #key => #name = __obj__.decode(__ty__, #name_str)?,
+                            #key => #alias = __obj__.decode(__ty__, #name_str)?,
                         });
                     }
                 }
             });
 
             let field_bind = quote(|t| {
-                for (name, key, default) in &fields {
+                for (alias, key, default, member) in &struct_fields {
                     match default {
                         Some(default) if default.is_empty() => {
-                            quote!(t, { #name: #name.unwrap_or_else(::std::default::Default::default), });
+                            quote!(t, { #member: #alias.unwrap_or_else(::std::default::Default::default), });
                         }
                         Some(default) => {
-                            quote!(t, { #name: #name.unwrap_or_else(|| #default), });
+                            quote!(t, { #member: #alias.unwrap_or_else(|| #default), });
                         }
                         None => match key {
                             Some((_, name_str)) => {
-                                quote!(t, { #name: __crate::decoder::Optional::convert(#name, #name_str)?, });
+                                quote!(t, { #member: __crate::decoder::Optional::convert(#alias, #name_str)?, });
                             }
                             None => {
-                                quote!(t, { #name: ::std::default::Default::default(), });
+                                quote!(t, { #member: ::std::default::Default::default(), });
                             }
                         },
                     }
                 }
             });
 
-            for (name, key, _) in &fields {
+            for (alias, key, _, _) in &struct_fields {
                 if let Some(_) = key {
                     quote!(t, {
-                        let mut #name = ::std::option::Option::None;
+                        let mut #alias = ::std::option::Option::None;
                     });
                 }
             }
@@ -150,7 +166,7 @@ pub fn expand(
                     quote!(t, { <Self as ::std::default::Default>::default() });
                 } else {
                     quote!(t, {
-                        return Err(__crate::errors::__unknown_field(__id__, __ty__))
+                        return Err(__crate::errors::__unknown_field(__id__, __ty__)),
                     });
                 }
             });

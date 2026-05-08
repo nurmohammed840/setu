@@ -15,12 +15,19 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
         ..
     } = input;
 
-    let body = quote(|t: &mut TokenStream| {
+    let body = quote(|t| {
         match data {
             Data::Struct(DataStruct { fields, .. }) => {
+                if let Fields::Unit = fields {
+                    quote!(t, {
+                        ::std::io::Write::write_all(w, &[__crate::DataType::StructEnd.code()])
+                    });
+                    return;
+                }
+
                 let mut seen: HashSet<&Expr> = HashSet::new();
 
-                for field in fields {
+                for (idx, field) in fields.iter().enumerate() {
                     if let Some(key) = utils::get_attr(&field.attrs, key_attr) {
                         match seen.get(key) {
                             Some(key_0) => {
@@ -44,7 +51,18 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
                             }
                         }
 
-                        let ident = &field.ident;
+                        let ident = quote(|t| match &field.ident {
+                            Some(key) => {
+                                quote!(t, { #key });
+                            }
+                            None => {
+                                let idx = Index {
+                                    index: idx as u32,
+                                    span: field.span(),
+                                };
+                                quote!(t, { #idx });
+                            }
+                        });
                         let ref_symbol = match field.ty {
                             Type::Reference(_) => None,
                             _ => Some(Punct::new('&', Spacing::Alone)),

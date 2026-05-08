@@ -3,18 +3,20 @@ use proc_macro::TokenStream;
 
 #[proc_macro_derive(Encode, attributes(key))]
 pub fn encoder(input: TokenStream) -> TokenStream {
-    lipi_derive::encoder::expand(&syn::parse_macro_input!(input), crate_path(), "key").into()
+    let Ok(derive_input) = syn::parse(input) else {
+        return TokenStream::new();
+    };
+    
+    lipi_derive::encoder::expand(&derive_input, crate_path(), "key").into()
 }
 
 #[proc_macro_derive(Decode, attributes(key, default, foo))]
 pub fn decoder(input: TokenStream) -> TokenStream {
-    lipi_derive::decoder::expand(
-        &syn::parse_macro_input!(input),
-        crate_path(),
-        "key",
-        "default",
-    )
-    .into()
+    let Ok(derive_input) = syn::parse(input) else {
+        return TokenStream::new();
+    };
+
+    lipi_derive::decoder::expand(&derive_input, crate_path(), "key", "default").into()
 }
 
 fn crate_path() -> quote2::proc_macro2::TokenStream {
