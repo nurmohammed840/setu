@@ -816,6 +816,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "setu-message"
+version = "0.1.0"
+dependencies = [
+ "std-lib",
+ "type-id",
+]
+
+[[package]]
 name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -912,7 +920,7 @@ dependencies = [
 
 [[package]]
 name = "type-id"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "type-id-macros",

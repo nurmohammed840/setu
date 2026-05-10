@@ -12,7 +12,7 @@ pub trait TypeId {
     fn ty(_: &mut TypeRegistry) -> Type;
 }
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone, Hash, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Type {
     // ===== Numbers =====
@@ -66,7 +66,7 @@ pub enum Type {
     Complex(Ident),
 }
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone, Hash, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ListVariant {
     BTreeSet,
@@ -77,7 +77,7 @@ pub enum ListVariant {
     Vec,
 }
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone, Hash, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MapVariant {
     HashMap,

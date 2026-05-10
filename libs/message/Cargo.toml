@@ -1,0 +1,8 @@
+[package]
+name = "setu-message"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+type-id = { path = "../type-id", version = "0.2" }
+std-lib = { path = "../std-lib", version = "0.1" }
