@@ -812,7 +812,24 @@ dependencies = [
  "h2",
  "http",
  "nio",
+ "setu-macros",
  "tokio-rustls",
+]
+
+[[package]]
+name = "setu-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote2",
+ "syn",
+]
+
+[[package]]
+name = "setu-macros"
+version = "0.1.0"
+dependencies = [
+ "setu-derive",
 ]
 
 [[package]]

@@ -61,7 +61,7 @@ impl HttpServer {
     async fn _run(addr: SocketAddr, tls: TlsAcceptor) -> Result<()> {
         let mut listener = TcpListener::bind(addr).await?;
 
-        println!("HTTP server runing: {}", listener.local_addr()?);
+        println!("Runing HTTP server: https://{}", listener.local_addr()?);
 
         loop {
             let Ok(tcp) = listener.accept().await else {
@@ -70,7 +70,7 @@ impl HttpServer {
 
             let tls = tls.clone();
 
-            nio::spawn_local(async {
+            nio::spawn_pinned(|| async {
                 if let Err(err) = HttpServer::serve(tls, tcp).await {
                     println!("http-error: {err:?}");
                 }

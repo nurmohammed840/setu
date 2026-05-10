@@ -1,0 +1,10 @@
+[package]
+name = "setu-macros"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+setu-derive = { path = "../derive", version = "0.1" }
