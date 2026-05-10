@@ -16,7 +16,22 @@ impl HttpServer {
         HttpServer::default()
     }
 
-    pub async fn build(self) -> Result<()> {
+    pub fn addr(mut self, addr: SocketAddr) -> Self {
+        self.addr = Some(addr);
+        self
+    }
+
+    pub fn certs(mut self, certs: impl Into<String>) -> Self {
+        self.certs = Some(certs.into());
+        self
+    }
+
+    pub fn private_key(mut self, private_key: impl Into<String>) -> Self {
+        self.private_key = Some(private_key.into());
+        self
+    }
+
+    pub async fn run(self) -> Result<()> {
         let addr = self.addr.unwrap_or_else(|| {
             env::var("SERVER_ADDR")
                 .ok()
@@ -40,10 +55,10 @@ impl HttpServer {
             tls_config.key_log = Arc::new(rustls::KeyLogFile::new());
         }
 
-        HttpServer::run(addr, TlsAcceptor::from(Arc::new(tls_config))).await
+        HttpServer::_run(addr, TlsAcceptor::from(Arc::new(tls_config))).await
     }
 
-    async fn run(addr: SocketAddr, tls: TlsAcceptor) -> Result<()> {
+    async fn _run(addr: SocketAddr, tls: TlsAcceptor) -> Result<()> {
         let mut listener = TcpListener::bind(addr).await?;
 
         println!("HTTP server runing: {}", listener.local_addr()?);
