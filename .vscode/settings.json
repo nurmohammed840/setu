@@ -1,0 +1,20 @@
+{
+  "deno.enable": true,
+  "deno.lint": false,
+  // "rust-analyzer.check.command": "clippy",
+  // "rust-analyzer.inlayHints.lifetimeElisionHints.enable": "always",
+  // "rust-analyzer.inlayHints.lifetimeElisionHints.useParameterNames": true,
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    // ---------------------
+    // ".cargo": true,
+    "LICENSE": true,
+    "README.md": true,
+    // ================
+    "libs/lipi/src/bin": true,
+  },
+}
