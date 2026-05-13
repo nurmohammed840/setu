@@ -1,8 +1,10 @@
 use bytes::Bytes;
+use futures::Stream;
 use h2::RecvStream;
 use http::Request;
 use std::{
     future::poll_fn,
+    pin::Pin,
     task::{Context, Poll},
 };
 
@@ -46,6 +48,15 @@ impl HttpBody {
             }
             v => v,
         })
+    }
+}
+
+impl Stream for HttpBody {
+    type Item = Result<Bytes, h2::Error>;
+
+    #[inline]
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.poll_data(cx)
     }
 }
 

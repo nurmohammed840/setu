@@ -2,7 +2,7 @@ mod request;
 mod response;
 mod rpc_router;
 
-pub use request::HttpRequest;
+pub use request::{HttpBody, HttpRequest};
 pub use response::HttpResponse;
 
 use crate::{Result, transport::tls};
