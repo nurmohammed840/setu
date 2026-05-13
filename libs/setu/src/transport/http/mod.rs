@@ -1,4 +1,11 @@
-use crate::{Result, transport};
+mod request;
+mod response;
+mod rpc_router;
+
+pub use request::HttpRequest;
+pub use response::HttpResponse;
+
+use crate::{Result, transport::tls};
 use std::{env, net::SocketAddr, sync::Arc};
 
 use nio::net::{TcpConnection, TcpListener};
@@ -48,7 +55,7 @@ impl HttpServer {
             .private_key
             .unwrap_or_else(|| env::var("TLS_KEY").expect(""));
 
-        let mut tls_config = transport::tls::server_config(certs, private_key)?;
+        let mut tls_config = tls::server_config(certs, private_key)?;
 
         tls_config.alpn_protocols = vec!["h2".into()];
         if env::var("SSLKEYLOGFILE").is_ok() {
@@ -86,41 +93,9 @@ impl HttpServer {
         println!("H2 connection: {addr}");
 
         while let Some(stream) = conn.accept().await {
-            let (request, respond) = stream?;
-            nio::spawn_local(async move {
-                if let Err(e) = http_handler::handle_request(request, respond).await {
-                    println!("error while handling request: {}", e);
-                }
-            });
+            let (req, res) = stream?;
+            rpc_router::process_rpc_request(HttpRequest::from(req), HttpResponse::from(res)).await;
         }
-
-        Ok(())
-    }
-}
-
-mod http_handler {
-    use bytes::Bytes;
-    use h2::{RecvStream, server::SendResponse};
-    use http::Request;
-
-    pub async fn handle_request(
-        mut request: Request<RecvStream>,
-        mut respond: SendResponse<Bytes>,
-    ) -> crate::Result<()> {
-        println!("GOT request: {:#?}", request.uri());
-
-        let body = request.body_mut();
-        while let Some(data) = body.data().await {
-            let data = data?;
-            let _ = body.flow_control().release_capacity(data.len());
-        }
-
-        let response = http::Response::new(());
-        let mut send = respond.send_response(response, false)?;
-
-        send.send_data(Bytes::from_static(b"hello "), false)?;
-        send.send_data(Bytes::from_static(b"world\n"), true)?;
-
         Ok(())
     }
 }
