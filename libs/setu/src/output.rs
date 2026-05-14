@@ -4,7 +4,7 @@ use std::task::Poll;
 use std::time::Duration;
 
 use crate::Result;
-use crate::transport::frame::FrameDecoder;
+use crate::frame::FrameDecoder;
 use crate::transport::http::{HttpBody, HttpRequest, HttpResponse};
 
 use futures::FutureExt;
@@ -40,9 +40,7 @@ where
     {
         nio::spawn_local(async move {
             match decode_input_args::<Args>(&mut req.body).await {
-                Err(err) => {
-                    println!("rpc-err: {err:#?}");
-                }
+                Err(err) => send_error(res, http::StatusCode::BAD_REQUEST, err),
                 Ok(args) => {
                     let mut timer = Some(nio::sleep(Duration::from_secs(60)));
                     let mut fut = pin!(func.call_once(args));
@@ -68,17 +66,29 @@ where
                             res.writer.send_reset(h2::Reason::CANCEL);
                         }
                         CallStatus::Output(data) => match data.to_bytes() {
-                            Ok(_encoded) => {}
-                            Err(_err) => {
-                                // println!("Encode-Error: {_err}");
-                                res.status = http::StatusCode::INTERNAL_SERVER_ERROR;
-                                let _ = res.send_headers();
+                            Ok(buf) => {
+                                let _ = res.send_final_message(buf);
+                            }
+                            Err(err) => {
+                                send_error(res, http::StatusCode::INTERNAL_SERVER_ERROR, err);
                             }
                         },
                     }
                 }
             }
         });
+    }
+}
+
+#[inline]
+fn send_error(mut res: HttpResponse, code: http::StatusCode, _err: impl ToString) {
+    res.status = code;
+    if cfg!(debug_assertions) {
+        let err_msg = _err.to_string();
+        // println!("RPC-Error: {err_msg}");
+        let _ = res.write_unbound(err_msg);
+    } else {
+        let _ = res.send_headers();
     }
 }
 

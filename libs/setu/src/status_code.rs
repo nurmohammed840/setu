@@ -1,4 +1,7 @@
-pub enum StatusCode {
+
+#[derive(Debug, Default, Clone, Copy)]
+pub enum Status {
+    #[default]
     Ok = 0,
     Cancelled = 1,
     Unknown = 2,
@@ -18,4 +21,11 @@ pub enum StatusCode {
     Aborted = 10,
     OutOfRange = 11,
     DataLoss = 15,
+}
+
+impl Status {
+    #[inline]
+    pub fn code(self) -> u8 {
+        self as u8
+    }
 }

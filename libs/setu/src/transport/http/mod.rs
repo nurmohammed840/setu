@@ -3,7 +3,7 @@ mod response;
 mod rpc_router;
 
 pub use request::{HttpBody, HttpRequest};
-pub use response::HttpResponse;
+pub use response::{HttpResponse, HttpWriter};
 
 use crate::{Result, transport::tls};
 use std::{env, net::SocketAddr, sync::Arc};

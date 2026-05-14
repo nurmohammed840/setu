@@ -1,8 +1,10 @@
+pub(crate) mod frame;
+
 mod status_code;
 mod trailer;
 
 pub mod transport;
-pub use status_code::StatusCode;
+pub use status_code::Status;
 pub use trailer::Trailer;
 
 mod output;

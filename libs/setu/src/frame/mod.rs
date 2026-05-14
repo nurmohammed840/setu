@@ -1,3 +1,5 @@
+mod writer;
+
 use crate::Result;
 use bytes::{Buf, Bytes};
 use futures::{Stream, StreamExt};
@@ -173,6 +175,38 @@ impl FrameDecoder {
     }
 }
 
+pub struct LenBE {
+    buf: [u8; 4],
+    size: u8,
+}
+
+impl std::ops::Deref for LenBE {
+    type Target = [u8];
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.buf[(4 - self.size as usize)..]
+    }
+}
+
+impl LenBE {
+    #[inline]
+    fn new(len: usize) -> Self {
+        let buf = (len as u32).to_be_bytes();
+        let size = if len <= 0x_FF {
+            1
+        } else if len <= 0x_FF_FF {
+            2
+        } else if len <= 0x_FF_FF_FF {
+            3
+        } else {
+            debug_assert!(len <= 0x_FF_FF_FF_FF);
+            4
+        };
+
+        Self { buf, size }
+    }
+}
+
 async fn fetch_data<I>(stream: &mut I) -> Result<bytes::Bytes>
 where
     I: Stream<Item = StreamData> + Unpin,
@@ -183,13 +217,25 @@ where
     }
 }
 
-struct FrameHeader {
-    is_compressed: bool,
-    is_trailer: bool,
-    len_size: u8,
+pub struct FrameHeader {
+    pub is_compressed: bool,
+    pub is_trailer: bool,
+    pub len_size: u8,
 }
 
 impl FrameHeader {
+    fn new(len_size: u8, is_trailer: bool) -> FrameHeader {
+        FrameHeader {
+            is_compressed: false,
+            is_trailer,
+            len_size,
+        }
+    }
+    #[inline]
+    fn encode(self) -> u8 {
+        (self.len_size << 2) | ((self.is_trailer as u8) << 1) | (self.is_compressed as u8)
+    }
+
     fn parse(byte: u8) -> Result<FrameHeader, &'static str> {
         let is_compressed = (byte & 0b1) == 0b1;
         let is_trailer = (byte & 0b10) == 0b10;
@@ -234,7 +280,7 @@ mod tests {
     }
 
     fn create_stream(s: &[&'static [u8]]) -> impl Stream<Item = StreamData> + Unpin {
-        futures::stream::iter(s.iter().copied().map(Bytes::from_static).map(Ok))
+        futures::stream::iter(s.iter().copied().map(Bytes::from).map(Ok))
     }
 
     #[nio::test]
