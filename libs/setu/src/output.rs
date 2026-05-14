@@ -21,7 +21,7 @@ pub trait Output {
 }
 
 enum CallStatus<T> {
-    Canceled(Result<h2::Reason, h2::Error>),
+    Canceled,
     Timeout,
     Output(T),
 }
@@ -54,8 +54,8 @@ where
                             return Poll::Ready(CallStatus::Timeout);
                         }
 
-                        if let Poll::Ready(reason) = res.writer.poll_reset(cx) {
-                            return Poll::Ready(CallStatus::Canceled(reason));
+                        if let Poll::Ready(_) = res.writer.poll_reset(cx) {
+                            return Poll::Ready(CallStatus::Canceled);
                         }
 
                         fut.as_mut().poll(cx).map(CallStatus::Output)
@@ -63,11 +63,17 @@ where
                     .await;
 
                     match result {
-                        CallStatus::Timeout => {}
-                        CallStatus::Canceled(_reason) => {}
+                        CallStatus::Canceled => {}
+                        CallStatus::Timeout => {
+                            res.writer.send_reset(h2::Reason::CANCEL);
+                        }
                         CallStatus::Output(data) => match data.to_bytes() {
                             Ok(_encoded) => {}
-                            Err(_err) => {}
+                            Err(_err) => {
+                                // println!("Encode-Error: {_err}");
+                                res.status = http::StatusCode::INTERNAL_SERVER_ERROR;
+                                let _ = res.send_headers();
+                            }
                         },
                     }
                 }

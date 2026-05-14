@@ -1,6 +1,5 @@
-use http::{Method, header::CONTENT_TYPE};
-
 use super::*;
+use http::{Method, header::CONTENT_TYPE};
 
 impl HttpRequest {
     fn is_rpc_call(&self) -> bool {

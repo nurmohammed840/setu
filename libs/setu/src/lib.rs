@@ -1,4 +1,9 @@
+mod status_code;
+mod trailer;
+
 pub mod transport;
+pub use status_code::StatusCode;
+pub use trailer::Trailer;
 
 mod output;
 
