@@ -16,6 +16,22 @@ pub enum FrameData {
     Trailer(Data),
 }
 
+impl FrameData {
+    pub fn message(self) -> Result<Data, &'static str> {
+        match self {
+            FrameData::Message(data) => Ok(data),
+            FrameData::Trailer(_) => Err("expected message"),
+        }
+    }
+
+    pub fn trailer(self) -> Result<Data, &'static str> {
+        match self {
+            FrameData::Trailer(data) => Ok(data),
+            FrameData::Message(_) => Err("expected trailer"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Data {
     Bytes(Bytes),
@@ -191,6 +207,18 @@ impl FrameHeader {
     }
 }
 
+impl std::ops::Deref for Data {
+    type Target = [u8];
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Data::Bytes(bytes) => &*bytes,
+            Data::Buf(buf) => &*buf,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,10 +253,10 @@ mod tests {
         let mut de = FrameDecoder::default();
 
         let data = de.parse_data(&mut stream, 2).await?;
-        assert!(matches!(data, Data::Bytes(d) if &d[..] == [1, 2]));
+        assert!(matches!(data, Data::Bytes(d) if *d == [1, 2]));
 
         let data = de.parse_data(&mut stream, 3).await?;
-        assert!(matches!(data, Data::Buf(d) if &d[..] == [3, 4, 5]));
+        assert!(matches!(data, Data::Buf(d) if d == [3, 4, 5]));
         Ok(())
     }
 

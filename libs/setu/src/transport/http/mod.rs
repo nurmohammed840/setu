@@ -11,6 +11,20 @@ use std::{env, net::SocketAddr, sync::Arc};
 use nio::net::{TcpConnection, TcpListener};
 use tokio_rustls::{TlsAcceptor, rustls};
 
+pub trait HttpHandler: 'static + Send {
+    fn handler(&self, req: HttpRequest, res: HttpResponse);
+}
+
+impl<F> HttpHandler for F
+where
+    F: std::ops::Fn(HttpRequest, HttpResponse) + Send + 'static,
+{
+    #[inline]
+    fn handler(&self, req: HttpRequest, res: HttpResponse) {
+        self(req, res)
+    }
+}
+
 #[derive(Default)]
 pub struct HttpServer {
     addr: Option<SocketAddr>,
@@ -38,7 +52,7 @@ impl HttpServer {
         self
     }
 
-    pub async fn run(self) -> Result<()> {
+    pub async fn run(self, h: impl HttpHandler + Clone) -> Result<()> {
         let addr = self.addr.unwrap_or_else(|| {
             env::var("SERVER_ADDR")
                 .ok()
@@ -62,10 +76,12 @@ impl HttpServer {
             tls_config.key_log = Arc::new(rustls::KeyLogFile::new());
         }
 
-        HttpServer::_run(addr, TlsAcceptor::from(Arc::new(tls_config))).await
+        let tls = TlsAcceptor::from(Arc::new(tls_config));
+
+        HttpServer::_run(addr, tls, h).await
     }
 
-    async fn _run(addr: SocketAddr, tls: TlsAcceptor) -> Result<()> {
+    async fn _run(addr: SocketAddr, tls: TlsAcceptor, h: impl HttpHandler + Clone) -> Result<()> {
         let mut listener = TcpListener::bind(addr).await?;
 
         println!("Runing HTTP server: https://{}", listener.local_addr()?);
@@ -76,16 +92,17 @@ impl HttpServer {
             };
 
             let tls = tls.clone();
+            let h = h.clone();
 
-            nio::spawn_pinned(|| async {
-                if let Err(err) = HttpServer::serve(tls, tcp).await {
+            nio::spawn_pinned(|| async move {
+                if let Err(err) = HttpServer::serve(tls, tcp, h).await {
                     println!("http-error: {err:?}");
                 }
             });
         }
     }
 
-    async fn serve(tls: TlsAcceptor, tcp: TcpConnection) -> Result<()> {
+    async fn serve(tls: TlsAcceptor, tcp: TcpConnection, h: impl HttpHandler) -> Result<()> {
         let addr = tcp.peer_addr()?;
         let conn = tls.accept(tcp.connect().await?).await?;
         let mut conn = h2::server::handshake(conn).await?;
@@ -94,7 +111,7 @@ impl HttpServer {
 
         while let Some(stream) = conn.accept().await {
             let (req, res) = stream?;
-            rpc_router::process_rpc_request(HttpRequest::from(req), HttpResponse::from(res)).await;
+            h.handler(HttpRequest::from(req), HttpResponse::from(res));
         }
         Ok(())
     }

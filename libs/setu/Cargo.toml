@@ -14,8 +14,8 @@ description = "Remote Procedure Call (RPC) framework"
 nio = { version = "0.1.4", features = ["tokio-io"] }
 futures = "0.3"
 
-# Macros
-setu-macros = { path = "./macros", version = "0.1" }
+# Encoder
+lipi = { path = "../lipi", version = "0.1" }
 
 # Transport
 h2 = "0.4"
@@ -25,5 +25,11 @@ bytes = "1"
 # TLS
 tokio-rustls = "0.26"
 
+# Macros
+setu-macros = { path = "./macros", version = "0.1" }
+
+# Other
+std-lib = { path = "../std-lib", version = "0.1" }
+type-id = { path = "../type-id", version = "0.2" }
 
 [dev-dependencies]
