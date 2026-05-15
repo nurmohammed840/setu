@@ -1,5 +1,3 @@
-use lipi::Encode;
-
 use crate::transport::http::HttpResponse;
 use crate::{
     Trailer,
@@ -7,8 +5,8 @@ use crate::{
 };
 
 impl HttpResponse {
-    pub(crate) fn send_final_message(self, msg: Vec<u8>) -> Result<(), h2::Error> {
-        self.write_unbound(encode_payload(msg))
+    pub(crate) fn send_final_message(self, msg: Vec<u8>) {
+        let _ = self.write_unbound(encode_payload(msg));
     }
 }
 
@@ -17,13 +15,13 @@ fn encode_payload(msg: Vec<u8>) -> Vec<u8> {
     let header = FrameHeader::new(len.size, false);
 
     let mut frame =
-        Vec::with_capacity(1 + len.size as usize + msg.len() + Trailer::MIN_ENCODED_LEN);
+        Vec::with_capacity(1 + len.size as usize + msg.len() + Trailer::OK_ENCODED.len());
 
     frame.push(header.encode());
     frame.extend_from_slice(&*len);
     frame.extend_from_slice(&msg);
 
-    let _ = Trailer::default().encode(&mut frame);
+    frame.extend_from_slice(&Trailer::OK_ENCODED);
     frame
 }
 

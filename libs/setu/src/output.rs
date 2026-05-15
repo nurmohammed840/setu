@@ -44,41 +44,35 @@ where
                 Ok(timer) => timer,
             };
 
-            match decode_input_args::<Args>(&mut req.body).await {
-                Err(err) => res.send_error(http::StatusCode::BAD_REQUEST, err),
-                Ok(args) => {
-                    let mut fut = pin!(func.call_once(args));
+            let args = match decode_input_args::<Args>(&mut req.body).await {
+                Err(err) => return res.send_error(http::StatusCode::BAD_REQUEST, err),
+                Ok(args) => args,
+            };
 
-                    let result = poll_fn(|cx| {
-                        if let Some(timer) = timer.as_mut()
-                            && let Poll::Ready(()) = timer.poll_unpin(cx)
-                        {
-                            return Poll::Ready(CallStatus::Timeout);
-                        }
+            let mut fut = pin!(func.call_once(args));
 
-                        if let Poll::Ready(_) = res.writer.poll_reset(cx) {
-                            return Poll::Ready(CallStatus::Canceled);
-                        }
-
-                        fut.as_mut().poll(cx).map(CallStatus::Output)
-                    })
-                    .await;
-
-                    match result {
-                        CallStatus::Canceled => {}
-                        CallStatus::Timeout => {
-                            res.writer.send_reset(h2::Reason::CANCEL);
-                        }
-                        CallStatus::Output(data) => match data.to_bytes() {
-                            Ok(buf) => {
-                                let _ = res.send_final_message(buf);
-                            }
-                            Err(err) => {
-                                res.send_error(http::StatusCode::INTERNAL_SERVER_ERROR, err);
-                            }
-                        },
-                    }
+            let result = poll_fn(|cx| {
+                if let Some(timer) = timer.as_mut()
+                    && let Poll::Ready(()) = timer.poll_unpin(cx)
+                {
+                    return Poll::Ready(CallStatus::Timeout);
                 }
+
+                if let Poll::Ready(_) = res.poll_reset(cx) {
+                    return Poll::Ready(CallStatus::Canceled);
+                }
+
+                fut.as_mut().poll(cx).map(CallStatus::Output)
+            })
+            .await;
+
+            match result {
+                CallStatus::Canceled => {}
+                CallStatus::Timeout => res.send_reset(h2::Reason::CANCEL),
+                CallStatus::Output(data) => match data.to_bytes() {
+                    Err(err) => res.send_error(http::StatusCode::INTERNAL_SERVER_ERROR, err),
+                    Ok(buf) => res.send_final_message(buf),
+                },
             }
         });
     }

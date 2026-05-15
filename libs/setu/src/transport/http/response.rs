@@ -1,4 +1,7 @@
-use std::future::poll_fn;
+use std::{
+    future::poll_fn,
+    task::{Context, Poll},
+};
 
 use bytes::Bytes;
 use h2::server::SendResponse;
@@ -70,6 +73,16 @@ impl HttpResponse {
     #[inline]
     pub fn write_unbound(self, bytes: impl Into<Bytes>) -> Result<()> {
         self.create_stream()?.end_write_unbound(bytes)
+    }
+
+    #[inline]
+    pub fn poll_reset(&mut self, cx: &mut Context<'_>) -> Poll<Result<h2::Reason, h2::Error>> {
+        self.writer.poll_reset(cx)
+    }
+
+    #[inline]
+    pub fn send_reset(&mut self, reason: h2::Reason) {
+        self.writer.send_reset(reason)
     }
 }
 

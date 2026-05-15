@@ -1,4 +1,3 @@
-use http::Response;
 use setu::{
     Application,
     transport::{
@@ -10,13 +9,11 @@ use setu::{
 #[nio::main]
 async fn main() {
     HttpServer::new()
-        .run(|req: HttpRequest, mut res: HttpResponse| {
+        .run(|req: HttpRequest, res: HttpResponse| {
             if let Some(id) = req.get_rpc_key() {
                 Example::execute(id, req, res);
             } else {
-                let response = Response::new(());
-                let mut stream = res.writer.send_response(response, false).unwrap();
-                stream.send_data("Hello, World".into(), true).unwrap();
+                res.write_unbound("Hello, World").unwrap();
             }
         })
         .await

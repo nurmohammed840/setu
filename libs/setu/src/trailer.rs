@@ -1,6 +1,7 @@
 use crate::Status;
+use lipi::{Decode, Encode};
 
-#[derive(lipi::Encode, lipi::Decode, Default, Debug)]
+#[derive(Encode, Decode, Default, Debug)]
 pub struct Trailer {
     #[key = 1]
     pub status: u8,
@@ -10,12 +11,22 @@ pub struct Trailer {
 }
 
 impl Trailer {
-    pub(crate) const MIN_ENCODED_LEN: usize = 3;
+    pub(crate) const OK_ENCODED: [u8; 3] = [18, 0, 10];
 
     pub fn new(status: Status) -> Self {
         Self {
             status: status.code(),
             error: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_trailer_encoded() {
+        assert_eq!(Trailer::default().to_bytes().unwrap(), Trailer::OK_ENCODED);
     }
 }
