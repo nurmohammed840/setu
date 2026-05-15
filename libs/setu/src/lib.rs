@@ -2,10 +2,12 @@ pub(crate) mod frame;
 
 mod status_code;
 mod trailer;
+mod timeout;
 
 pub mod transport;
 pub use status_code::Status;
 pub use trailer::Trailer;
+pub use timeout::Timeout;
 
 mod output;
 
