@@ -3,12 +3,12 @@ use std::pin::pin;
 use std::str::FromStr;
 use std::task::Poll;
 
-use crate::Result;
-use crate::frame::FrameDecoder;
+use crate::frame::{self, FrameDecoder};
 use crate::transport::http::{HttpBody, HttpRequest, HttpResponse};
+use crate::{Result, Status};
 
 use futures::FutureExt;
-use lipi::Encode;
+use lipi::{DecodeOwned, Encode};
 use type_id::TypeId;
 
 pub trait Output {
@@ -17,7 +17,7 @@ pub trait Output {
         req: HttpRequest,
         res: HttpResponse,
     ) where
-        Args: for<'a> lipi::Decode<'a>;
+        Args: DecodeOwned;
 }
 
 enum CallStatus<T> {
@@ -36,7 +36,7 @@ where
         mut req: HttpRequest,
         mut res: HttpResponse,
     ) where
-        Args: for<'a> lipi::Decode<'a>,
+        Args: DecodeOwned,
     {
         nio::spawn_local(async move {
             let mut timer = match req.get_timeout() {
@@ -44,7 +44,7 @@ where
                 Ok(timer) => timer,
             };
 
-            let args = match decode_input_args::<Args>(&mut req.body).await {
+            let args = match decode_args::<Args>(&mut req.body).await {
                 Err(err) => return res.send_error(http::StatusCode::BAD_REQUEST, err),
                 Ok(args) => args,
             };
@@ -102,12 +102,29 @@ impl HttpResponse {
     }
 }
 
-async fn decode_input_args<Args>(body: &mut HttpBody) -> Result<Args>
-where
-    Args: for<'a> lipi::Decode<'a>,
-{
+async fn decode_args<Args: DecodeOwned>(stream: &mut HttpBody) -> Result<Args> {
+    let bytes = decode_last_msg(stream).await?;
+    Args::decode(&mut &*bytes)
+}
+
+async fn decode_last_msg(stream: &mut HttpBody) -> Result<frame::RawBytes> {
     let mut de = FrameDecoder::default();
-    let frame = de.parse_frame(body).await?;
-    let input = frame.data.message()?;
-    Args::decode(&mut &*input)
+    let bytes = de
+        .parse_frame(stream)
+        .await?
+        .data
+        .message()
+        .ok_or("expected message frame")?;
+
+    let (status, _) = de
+        .parse_frame(stream)
+        .await?
+        .data
+        .trailer()
+        .ok_or("expected trailer frame")?;
+
+    if status != Status::Ok {
+        return Err("unexpected status code".into());
+    }
+    Ok(bytes)
 }

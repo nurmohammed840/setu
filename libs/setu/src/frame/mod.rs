@@ -1,41 +1,42 @@
+#![allow(warnings)]
 mod writer;
 
-use crate::Result;
+use crate::{Result, Status};
 use bytes::{Buf, Bytes};
 use futures::{Stream, StreamExt};
 
 type StreamData = Result<Bytes, h2::Error>;
 
 #[derive(Debug)]
-pub struct Frame<T> {
+pub struct MaybeCompressed<T> {
     pub is_compressed: bool,
     pub data: T,
 }
 
 #[derive(Debug)]
-pub enum FrameData {
-    Message(Data),
-    Trailer(Data),
+pub enum Frame {
+    Message(RawBytes),
+    Trailer { status: Status, bytes: RawBytes },
 }
 
-impl FrameData {
-    pub fn message(self) -> Result<Data, &'static str> {
+impl Frame {
+    pub fn message(self) -> Option<RawBytes> {
         match self {
-            FrameData::Message(data) => Ok(data),
-            FrameData::Trailer(_) => Err("expected message"),
+            Frame::Message(data) => Some(data),
+            Frame::Trailer { .. } => None,
         }
     }
 
-    pub fn trailer(self) -> Result<Data, &'static str> {
+    pub fn trailer(self) -> Option<(Status, RawBytes)> {
         match self {
-            FrameData::Trailer(data) => Ok(data),
-            FrameData::Message(_) => Err("expected trailer"),
+            Frame::Trailer { status, bytes } => Some((status, bytes)),
+            Frame::Message(_) => None,
         }
     }
 }
 
 #[derive(Debug)]
-pub enum Data {
+pub enum RawBytes {
     Bytes(Bytes),
     Buf(Vec<u8>),
 }
@@ -48,7 +49,7 @@ pub struct FrameDecoder {
 #[derive(Debug, Default)]
 pub struct FrameDecoderStream {
     decoder: FrameDecoder,
-    trailer: Option<Frame<Data>>,
+    pub trailer: Option<(Status, MaybeCompressed<RawBytes>)>,
 }
 
 impl FrameDecoderStream {
@@ -56,7 +57,7 @@ impl FrameDecoderStream {
         self.trailer.is_some()
     }
 
-    pub async fn next<I>(&mut self, stream: &mut I) -> Result<Option<Frame<Data>>>
+    pub async fn next<I>(&mut self, stream: &mut I) -> Result<Option<MaybeCompressed<RawBytes>>>
     where
         I: Stream<Item = StreamData> + Unpin,
     {
@@ -67,51 +68,41 @@ impl FrameDecoderStream {
         let frame = self.decoder.parse_frame(stream).await?;
 
         Ok(match frame.data {
-            FrameData::Message(data) => Some(Frame {
+            Frame::Message(data) => Some(MaybeCompressed {
                 is_compressed: frame.is_compressed,
                 data,
             }),
-            FrameData::Trailer(data) => {
-                self.trailer = Some(Frame {
+            Frame::Trailer { status, bytes } => {
+                let data = MaybeCompressed {
                     is_compressed: frame.is_compressed,
-                    data,
-                });
+                    data: bytes,
+                };
+                self.trailer = Some((status, data));
                 None
             }
         })
     }
-
-    pub fn trailer(&self) -> Option<&Frame<Data>> {
-        self.trailer.as_ref()
-    }
 }
 
 impl FrameDecoder {
-    /// write code that decode DataFrame;
-    /// Each frame starts with a single header byte containing:
-    ///
-    /// ```text
-    /// 000L_LLFC
-    ///
-    /// `LLL` = payload length
-    /// `F` = frame type (`1` = Trailer, `0` = Message)
-    /// `C` = compressed flag
-    /// ```
-    pub async fn parse_frame<I>(&mut self, stream: &mut I) -> Result<Frame<FrameData>>
+    pub async fn parse_frame<I>(&mut self, stream: &mut I) -> Result<MaybeCompressed<Frame>>
     where
         I: Stream<Item = StreamData> + Unpin,
     {
-        let header = FrameHeader::parse(self.read_byte(stream).await?)?;
+        let header = FrameHeader::parse(self.read_byte(stream).await?);
         let len = self.parse_len_big_endian(stream, header.len_size).await?;
 
-        let data = self.parse_data(stream, len).await?;
+        let bytes = self.parse_bytes(stream, len).await?;
 
-        Ok(Frame {
+        Ok(MaybeCompressed {
             is_compressed: header.is_compressed,
             data: if header.is_trailer {
-                FrameData::Trailer(data)
+                Frame::Trailer {
+                    status: header.code.into(),
+                    bytes,
+                }
             } else {
-                FrameData::Message(data)
+                Frame::Message(bytes)
             },
         })
     }
@@ -127,14 +118,18 @@ impl FrameDecoder {
         Ok(len)
     }
 
-    async fn parse_data<I>(&mut self, stream: &mut I, len: usize) -> Result<Data>
+    async fn parse_bytes<I>(&mut self, stream: &mut I, len: usize) -> Result<RawBytes>
     where
         I: Stream<Item = StreamData> + Unpin,
     {
+        if len == 0 {
+            return Ok(RawBytes::Buf(Vec::new()));
+        }
+
         let data = self.read_data(stream).await?;
 
         if len <= data.len() {
-            return Ok(Data::Bytes(data.split_to(len)));
+            return Ok(RawBytes::Bytes(data.split_to(len)));
         }
 
         let mut buf = Vec::with_capacity(len);
@@ -147,7 +142,7 @@ impl FrameDecoder {
             buf.extend_from_slice(&data.split_to(take));
         }
 
-        Ok(Data::Buf(buf))
+        Ok(RawBytes::Buf(buf))
     }
 
     async fn read_byte<I>(&mut self, stream: &mut I) -> Result<u8>
@@ -218,49 +213,56 @@ where
 }
 
 pub struct FrameHeader {
+    // 1 bit
     pub is_compressed: bool,
+    // 1 bit
     pub is_trailer: bool,
+    // 2 bit
     pub len_size: u8,
+    // 4 bit
+    pub code: u8,
 }
 
 impl FrameHeader {
-    fn new(len_size: u8, is_trailer: bool) -> FrameHeader {
+    pub const fn new(trailer: Option<Status>, len_size: u8) -> FrameHeader {
         FrameHeader {
             is_compressed: false,
-            is_trailer,
-            len_size,
+            is_trailer: trailer.is_some(),
+            len_size: len_size - 1,
+            code: match trailer {
+                Some(status) => status.code(),
+                None => 0,
+            },
         }
     }
+
     #[inline]
-    fn encode(self) -> u8 {
-        (self.len_size << 2) | ((self.is_trailer as u8) << 1) | (self.is_compressed as u8)
+    pub const fn encode(self) -> u8 {
+        (self.code << 4)
+            | (self.len_size << 2)
+            | ((self.is_trailer as u8) << 1)
+            | (self.is_compressed as u8)
     }
 
-    fn parse(byte: u8) -> Result<FrameHeader, &'static str> {
-        let is_compressed = (byte & 0b1) == 0b1;
-        let is_trailer = (byte & 0b10) == 0b10;
-        let len_size = byte >> 2;
-
-        if len_size > 4 {
-            return Err("invalid length size");
+    #[inline]
+    pub const fn parse(byte: u8) -> FrameHeader {
+        FrameHeader {
+            is_compressed: (byte & 0b1) == 0b1,
+            is_trailer: (byte & 0b10) == 0b10,
+            len_size: ((byte >> 2) & 0b11) + 1,
+            code: byte >> 4,
         }
-
-        Ok(FrameHeader {
-            is_compressed,
-            is_trailer,
-            len_size,
-        })
     }
 }
 
-impl std::ops::Deref for Data {
+impl std::ops::Deref for RawBytes {
     type Target = [u8];
 
     #[inline]
     fn deref(&self) -> &Self::Target {
         match self {
-            Data::Bytes(bytes) => &*bytes,
-            Data::Buf(buf) => &*buf,
+            RawBytes::Bytes(bytes) => &*bytes,
+            RawBytes::Buf(buf) => &*buf,
         }
     }
 }
@@ -271,12 +273,14 @@ mod tests {
 
     #[test]
     fn test_frame_header() {
-        let h = FrameHeader::parse(0b100_11).unwrap();
-        assert!(h.is_compressed);
+        let raw = FrameHeader::new(Some(Status::Cancelled), 4).encode();
+        assert_eq!(raw, 0b_1_11_1_0);
+
+        let h = FrameHeader::parse(raw);
+        assert!(!h.is_compressed);
         assert!(h.is_trailer);
         assert_eq!(h.len_size, 4);
-
-        assert!(FrameHeader::parse(0b101_00).is_err());
+        assert_eq!(h.code, 1);
     }
 
     fn create_stream(s: &[&'static [u8]]) -> impl Stream<Item = StreamData> + Unpin {
@@ -298,11 +302,11 @@ mod tests {
         let mut stream = create_stream(&[&[], &[1, 2, 3], &[], &[4], &[], &[5]]);
         let mut de = FrameDecoder::default();
 
-        let data = de.parse_data(&mut stream, 2).await?;
-        assert!(matches!(data, Data::Bytes(d) if *d == [1, 2]));
+        let data = de.parse_bytes(&mut stream, 2).await?;
+        assert!(matches!(data, RawBytes::Bytes(d) if *d == [1, 2]));
 
-        let data = de.parse_data(&mut stream, 3).await?;
-        assert!(matches!(data, Data::Buf(d) if d == [3, 4, 5]));
+        let data = de.parse_bytes(&mut stream, 3).await?;
+        assert!(matches!(data, RawBytes::Buf(d) if d == [3, 4, 5]));
         Ok(())
     }
 
@@ -310,7 +314,7 @@ mod tests {
     async fn test_read_data_eof() -> Result<()> {
         let mut stream = create_stream(&[&[1], &[2]]);
         let mut de = FrameDecoder::default();
-        assert!(de.parse_data(&mut stream, 3).await.is_err());
+        assert!(de.parse_bytes(&mut stream, 3).await.is_err());
         Ok(())
     }
 }

@@ -1,5 +1,6 @@
 pub(crate) mod frame;
 
+mod utils;
 mod status_code;
 mod trailer;
 mod timeout;
