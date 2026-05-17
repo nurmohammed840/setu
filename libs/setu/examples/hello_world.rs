@@ -28,10 +28,13 @@ async fn add(a: u8, b: u8) -> u8 {
 struct Example;
 
 impl setu::Application for Example {
-    fn execute(id: u32, req: HttpRequest, res: HttpResponse) {
+    fn execute(id: u32, req: HttpRequest, mut res: HttpResponse) {
         match id {
-            42 => setu::Output::process(add, req, res),
-            _ => {}
+            10 => setu::Output::process(add, req, res),
+            id => {
+                *res.status_mut() = http::StatusCode::NOT_IMPLEMENTED;
+                let _ = res.write_unbound(format!("Unknown call id {id}"));
+            }
         }
     }
 }
