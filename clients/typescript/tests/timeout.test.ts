@@ -1,4 +1,4 @@
-import { assertEquals, assertThrows } from "../dev-deps.ts";
+import { assertEquals, assertThrows } from "jsr:@std/assert";
 import { Timeout } from "../src/timeout.ts";
 
 function check(unit: string, timeout: Timeout) {
