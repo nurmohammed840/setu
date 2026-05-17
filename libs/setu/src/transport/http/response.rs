@@ -1,5 +1,6 @@
 use std::{
     future::poll_fn,
+    ops::{Deref, DerefMut},
     task::{Context, Poll},
 };
 
@@ -11,10 +12,11 @@ type Result<T, E = h2::Error> = std::result::Result<T, E>;
 /// Represents an HTTP response object.
 #[derive(Debug)]
 pub struct HttpResponse {
-    /// Represens status code of HTTP response.
-    pub status: http::StatusCode,
-    /// Represens headers of HTTP response.
-    pub headers: Option<http::HeaderMap>,
+    // /// Represens status code of HTTP response.
+    // pub status: http::StatusCode,
+    // /// Represens headers of HTTP response.
+    // pub headers: Option<http::HeaderMap>,
+    response: http::Response<()>,
 
     /// Responsible for sending the HTTP response body
     pub writer: SendResponse<Bytes>,
@@ -24,22 +26,12 @@ impl From<SendResponse<Bytes>> for HttpResponse {
     fn from(writer: SendResponse<Bytes>) -> Self {
         Self {
             writer,
-            headers: None,
-            status: http::StatusCode::OK,
+            response: http::Response::new(()),
         }
     }
 }
 
 impl HttpResponse {
-    fn create_response(mut self, end: bool) -> Result<h2::SendStream<Bytes>> {
-        let mut response = http::Response::new(());
-        *response.status_mut() = self.status;
-        if let Some(headers) = self.headers {
-            *response.headers_mut() = headers;
-        }
-        self.writer.send_response(response, end)
-    }
-
     /// Returns the stream ID of the response stream.
     ///
     /// # Panics
@@ -52,16 +44,17 @@ impl HttpResponse {
 
     /// Send the response headers.
     #[inline]
-    pub fn send_headers(self) -> Result<()> {
-        self.create_response(true)?;
+    pub fn send_headers(mut self) -> Result<()> {
+        self.writer.send_response(self.response, true)?;
         Ok(())
     }
 
     /// This method is used to obtain a [Responder] that can be used to send the response body.
     #[inline]
-    pub fn create_stream(self) -> Result<HttpWriter> {
-        let stream = self.create_response(false)?;
-        Ok(HttpWriter { stream })
+    pub fn create_stream(mut self) -> Result<HttpWriter> {
+        Ok(HttpWriter {
+            stream: self.writer.send_response(self.response, false)?,
+        })
     }
 
     /// Sends response data to the remote peer.
@@ -83,6 +76,22 @@ impl HttpResponse {
     #[inline]
     pub fn send_reset(&mut self, reason: h2::Reason) {
         self.writer.send_reset(reason)
+    }
+}
+
+impl Deref for HttpResponse {
+    type Target = http::Response<()>;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.response
+    }
+}
+
+impl DerefMut for HttpResponse {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.response
     }
 }
 

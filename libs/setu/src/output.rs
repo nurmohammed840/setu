@@ -91,7 +91,7 @@ impl HttpRequest {
 
 impl HttpResponse {
     fn send_error(mut self, code: http::StatusCode, _err: impl ToString) {
-        self.status = code;
+        *self.status_mut() = code;
         if cfg!(debug_assertions) {
             let err_msg = _err.to_string();
             // println!("RPC-Error: {err_msg}");

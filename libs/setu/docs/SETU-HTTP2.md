@@ -16,7 +16,7 @@ When using raw Socket (ex: TCP) or protocols such as WebSocket, these capabiliti
 - `:path /ServiceName`
 - `:scheme https`
 - `:authority localhost:50050` optional
-- `Content-Type: application/setu` or `application/setu+json`
+- `content-type: application/setu` or `application/setu+json`
 - `rpc-id: 42`
 - `rpc-timeout: 5000m` optional, If omitted, no timeout is applied.
 - `rpc-encoding: ...` optional, If omitted, no compression is used.
@@ -33,7 +33,7 @@ Length-Prefixed-Message:
 # Responses
 
 - `:status 200`
-- `Content-Type: application/setu`
+- `content-type: application/setu`
 - `rpc-encoding: ...` optional
 - `rpc-accept-encoding: ...` optional
 
