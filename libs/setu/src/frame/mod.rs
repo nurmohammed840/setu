@@ -317,4 +317,11 @@ mod tests {
         assert!(de.read_bytes(&mut stream, 3).await.is_err());
         Ok(())
     }
+
+    #[test]
+    fn test_len_be() {
+        assert_eq!(&*LenBE::new(0x1234), [0x12, 0x34]);
+        assert_eq!(&*LenBE::new(0x123456), [0x12, 0x34, 0x56]);
+        assert_eq!(&*LenBE::new(0x12345678), [0x12, 0x34, 0x56, 0x78]);
+    }
 }

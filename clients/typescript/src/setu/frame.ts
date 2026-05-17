@@ -62,6 +62,28 @@ export class FrameHeader {
     }
 }
 
+export class LenBE {
+    private buf: ArrayBuffer;
+    size: number;
+
+    constructor(len: number) {
+        this.buf = new ArrayBuffer(4);
+        new DataView(this.buf).setUint32(0, len, false); // false = big-endian
+
+        if (len <= 0xFF) this.size = 1;
+        else if (len <= 0xFF_FF) this.size = 2;
+        else if (len <= 0xFF_FF_FF) this.size = 3;
+        else {
+            if (len > 0xFF_FF_FF_FF) throw new RangeError(`len: ${len} must fit in u32`);
+            this.size = 4;
+        }
+    }
+
+    asBytes(): Uint8Array {
+        return new Uint8Array(this.buf, 4 - this.size);
+    }
+}
+
 export class FrameDecoder {
     dataPtr: Uint8Array = new Uint8Array();
     constructor(public res: HttpResponse) { }

@@ -1,5 +1,5 @@
 import { assertEquals, assert, assertRejects } from "jsr:@std/assert";
-import { FrameHeader, FrameDecoder } from "../src/setu/frame.ts";
+import { FrameHeader, FrameDecoder, LenBE } from "../src/setu/frame.ts";
 import { Status } from "../src/status.ts";
 import { HttpResponse } from "../src/http.transport.ts";
 
@@ -42,4 +42,10 @@ Deno.test("read bytes", async () => {
 Deno.test("stream eof", async () => {
     let de = createStream([1], [2]);
     await assertRejects(async () => await de.readBytes(3));
+});
+
+Deno.test("LenBE basic", () => {
+    assertEquals([...new LenBE(0x1234).asBytes()], [0x12, 0x34]);
+    assertEquals([...new LenBE(0x123456).asBytes()], [0x12, 0x34, 0x56]);
+    assertEquals([...new LenBE(0x12345678).asBytes()], [0x12, 0x34, 0x56, 0x78]);
 });
