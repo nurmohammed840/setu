@@ -1,4 +1,5 @@
 import { Timeout } from "./timeout.ts";
+import { Buffer } from "./utils/buffer.ts";
 
 const SETTINGS = {
     unaryTimeout: Timeout.minute(2)
@@ -8,7 +9,16 @@ interface Context {
     timeout?: Timeout
 }
 
-export async function rpc(service: string | URL, call_id: number, ctx: Context = { timeout: SETTINGS.unaryTimeout }) {
+interface CallArgs {
+    path: string | URL,
+    call_id: number,
+    body: BodyInit,
+    ctx?: Context
+}
+
+export async function rpc({ path, call_id, body, ctx }: CallArgs) {
+    ctx ??= { timeout: SETTINGS.unaryTimeout };
+
     let headers: HeadersInit = {
         "content-type": "application/setu",
         "rpc-id": call_id.toString(),
@@ -18,20 +28,58 @@ export async function rpc(service: string | URL, call_id: number, ctx: Context =
         headers["rpc-timeout"] = ctx.timeout.toString();
     }
 
-    let rpc = await fetch(service, { method: "POST", headers });
+    let res = await fetch(path, { method: "POST", headers, body });
 
-    if (!rpc.ok) {
-        throw new Error(`${rpc.statusText}: ${await rpc.text()}`);
+    if (!res.ok) {
+        throw new Error(`${res.statusText}: ${await res.text()}`);
     }
 
-    let contentType = rpc.headers.get("content-type");
+    let contentType = res.headers.get("content-type");
     if (contentType != "application/setu") {
         throw new Error(
             `unexpected content-type: ${contentType ?? "none"}`
         );
     }
 
-    return rpc;
+    if (!res.body) {
+        throw new Error("No response body");
+    }
+
+    return new HttpResponse(res.body.getReader());
 }
 
-console.log(await rpc("https://127.0.0.1:4433/", 7));
+export class HttpResponse {
+    eos = false; // end of stream
+    constructor(private reader: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>>) { }
+
+    [Symbol.dispose]() {
+        this.reader.cancel()
+    }
+
+    async read() {
+        if (this.eos) throw new Error("read after eos");
+        const { done, value } = await this.reader.read();
+        if (done) {
+            this.eos = true;
+            return;
+        }
+        return value;
+    }
+
+
+
+    async toBytes() {
+        let chunk;
+        let buf = new Buffer();
+        while (chunk = await this.read()) {
+            buf.append(chunk);
+        }
+        return buf.data();
+    }
+}
+
+// console.log(await rpc({
+//     path: "https://127.0.0.1:4433/",
+//     call_id: 7,
+//     body: ""
+// }));

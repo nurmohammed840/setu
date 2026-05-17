@@ -1,11 +1,34 @@
 import { Status } from "../status.ts";
+import { HttpResponse } from "../http.transport.ts";
+import { expected } from "../utils/common.ts";
+import { takeBytes } from "../utils/bytes.ts";
+import { Buffer } from "../utils/buffer.ts";
 
 export class MaybeCompressed<T> {
-    isCompressed: boolean = false;
-    constructor(private data: T) { }
+    constructor(
+        private isCompressed: boolean,
+        private data: T
+    ) { }
 }
 
-export type Frame = { type: "message"; data: Uint8Array; } | { type: "trailer"; status: Status; bytes: Uint8Array; };
+export type Frame = MessageFrame | TrailerFrame;
+
+export interface MessageFrame {
+    type: "message";
+    bytes: Uint8Array;
+}
+
+export interface TrailerFrame {
+    type: "trailer";
+    status: Status;
+    bytes: Uint8Array;
+}
+
+interface FrameHeaderArgs {
+    lenSize: number,
+    isCompressed?: boolean,
+    trailer?: Status
+}
 
 export class FrameHeader {
     constructor(
@@ -15,8 +38,8 @@ export class FrameHeader {
         public code: number,
     ) { }
 
-    static new = (lenSize: number, trailer?: Status) => new FrameHeader(
-        false,
+    static new = ({ lenSize, trailer, isCompressed }: FrameHeaderArgs) => new FrameHeader(
+        !!isCompressed,
         trailer != undefined,
         lenSize - 1,
         trailer ? Status.code(trailer) : 0,
@@ -36,5 +59,77 @@ export class FrameHeader {
             (+this.isTrailer << 1) |
             (+this.isCompressed)
         );
+    }
+}
+
+export class FrameDecoder {
+    dataPtr: Uint8Array = new Uint8Array();
+    constructor(public res: HttpResponse) { }
+
+    [Symbol.dispose]() {
+        this.res[Symbol.dispose]()
+    }
+
+    async parseFrame(): Promise<MaybeCompressed<Frame>> {
+        let header = FrameHeader.parse(await this.readByte());
+        let len = await this.parseLenBigEndian(header.lenSize);
+        let bytes = await this.readBytes(len);
+
+        return new MaybeCompressed(
+            header.isCompressed,
+            header.isTrailer
+                ? { type: "trailer", status: Status.from(header.code), bytes }
+                : { type: "message", bytes }
+        );
+    }
+
+    async parseLenBigEndian(size: number) {
+        let len = 0;
+        for (let i = 0; i < size; i++) {
+            len = (len << 8) | await this.readByte();
+        }
+        return 0;
+    }
+
+    async readBytes(len: number) {
+        if (len == 0) {
+            return new Uint8Array();
+        }
+
+        let data = await this.readData();
+
+        if (len <= data.length) {
+            return this.splitTo(len, data);
+        }
+
+        let buf = new Buffer();
+
+        while (buf.len < len) {
+            let data = await this.readData();
+
+            let remaining = len - buf.len;
+            let takeN = Math.min(remaining, data.length);
+            buf.append(this.splitTo(takeN, data));
+        }
+
+        return buf.data()
+    }
+
+    splitTo(len: number, data: Uint8Array) {
+        let [bytes, ptr] = takeBytes(len, data);
+        this.dataPtr = ptr;
+        return bytes;
+    }
+
+    async readByte() {
+        let [byte] = this.splitTo(1, await this.readData());
+        return byte;
+    }
+
+    async readData() {
+        while (this.dataPtr.length == 0) {
+            this.dataPtr = expected(await this.res.read(), new Error("unexpected end of message"));
+        }
+        return this.dataPtr;
     }
 }

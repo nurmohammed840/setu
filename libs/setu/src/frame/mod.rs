@@ -92,7 +92,7 @@ impl FrameDecoder {
         let header = FrameHeader::parse(self.read_byte(stream).await?);
         let len = self.parse_len_big_endian(stream, header.len_size).await?;
 
-        let bytes = self.parse_bytes(stream, len).await?;
+        let bytes = self.read_bytes(stream, len).await?;
 
         Ok(MaybeCompressed {
             is_compressed: header.is_compressed,
@@ -118,7 +118,7 @@ impl FrameDecoder {
         Ok(len)
     }
 
-    async fn parse_bytes<I>(&mut self, stream: &mut I, len: usize) -> Result<RawBytes>
+    async fn read_bytes<I>(&mut self, stream: &mut I, len: usize) -> Result<RawBytes>
     where
         I: Stream<Item = StreamData> + Unpin,
     {
@@ -302,10 +302,10 @@ mod tests {
         let mut stream = create_stream(&[&[], &[1, 2, 3], &[], &[4], &[], &[5]]);
         let mut de = FrameDecoder::default();
 
-        let data = de.parse_bytes(&mut stream, 2).await?;
+        let data = de.read_bytes(&mut stream, 2).await?;
         assert!(matches!(data, RawBytes::Bytes(d) if *d == [1, 2]));
 
-        let data = de.parse_bytes(&mut stream, 3).await?;
+        let data = de.read_bytes(&mut stream, 3).await?;
         assert!(matches!(data, RawBytes::Buf(d) if d == [3, 4, 5]));
         Ok(())
     }
@@ -314,7 +314,7 @@ mod tests {
     async fn test_read_data_eof() -> Result<()> {
         let mut stream = create_stream(&[&[1], &[2]]);
         let mut de = FrameDecoder::default();
-        assert!(de.parse_bytes(&mut stream, 3).await.is_err());
+        assert!(de.read_bytes(&mut stream, 3).await.is_err());
         Ok(())
     }
 }
