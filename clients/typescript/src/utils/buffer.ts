@@ -1,11 +1,10 @@
 export class Buffer {
     #len = 0;
-    #data: Uint8Array[] = [];
-    constructor() { }
+    #data: ArrayLike<number>[] = [];
 
-    append(buf: Uint8Array) {
-        this.#len += buf.length;
-        this.#data.push(buf)
+    append(...bufs: ArrayLike<number>[]) {
+        for (let buf of bufs) this.#len += buf.length;
+        this.#data.push(...bufs)
     }
 
     get len() {
