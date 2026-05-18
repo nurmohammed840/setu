@@ -1,7 +1,7 @@
 import { Status } from "../status.ts";
 import { HttpResponse } from "../http.transport.ts";
 import { expected } from "../utils/common.ts";
-import { takeBytes } from "../utils/bytes.ts";
+import { Bytes } from "../utils/bytes.ts";
 import { Buffer } from "../utils/buffer.ts";
 
 export class MaybeCompressed<T> {
@@ -85,7 +85,7 @@ export class LenBE {
 }
 
 export class FrameDecoder {
-    dataPtr: Uint8Array = new Uint8Array();
+    data = Bytes.empty();
     constructor(public res: HttpResponse) { }
 
     [Symbol.dispose]() {
@@ -121,7 +121,7 @@ export class FrameDecoder {
         let data = await this.readData();
 
         if (len <= data.length) {
-            return this.splitTo(len, data);
+            return data.take(len);
         }
 
         let buf = new Buffer();
@@ -131,27 +131,22 @@ export class FrameDecoder {
 
             let remaining = len - buf.len;
             let takeN = Math.min(remaining, data.length);
-            buf.append(this.splitTo(takeN, data));
+            buf.append(data.take(takeN));
         }
 
         return buf.data()
     }
 
-    splitTo(len: number, data: Uint8Array) {
-        let [bytes, ptr] = takeBytes(len, data);
-        this.dataPtr = ptr;
-        return bytes;
-    }
-
     async readByte() {
-        let [byte] = this.splitTo(1, await this.readData());
-        return byte;
+        let data = await this.readData();
+        return data.nextByte()
     }
 
     async readData() {
-        while (this.dataPtr.length == 0) {
-            this.dataPtr = expected(await this.res.read(), new Error("unexpected end of message"));
+        while (this.data.isEmpty()) {
+            let bytes = expected(await this.res.read(), new Error("unexpected end of message"));
+            this.data = new Bytes(bytes);
         }
-        return this.dataPtr;
+        return this.data;
     }
 }
