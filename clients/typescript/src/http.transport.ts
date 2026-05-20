@@ -71,9 +71,9 @@ export class HttpResponse {
     async toBytes() {
         let chunk;
         let buf = new Buffer();
-        while (chunk = await this.read()) {
+        while (chunk = await this.read())
             buf.append(chunk);
-        }
+
         return buf.data();
     }
 }

@@ -24,10 +24,6 @@ export namespace Status {
         return (code & 0b1111) as Status;
     }
 
-    export function code(status: Status): number {
-        return status as number;
-    }
-
     export function toString(status: Status): string {
         return Status[status];
     }

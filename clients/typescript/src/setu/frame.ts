@@ -42,7 +42,7 @@ export class FrameHeader {
         !!isCompressed,
         trailer != undefined,
         lenSize - 1,
-        trailer ? Status.code(trailer) : 0,
+        trailer ?? 0,
     );
 
     static parse = (byte: number) => new FrameHeader(
@@ -63,12 +63,11 @@ export class FrameHeader {
 }
 
 export class LenBE {
-    private buf: ArrayBuffer;
+    #buf = new ArrayBuffer(4);
     size: number;
 
     constructor(len: number) {
-        this.buf = new ArrayBuffer(4);
-        new DataView(this.buf).setUint32(0, len, false); // false = big-endian
+        new DataView(this.#buf).setUint32(0, len, false); // false = big-endian
 
         if (len <= 0xFF) this.size = 1;
         else if (len <= 0xFF_FF) this.size = 2;
@@ -80,7 +79,7 @@ export class LenBE {
     }
 
     asBytes(): Uint8Array {
-        return new Uint8Array(this.buf, 4 - this.size);
+        return new Uint8Array(this.#buf, 4 - this.size);
     }
 }
 

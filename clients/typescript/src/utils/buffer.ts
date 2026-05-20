@@ -7,6 +7,12 @@ export class Buffer {
         this.#data.push(...bufs)
     }
 
+    writeByte(byte: number) {
+        if (byte > 0xFF) throw RangeError(`byte must be 0..=255, got ${byte}`);
+        this.#len += 1;
+        this.#data.push([byte]);
+    }
+
     get len() {
         return this.#len;
     }
