@@ -2,6 +2,7 @@ import { Buffer } from "../utils/buffer.ts";
 import { DataType } from "./mod.ts";
 import { encodeVarInt } from "./varint.ts";
 import { zigzagEncode } from "./zigzag.ts";
+import { bitvecFrom } from "../bitset.ts";
 
 const utf8Encoder = new TextEncoder();
 
@@ -52,10 +53,10 @@ export class Writer extends Buffer {
     }
 }
 
-// ---------------------------------------------------
+// =================================================================
 
-abstract class Encoder {
-    abstract TY: DataType;
+export abstract class Encoder {
+    abstract readonly TY: DataType;
     abstract encode(writer: Writer): void;
 
     toBytes() {
@@ -64,8 +65,6 @@ abstract class Encoder {
         return buf.data()
     }
 }
-
-// ---------------------------------------------------
 
 export class U8 extends Encoder {
     TY = DataType.U8;
@@ -85,13 +84,6 @@ export class F32 extends Encoder {
     encode(w: Writer) { w.writeF32(this.val) }
 }
 
-export class F64 extends Encoder {
-    TY = DataType.F64;
-    constructor(public val: number) { super() }
-    encode(w: Writer) { w.writeF64(this.val) }
-}
-
-
 export class UInt extends Encoder {
     TY = DataType.UInt;
     constructor(public val: number | bigint) { super() }
@@ -104,9 +96,85 @@ export class Int extends Encoder {
     encode(w: Writer) { w.writeInt(this.val) }
 }
 
-export class Str extends Encoder {
-    TY = DataType.Str;
-    constructor(public val: string) { super() }
-    encode(w: Writer) { w.writeUTF8(this.val); }
+export class Struct extends Encoder {
+    TY = DataType.Struct;
+    constructor(public val: StructTy) { super() }
+    encode(w: Writer) {
+        for (let [k, v] of Object.entries(this.val)) {
+            let id = +k;
+            if (v === undefined) continue;
+            if (typeof v == "boolean") {
+                w.write_field_id_and_ty(id, DataType.fromBool(v));
+                continue;
+            }
+            w.write_field_id_and_ty(id, dataTy(v));
+            encode(w, v);
+        }
+        w.writeByte(DataType.StructEnd);
+    }
 }
+
+// ============================ LIST =============================
+
+export class Bools extends Encoder {
+    TY = DataType.List;
+    constructor(public val: boolean[]) { super() }
+    encode(w: Writer) {
+        w.write_field_id_and_ty(this.val.length, DataType.True);
+        w.append(bitvecFrom(this.val).asBytes())
+    }
+}
+
+// =================================================================
+
+export type Ty =
+    | Encoder
+    | string | number | bigint
+    | Uint8Array
+    | StructTy;
+
+export type StructTy = { [key: number]: Ty | boolean | undefined; };
+
+export function dataTy(val: Ty) {
+    if (val instanceof Encoder) return val.TY;
+
+    if (typeof val == "string") return DataType.Str;
+    if (typeof val == "number") return DataType.F64;
+    if (typeof val == "bigint") return DataType.Int;
+
+    if (val instanceof Uint8Array) return DataType.List;
+
+    if (typeof val == "object") return DataType.Struct;
+
+    throw new Error(`unknown type: ${typeof val}`);
+}
+
+export function encode(w: Writer, val: Ty) {
+    if (val instanceof Encoder) return val.encode(w);
+
+    if (typeof val == "string") return w.writeUTF8(val);
+    if (typeof val == "number") return w.writeF64(val);
+    if (typeof val == "bigint") return w.writeInt(val);
+
+    if (val instanceof Uint8Array) return w.writeBytes(val);
+
+    if (typeof val == "object") return new Struct(val).encode(w);
+
+    throw new Error(`unknown value: ${val}`);
+}
+
+
+// =================================================================
+
+let v: Ty = {
+    1: false,
+    6: {
+        5: "asd"
+    }
+};
+
+let w = new Writer();
+encode(w, v);
+console.log(w.data());
+console.log(JSON.stringify(v).length);
 

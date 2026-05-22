@@ -35,7 +35,7 @@ where
         let slot_idx = index / u8::BITS as usize;
         let mask = 1 << (index % u8::BITS as usize);
         let slot = self.as_ref().get(slot_idx)?;
-        Some(slot & mask != 0)
+        Some((slot & mask) != 0)
     }
 }
 
