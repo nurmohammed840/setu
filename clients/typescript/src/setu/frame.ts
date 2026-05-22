@@ -143,7 +143,7 @@ export class FrameDecoder {
 
     async readData() {
         while (this.data.isEmpty()) {
-            let bytes = expected(await this.res.read(), new Error("unexpected end of message"));
+            let bytes = expected(await this.res.read(), "unexpected end of message");
             this.data = new Bytes(bytes);
         }
         return this.data;
