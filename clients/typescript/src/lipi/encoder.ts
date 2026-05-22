@@ -23,7 +23,7 @@ export class Writer extends Buffer {
     }
 
     writeI8(num: number) {
-        assert(num >= -128 && num <= 127, `I8 out of range: ${num} (expected -128..=127)`);
+        assert(num >= -128 && num <= 127, () => `I8 out of range: ${num} (expected -128..=127)`);
 
         const buf = new ArrayBuffer(1);
         new DataView(buf).setInt8(0, num);
@@ -48,7 +48,7 @@ export class Writer extends Buffer {
     }
 
     write_field_id_and_ty(num: number, ty: DataType) {
-        assert(Number.isInteger(num) && num >= 0, `expected non-negative integer, got: ${num}`);
+        assert(Number.isInteger(num) && num >= 0, () => `expected non-negative integer, got: ${num}`);
 
         if (num < 15) return this.writeByte((num << 4) | ty);
 

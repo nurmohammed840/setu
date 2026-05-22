@@ -1,8 +1,9 @@
 import { Bytes } from "../utils/bytes.ts";
+import { assert } from "../utils/common.ts";
 
 export function encodeVarInt(num: bigint | number) {
     num = BigInt(num);
-    if (num < 0n) throw new RangeError(`expected unsigned number: found ${num}`);
+    assert(num >= 0n, () => `expected unsigned number: found ${num}`);
 
     let buf = [];
     while (num > 0b111_1111) {

@@ -1,6 +1,6 @@
 import { Status } from "../status.ts";
 import { HttpResponse } from "../http.transport.ts";
-import { expected } from "../utils/common.ts";
+import { assert, expected } from "../utils/common.ts";
 import { Bytes } from "../utils/bytes.ts";
 import { Buffer } from "../utils/buffer.ts";
 
@@ -73,7 +73,7 @@ export class LenBE {
         else if (len <= 0xFF_FF) this.size = 2;
         else if (len <= 0xFF_FF_FF) this.size = 3;
         else {
-            if (len > 0xFF_FF_FF_FF) throw new RangeError(`len: ${len} must fit in u32`);
+            assert(len <= 0xFF_FF_FF_FF, () => `len: ${len} must fit in u32`);
             this.size = 4;
         }
     }

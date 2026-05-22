@@ -4,8 +4,8 @@ export function expected<T>(data?: T, err = "expected value"): T {
 }
 
 
-export function assert(expr: unknown, msg = ""): asserts expr {
+export function assert(expr: unknown, msg: string | (() => string) = ""): asserts expr {
     if (!expr) {
-        throw new Error(msg);
+        throw new Error(typeof msg === "string" ? msg : msg());
     }
 }

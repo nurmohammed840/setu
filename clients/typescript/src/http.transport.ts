@@ -1,5 +1,6 @@
 import { Timeout } from "./timeout.ts";
 import { Buffer } from "./utils/buffer.ts";
+import { assert } from "./utils/common.ts";
 
 const SETTINGS = {
     unaryTimeout: Timeout.minute(2)
@@ -35,15 +36,9 @@ export async function rpc({ path, call_id, body, ctx }: CallArgs) {
     }
 
     let contentType = res.headers.get("content-type");
-    if (contentType != "application/setu") {
-        throw new Error(
-            `unexpected content-type: ${contentType ?? "none"}`
-        );
-    }
 
-    if (!res.body) {
-        throw new Error("No response body");
-    }
+    assert(contentType == "application/setu", () => `unexpected content-type: ${contentType ?? "none"}`);
+    assert(res.body, "No response body");
 
     return new HttpResponse(res.body.getReader());
 }
@@ -57,7 +52,7 @@ export class HttpResponse {
     }
 
     async read() {
-        if (this.eos) throw new Error("read after eos");
+        assert(!this.eos, "read after eos");
         const { done, value } = await this.reader.read();
         if (done) {
             this.eos = true;

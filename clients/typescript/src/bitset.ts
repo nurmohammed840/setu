@@ -1,3 +1,5 @@
+import { assert } from "./utils/common.ts";
+
 export interface BitSetRead {
     capacity(): number;
     isEmpty(): boolean;
@@ -58,9 +60,7 @@ export class BitVec implements BitSetRead, BitSetWrite {
         const slotIdx = Math.floor(index / 8);
         const mask = 1 << (index % 8);
 
-        if (slotIdx >= this.bytes.length) {
-            throw new RangeError(`Out of bounds slot index: ${slotIdx}`);
-        }
+        assert(slotIdx < this.bytes.length, () => `Out of bounds slot index: ${slotIdx}`);
 
         const oldValue = (this.bytes[slotIdx] & mask) !== 0;
         this.bytes[slotIdx] |= mask;
@@ -85,7 +85,7 @@ export class BitVec implements BitSetRead, BitSetWrite {
 
 
 export function boolPackedLen(len: number) {
-    if (len < 0) throw new RangeError("length cannot be negative");
+    assert(len >= 0, () => `length ${len} cannot be negative`);
     return Math.floor((len + 7) / 8);
 }
 
