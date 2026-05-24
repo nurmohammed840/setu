@@ -55,13 +55,18 @@ export class Writer extends Buffer {
         this.writeByte((0b1111 << 4) | ty);
         this.writeUint(num - 15)
     }
+
+    write_len_and_ty(num: number, ty: DataType) {
+        assert(num <= 0xFF_FF_FF_F); // 28 bits
+        this.write_field_id_and_ty(num, ty)
+    }
 }
 
 // =================================================================
 
 export abstract class Encoder {
     abstract readonly FIELD_TY: DataType;
-    abstract encode(writer: Writer): void;
+    abstract encode(w: Writer): void;
 
     toBytes() {
         let buf = new Writer();
@@ -100,11 +105,16 @@ export class Int extends Encoder {
     encode(w: Writer) { w.writeInt(this.val) }
 }
 
+
+// ============================ Struct =============================
+
+export type StructTy =
+    | { [key: number]: Ty | boolean | undefined; }
+    | Array<boolean | Ty | undefined>;
+
 export class Struct extends Encoder {
     FIELD_TY = DataType.Struct;
-    constructor(public val: StructTy | Array<boolean | Ty | undefined>) {
-        super();
-    }
+    constructor(public val: StructTy) { super(); }
     encode(w: Writer) {
         for (let [k, v] of Object.entries(this.val)) {
             let id = +k;
@@ -122,9 +132,7 @@ export class Struct extends Encoder {
 
 export class Field extends Encoder {
     FIELD_TY = DataType.Union;
-    constructor(public id: number, public val: boolean | Ty) {
-        super();
-    }
+    constructor(public id: number, public val: boolean | Ty) { super(); }
     encode(w: Writer) {
         if (typeof this.val == "boolean")
             return w.write_field_id_and_ty(this.id, DataType.fromBool(this.val));
@@ -136,24 +144,43 @@ export class Field extends Encoder {
 
 // ============================ LIST =============================
 
-type ListTy<T> = T extends unknown ? T[] : never;
+type ListOf<T> = T extends unknown ? T[] : never;
+export type ListTy = ListOf<Ty> | Set<Ty>;
 
 export class Bools extends Encoder {
     FIELD_TY = DataType.List;
     constructor(public val: boolean[]) { super() }
     encode(w: Writer) {
-        w.write_field_id_and_ty(this.val.length, DataType.True);
+        w.write_len_and_ty(this.val.length, DataType.True);
         w.append(bitvecFrom(this.val).asBytes())
     }
 }
 
 export class List extends Encoder {
     FIELD_TY = DataType.List;
-    constructor(public ty: DataType, public val: ListTy<Ty>) { super() }
+    constructor(public ty: DataType, public val: ListTy) {
+        super();
+        let { value } = this.val.values().next();
+        if (value !== undefined) {
+            let vty = fieldTy(value);
+            assert(vty == ty, () => `expected list ty ${DataType[ty]}, found: ${DataType[vty]}`);
+        }
+    }
+
     encode(w: Writer) {
-        w.write_field_id_and_ty(this.val.length, this.ty);
+        let len = this.val instanceof Set ? this.val.size : this.val.length;
+        w.write_len_and_ty(len, this.ty);
+
         for (let v of this.val) encode(w, v)
     }
+}
+
+// ============================= TABLE =============================
+
+export class Table extends Encoder {
+    FIELD_TY = DataType.Table;
+    constructor(public ty: DataType, public val: Map<Ty, Ty>) { super(); }
+    encode(w: Writer) { }
 }
 
 // =================================================================
@@ -165,8 +192,6 @@ export type Ty =
     | Float32Array | Float64Array
     | Uint16Array | Uint32Array | BigUint64Array
     | Int16Array | Int32Array | BigInt64Array;
-
-export type StructTy = { [key: number]: Ty | boolean | undefined; };
 
 export function fieldTy(v: Ty) {
     if (v instanceof Encoder) return v.FIELD_TY;
@@ -185,53 +210,52 @@ export function fieldTy(v: Ty) {
     throw new Error(`unknown type: ${typeof v}`);
 }
 
-export function encode(w: Writer, val: Ty) {
-    if (val instanceof Encoder) return val.encode(w);
+export function encode(w: Writer, v: Ty) {
+    if (v instanceof Encoder) return v.encode(w);
 
-    if (typeof val == "string") return w.writeUTF8(val);
-    if (typeof val == "number") return w.writeF64(val);
-    if (typeof val == "bigint") return w.writeInt(val);
+    if (typeof v == "string") return w.writeUTF8(v);
+    if (typeof v == "number") return w.writeF64(v);
+    if (typeof v == "bigint") return w.writeInt(v);
 
 
-    if (val instanceof Uint8Array) {
-        w.write_field_id_and_ty(val.length, DataType.U8);
-        return w.append(val);
+    if (v instanceof Uint8Array) {
+        w.write_len_and_ty(v.length, DataType.U8);
+        return w.append(v);
     }
 
-    if (val instanceof Int8Array) {
-        w.write_field_id_and_ty(val.length, DataType.I8);
-        return w.append(new Uint8Array(val.buffer, val.byteOffset, val.byteLength));
+    if (v instanceof Int8Array) {
+        w.write_len_and_ty(v.length, DataType.I8);
+        return w.append(new Uint8Array(v.buffer, v.byteOffset, v.byteLength));
     }
 
-    if (val instanceof Float32Array || val instanceof Float64Array) return encodeFloatArray(w, val)
+    if (v instanceof Float32Array || v instanceof Float64Array) return encodeFloatArray(w, v)
 
-    if (val instanceof Uint16Array || val instanceof Uint32Array || val instanceof BigUint64Array) {
-        w.write_field_id_and_ty(val.length, DataType.UInt);
-        for (let num of val) w.writeUint(num);
+    if (v instanceof Uint16Array || v instanceof Uint32Array || v instanceof BigUint64Array) {
+        w.write_len_and_ty(v.length, DataType.UInt);
+        for (let n of v) w.writeUint(n);
         return
     }
 
-    if (val instanceof Int16Array || val instanceof Int32Array || val instanceof BigInt64Array) {
-        w.write_field_id_and_ty(val.length, DataType.Int);
-        for (let num of val) w.writeInt(num);
+    if (v instanceof Int16Array || v instanceof Int32Array || v instanceof BigInt64Array) {
+        w.write_len_and_ty(v.length, DataType.Int);
+        for (let n of v) w.writeInt(n);
         return
     }
 
-    throw new Error(`unknown value: ${val}`);
+    throw new Error(`unknown value: ${v}`);
 }
 
 function encodeFloatArray(w: Writer, nums: Float32Array | Float64Array) {
     let ty = nums instanceof Float32Array ? DataType.F32 : DataType.F64;
-    w.write_field_id_and_ty(nums.length, ty);
+    w.write_len_and_ty(nums.length, ty);
 
     if (IS_LITTLE_ENDIAN) return w.append(new Uint8Array(nums.buffer, nums.byteOffset, nums.byteLength));
 
     if (ty == DataType.F32)
-        for (let num of nums) w.writeF32(num);
+        for (let n of nums) w.writeF32(n)
     else
-        for (let num of nums) w.writeF64(num)
+        for (let n of nums) w.writeF64(n)
 }
-
 
 // ====================================================
 
