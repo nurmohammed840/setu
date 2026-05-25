@@ -2,12 +2,19 @@ import { DataType } from "./mod.ts";
 import { encodeVarInt } from "./varint.ts";
 import { zigzagEncode } from "./zigzag.ts";
 import { Buffer } from "../utils/buffer.ts";
-import { assert } from "../utils/common.ts";
+import { assert, checkOverflow } from "../utils/common.ts";
 import { bitvecFrom } from "../bitset.ts";
 import { isLittleEndian } from "../utils/bytes.ts";
 
 const IS_LITTLE_ENDIAN = isLittleEndian()
 const utf8Encoder = new TextEncoder();
+
+type Encoder<T> = (this: Encode, val: T) => void;
+
+type TypedArray = Uint8Array | Int8Array
+    | Float32Array | Float64Array
+    | Uint16Array | Uint32Array | BigUint64Array
+    | Int16Array | Int32Array | BigInt64Array;
 
 export class Writer extends Buffer {
     writeUint(num: number | bigint) {
@@ -34,29 +41,13 @@ export class Writer extends Buffer {
     }
 }
 
-export abstract class Encoder {
-    abstract readonly FIELD_TY: DataType;
-    abstract encode(w: Writer): void;
-
-    toBytes() {
-        let buf = new Writer();
-        this.encode(buf);
-        return buf.data()
-    }
-}
-
-type TypedArray = Uint8Array | Int8Array
-    | Float32Array | Float64Array
-    | Uint16Array | Uint32Array | BigUint64Array
-    | Int16Array | Int32Array | BigInt64Array;
-
 export class Encode extends Writer {
     U8(num: number) {
         this.writeByte(num)
     }
 
     I8(num: number) {
-        assert(num >= -128 && num <= 127, () => `I8 out of range: ${num} (expected -128..=127)`);
+        checkOverflow(num, -128, 127);
 
         const buf = new ArrayBuffer(1);
         new DataView(buf).setInt8(0, num);
@@ -87,7 +78,7 @@ export class Encode extends Writer {
         this.writeBytes(utf8Encoder.encode(text));
     }
 
-    List<T>(f: (this: this, val: T) => void) {
+    List<T>(f: Encoder<T>) {
         return (vals: Iterable<T> & { length: number }) => {
             this.write_len_and_ty(vals.length, DataType.fromStr(f.name));
             for (let v of vals) f.call(this, v);
@@ -122,7 +113,7 @@ export class Encode extends Writer {
 export class StructEncoder {
     constructor(public e: Encode) { }
 
-    Field<T>(f: (this: Encode, val: T) => void) {
+    Field<T>(f: Encoder<T>) {
         return (id: number, v: T) => {
             this.e.write_field_id_and_ty(id, DataType.fromStr(f.name));
             f.call(this.e, v);
@@ -168,7 +159,7 @@ export class StructEncoder {
         this.Field(this.e.Str)(id, text)
     }
 
-    List<T>(f: (this: Encode, val: T) => void) {
+    List<T>(f: Encoder<T>) {
         return (id: number, vals: T[]) => {
             this.e.write_field_id_and_ty(id, DataType.List);
             this.e.List(f)(vals)

@@ -1,3 +1,5 @@
+import { checkOverflow } from "./common.ts";
+
 export class Buffer {
     #len = 0;
     #data: ArrayLike<number>[] = [];
@@ -13,7 +15,7 @@ export class Buffer {
     }
 
     writeByte(byte: number) {
-        if (byte > 0xFF) throw RangeError(`byte must be 0..=255, got ${byte}`);
+        checkOverflow(byte, 0, 255);
         this.#len += 1;
         this.#data.push([byte]);
     }
