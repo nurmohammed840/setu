@@ -37,7 +37,12 @@ Deno.test("read bytes", async () => {
     let de = createStream([], [1, 2, 3], [], [4], [], [5]);
 
     assertEquals([...await de.readBytes(2)], [1, 2]);
-    assertEquals([...await de.readBytes(3)], [3, 4, 5]);
+    assertEquals([...await de.readBytes(0)], []);
+    assertEquals([...await de.readBytes(1)], [3]);
+    assertEquals([...await de.readBytes(0)], []);
+    assertEquals([...await de.readBytes(2)], [4, 5]);
+
+    await assertRejects(async () => await de.readBytes(1));
 });
 
 Deno.test("stream eof", async () => {

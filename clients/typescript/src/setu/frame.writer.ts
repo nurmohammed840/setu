@@ -5,7 +5,7 @@ import { Trailer } from "./trailer.ts";
 export function encodeAsFrame(msg: Uint8Array) {
     let len = new LenBE(msg.length);
     let frame = new Buffer();
-    frame.append(
+    frame.appendMany(
         [FrameHeader.new({ lenSize: len.size }).encode()],
         len.asBytes(),
         msg,

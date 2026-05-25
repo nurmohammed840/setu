@@ -61,8 +61,6 @@ export class HttpResponse {
         return value;
     }
 
-
-
     async toBytes() {
         let chunk;
         let buf = new Buffer();

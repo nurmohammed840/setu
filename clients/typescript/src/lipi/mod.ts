@@ -1,3 +1,5 @@
+import { assert } from "../utils/common.ts";
+
 export enum DataType {
     False = 0,
     True = 1,
@@ -27,5 +29,10 @@ export enum DataType {
 export namespace DataType {
     export function fromBool(bool: boolean): DataType {
         return +bool;
+    }
+    export function fromStr(str: string): DataType {
+        let ty = DataType[str as "F32"];
+        assert(ty !== undefined, () => `invalid type: ${str}`);
+        return ty
     }
 }

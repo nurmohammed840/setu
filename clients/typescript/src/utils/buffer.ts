@@ -2,7 +2,12 @@ export class Buffer {
     #len = 0;
     #data: ArrayLike<number>[] = [];
 
-    append(...bufs: ArrayLike<number>[]) {
+    append(buf: ArrayLike<number>) {
+        this.#len += buf.length;
+        this.#data.push(buf)
+    }
+
+    appendMany(...bufs: ArrayLike<number>[]) {
         for (let buf of bufs) this.#len += buf.length;
         this.#data.push(...bufs)
     }
