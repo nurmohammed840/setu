@@ -1,5 +1,5 @@
 use setu::{
-    Application,
+    Application, export,
     transport::{
         HttpServer,
         http::{HttpRequest, HttpResponse},
@@ -24,17 +24,8 @@ async fn add(a: u8, b: u8) -> u8 {
     a + b
 }
 
-#[derive(Clone)]
-struct Example;
-
-impl setu::Application for Example {
-    fn execute(id: u32, req: HttpRequest, mut res: HttpResponse) {
-        match id {
-            10 => setu::Output::process(add, req, res),
-            id => {
-                *res.status_mut() = http::StatusCode::NOT_IMPLEMENTED;
-                let _ = res.write_unbound(format!("Unknown call id {id}"));
-            }
-        }
-    }
+export! {
+    as Example;
+    
+    fn add(a, b) = 15;
 }

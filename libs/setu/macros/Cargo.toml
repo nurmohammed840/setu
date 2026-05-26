@@ -8,3 +8,5 @@ proc-macro = true
 
 [dependencies]
 setu-derive = { path = "../derive", version = "0.1" }
+syn = "2"
+quote2 = "0.9"
