@@ -11,11 +11,6 @@ const utf8Encoder = new TextEncoder();
 
 type Encoder<T> = (this: Encode, val: T) => void;
 
-type TypedArray = Uint8Array | Int8Array
-    | Float32Array | Float64Array
-    | Uint16Array | Uint32Array | BigUint64Array
-    | Int16Array | Int32Array | BigInt64Array;
-
 export class Writer extends Buffer {
     writeUint(num: number | bigint) {
         this.append(encodeVarInt(num));
@@ -79,46 +74,51 @@ export class Encode extends Writer {
     }
 
     List<T>(f: Encoder<T>) {
-        return (vals: Iterable<T> & { length: number }) => {
-            this.write_len_and_ty(vals.length, DataType.fromStr(f.name));
-            for (let v of vals) f.call(this, v);
+        let self = this;
+        return function List(vals: Iterable<T> & { length: number }) {
+            self.write_len_and_ty(vals.length, DataType.fromStr(f.name));
+            for (let v of vals) f.call(self, v);
         }
     }
 
-    ListNum(v: TypedArray) {
-        if (v instanceof Uint8Array) {
-            this.write_len_and_ty(v.length, DataType.U8);
-            return this.append(v);
-        }
-        if (v instanceof Int8Array) {
-            this.write_len_and_ty(v.length, DataType.I8);
-            return this.append(RawBytes(v));
-        }
-        if (v instanceof Float32Array || v instanceof Float64Array)
-            return encodeFloatArray(this, v);
-
-        if (v instanceof Uint16Array || v instanceof Uint32Array || v instanceof BigUint64Array)
-            return this.List(this.UInt)(v);
-
-        if (v instanceof Int16Array || v instanceof Int32Array || v instanceof BigInt64Array)
-            return this.List(this.Int)(v);
+    ListU8 = function List(this: Encode, v: Uint8Array) {
+        this.write_len_and_ty(v.length, DataType.U8);
+        this.append(v)
     }
 
-    ListBool(bools: Array<boolean>) {
+    ListI8 = function List(this: Encode, v: Int8Array) {
+        this.write_len_and_ty(v.length, DataType.I8);
+        this.append(RawBytes(v))
+    }
+
+    ListF32 = function List(this: Encode, v: Float32Array) {
+        this.write_len_and_ty(v.length, DataType.F32);
+        if (IS_LITTLE_ENDIAN) return this.append(RawBytes(v));
+        for (let n of v) this.F32(n)
+    }
+
+    ListF64 = function List(this: Encode, v: Float64Array) {
+        this.write_len_and_ty(v.length, DataType.F64);
+        if (IS_LITTLE_ENDIAN) return this.append(RawBytes(v));
+        for (let n of v) this.F64(n)
+    }
+
+    ListBool = function List(this: Encode, bools: Array<boolean>) {
         this.write_len_and_ty(bools.length, DataType.True);
         this.append(bitvecFrom(bools).asBytes())
     }
 
     Table<K, V>(k: Encoder<K>, v: Encoder<V>) {
-        return (map: Map<K, V>) => {
-            this.writeUint(2); // Column count
-            this.writeUint(map.size); // Row count
+        let self = this;
+        return function Table(map: Map<K, V>) {
+            self.writeUint(2); // Column count
+            self.writeUint(map.size); // Row count
 
-            this.write_field_id_and_ty(0, DataType.fromStr(k.name));
-            for (let key of map.keys()) k.call(this, key);
+            self.write_field_id_and_ty(0, DataType.fromStr(k.name));
+            for (let key of map.keys()) k.call(self, key);
 
-            this.write_field_id_and_ty(1, DataType.fromStr(v.name));
-            for (let val of map.values()) v.call(this, val);
+            self.write_field_id_and_ty(1, DataType.fromStr(v.name));
+            for (let val of map.values()) v.call(self, val);
         }
     }
 }
@@ -173,10 +173,7 @@ export class StructEncoder {
     }
 
     List<T>(f: Encoder<T>) {
-        return (id: number, vals: T[]) => {
-            this.e.write_field_id_and_ty(id, DataType.List);
-            this.e.List(f)(vals)
-        }
+        return this.Field(this.e.List(f))
     }
 }
 
@@ -186,16 +183,4 @@ function RawBytes(v: ArrayBufferView) {
     return new Uint8Array(v.buffer, v.byteOffset, v.byteLength)
 }
 
-function encodeFloatArray(w: Encode, nums: Float32Array | Float64Array) {
-    let ty = nums instanceof Float32Array ? DataType.F32 : DataType.F64;
-
-    w.write_len_and_ty(nums.length, ty);
-
-    if (IS_LITTLE_ENDIAN)
-        return w.append(RawBytes(nums));
-
-    if (ty == DataType.F32)
-        for (let n of nums) w.F32(n)
-    else
-        for (let n of nums) w.F64(n)
-}
+// ===========================================================
