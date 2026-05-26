@@ -108,6 +108,19 @@ export class Encode extends Writer {
         this.write_len_and_ty(bools.length, DataType.True);
         this.append(bitvecFrom(bools).asBytes())
     }
+
+    Table<K, V>(k: Encoder<K>, v: Encoder<V>) {
+        return (map: Map<K, V>) => {
+            this.writeUint(2); // Column count
+            this.writeUint(map.size); // Row count
+
+            this.write_field_id_and_ty(0, DataType.fromStr(k.name));
+            for (let key of map.keys()) k.call(this, key);
+
+            this.write_field_id_and_ty(1, DataType.fromStr(v.name));
+            for (let val of map.values()) v.call(this, val);
+        }
+    }
 }
 
 export class StructEncoder {
@@ -121,7 +134,7 @@ export class StructEncoder {
     }
 
     Option<T>(f: (this: this, id: number, value: T) => void) {
-        return (id: number, val: T | undefined) => {
+        return (id: number, val?: T) => {
             if (val === undefined) return;
             f.call(this, id, val);
         }
