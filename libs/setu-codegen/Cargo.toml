@@ -6,4 +6,4 @@ edition = "2024"
 [dependencies]
 std-lib = { path = "../std-lib", version = "0.1" }
 type-id = { path = "../type-id", version = "0.2" }
-setu-message = { path = "../message", version = "0.1" }
+setu-type-info = { path = "../setu-type-info", version = "0.1" }

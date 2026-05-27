@@ -1,4 +1,4 @@
-use setu_message::TypeDefinition;
+use setu_type_info::TypeDefinition;
 use type_id::TypeRegistry;
 
 mod typescript;

@@ -868,7 +868,7 @@ dependencies = [
  "nio",
  "setu-codegen",
  "setu-macros",
- "setu-message",
+ "setu-type-info",
  "std-lib",
  "tokio-rustls",
  "type-id",
@@ -878,7 +878,7 @@ dependencies = [
 name = "setu-codegen"
 version = "0.1.0"
 dependencies = [
- "setu-message",
+ "setu-type-info",
  "std-lib",
  "type-id",
 ]
@@ -904,7 +904,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "setu-message"
+name = "setu-type-info"
 version = "0.1.0"
 dependencies = [
  "std-lib",

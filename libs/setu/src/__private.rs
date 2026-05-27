@@ -1,4 +1,4 @@
-pub use setu_message;
+pub use setu_type_info;
 pub use type_id;
 pub use lipi;
 

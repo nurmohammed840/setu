@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use setu_message::{FnOutputTy, Func, type_id};
+use setu_type_info::{FnOutputTy, Func, type_id};
 use type_id::{Ident, Type, TypeId};
 
 async fn func() {}
