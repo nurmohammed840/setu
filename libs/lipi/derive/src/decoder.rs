@@ -7,11 +7,12 @@ use crate::{errors, utils};
 use errors::to_compile_error;
 
 pub fn expand(
+    crate_path: &TokenStream,
     input: &DeriveInput,
-    crate_path: TokenStream,
+    t: &mut TokenStream,
     key_attr: &str,
     default_attr: &str,
-) -> TokenStream {
+) {
     let DeriveInput {
         ident,
         generics,
@@ -201,7 +202,6 @@ pub fn expand(
 
     let ty = data_ty(data);
 
-    let mut t = TokenStream::new();
     quote!(t, {
         const _: () = {
             use #crate_path as __crate;
@@ -213,5 +213,4 @@ pub fn expand(
             }
         };
     });
-    t
 }

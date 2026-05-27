@@ -8,7 +8,7 @@ use proc_macro2::TokenStream;
 use quote2::{Quote, QuoteFn, quote};
 use syn::*;
 
-pub fn expand(crate_path: TokenStream, input: &DeriveInput, output: &mut TokenStream) {
+pub fn expand(crate_path: &TokenStream, input: &DeriveInput, output: &mut TokenStream) {
     let DeriveInput {
         attrs,
         ident,

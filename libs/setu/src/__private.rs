@@ -1,5 +1,6 @@
 pub use setu_message;
 pub use type_id;
+pub use lipi;
 
 use crate::transport::http::HttpResponse;
 

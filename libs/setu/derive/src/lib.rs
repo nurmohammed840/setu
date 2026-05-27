@@ -42,11 +42,11 @@ pub fn expend_type_definition(crate_path: &TokenStream, list: &RpcList, t: &mut 
         for Rpc { name, index, .. } in &list.rpcs {
             let raw = name.to_string();
             quote!(t, {
-                Func::with_meta(r, "", &#name, #index, #raw)
+                Func::with_meta(r, "", &#name, #index, #raw),
             });
         }
     });
-    
+
     let name = interface_name(&list);
     quote!(t, {
         const _: () = {

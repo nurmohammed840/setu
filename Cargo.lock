@@ -896,9 +896,11 @@ dependencies = [
 name = "setu-macros"
 version = "0.1.0"
 dependencies = [
+ "lipi-derive",
  "quote2",
  "setu-derive",
  "syn",
+ "type-id-derive",
 ]
 
 [[package]]

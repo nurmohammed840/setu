@@ -1,27 +1,33 @@
+mod utils;
+
 use lipi_derive::{quote2, syn};
 use proc_macro::TokenStream;
+use quote2::*;
 
 #[proc_macro_derive(Encode, attributes(key))]
 pub fn encoder(input: TokenStream) -> TokenStream {
-    let Ok(derive_input) = syn::parse(input) else {
+    let Ok(input) = syn::parse(input) else {
         return TokenStream::new();
     };
-    
-    lipi_derive::encoder::expand(&derive_input, crate_path(), "key").into()
+
+    let mut t = proc_macro2::TokenStream::new();
+    lipi_derive::encoder::expand(&utils::crate_path!(::lipi), &input, &mut t, "key");
+    t.into()
 }
 
-#[proc_macro_derive(Decode, attributes(key, default, foo))]
+#[proc_macro_derive(Decode, attributes(key, default))]
 pub fn decoder(input: TokenStream) -> TokenStream {
-    let Ok(derive_input) = syn::parse(input) else {
+    let Ok(input) = syn::parse(input) else {
         return TokenStream::new();
     };
 
-    lipi_derive::decoder::expand(&derive_input, crate_path(), "key", "default").into()
-}
-
-fn crate_path() -> quote2::proc_macro2::TokenStream {
-    use quote2::*;
-    let mut out = proc_macro2::TokenStream::new();
-    quote!(out, { ::lipi });
-    out
+    let mut t = proc_macro2::TokenStream::new();
+    lipi_derive::decoder::expand(
+        &utils::crate_path!(::lipi),
+        &input,
+        &mut t,
+        "key",
+        "default",
+    );
+    t.into()
 }

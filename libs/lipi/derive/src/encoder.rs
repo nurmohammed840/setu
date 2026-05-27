@@ -7,7 +7,7 @@ use crate::utils::data_ty;
 use crate::{errors, utils};
 use errors::to_compile_error;
 
-pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> TokenStream {
+pub fn expand(crate_path: &TokenStream, input: &DeriveInput, t: &mut TokenStream, key_attr: &str) {
     let DeriveInput {
         ident,
         generics,
@@ -155,7 +155,6 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
 
     let ty = data_ty(data);
 
-    let mut t = TokenStream::new();
     quote!(t, {
         const _: () = {
             use #crate_path as __crate;
@@ -167,7 +166,6 @@ pub fn expand(input: &DeriveInput, crate_path: TokenStream, key_attr: &str) -> T
             }
         };
     });
-    t
 }
 
 // Add a bound `T: __crate::Encode` to every type parameter T.
