@@ -12,6 +12,10 @@ pub struct TypeRegistry {
 }
 
 impl TypeRegistry {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     /// This method registers a type with the registry.
     ///
     /// If the type has already been registered, it will return the existing type.

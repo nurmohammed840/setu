@@ -866,10 +866,20 @@ dependencies = [
  "http",
  "lipi",
  "nio",
+ "setu-codegen",
  "setu-macros",
  "setu-message",
  "std-lib",
  "tokio-rustls",
+ "type-id",
+]
+
+[[package]]
+name = "setu-codegen"
+version = "0.1.0"
+dependencies = [
+ "setu-message",
+ "std-lib",
  "type-id",
 ]
 

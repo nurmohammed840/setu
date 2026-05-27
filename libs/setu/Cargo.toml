@@ -34,3 +34,4 @@ type-id = { path = "../type-id", version = "0.2" }
 setu-message = { path = "../message", version = "0.1" }
 
 [dev-dependencies]
+setu-codegen = { path = "../setu-codegen", version = "0.1" }
