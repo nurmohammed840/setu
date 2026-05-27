@@ -1,6 +1,6 @@
+pub use lipi;
 pub use setu_type_info;
 pub use type_id;
-pub use lipi;
 
 use crate::transport::http::HttpResponse;
 

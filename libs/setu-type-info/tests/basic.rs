@@ -21,7 +21,7 @@ async fn func_with_arg(_: User) {}
 #[test]
 fn test_async_fn() {
     let mut r = type_id::TypeRegistry::default();
-    
+
     let f = Func::new(&func, &mut r, ());
     assert!(f.input_ty.is_empty());
     assert_eq!(output_ty(f), Type::Tuple(vec![]));

@@ -26,6 +26,6 @@ async fn add(a: u8, b: u8) -> u8 {
 
 export! {
     as Example;
-    
+
     fn add(a, b) = 15;
 }

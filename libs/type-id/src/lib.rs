@@ -100,9 +100,9 @@ macro_rules! discriminant {
     [$($id:tt : $ty:ty)*] => {
         #[derive(Debug, Clone, Hash)]
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-        pub enum Discriminant { 
+        pub enum Discriminant {
             $($id($ty),)*
-            None 
+            None
         }
         $(
             impl From<$ty> for Discriminant {

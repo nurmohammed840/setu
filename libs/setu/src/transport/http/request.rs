@@ -14,9 +14,7 @@ pub struct HttpRequest {
 }
 
 impl HttpRequest {
-    pub fn asds(&self) {
-        
-    }
+    pub fn asds(&self) {}
 }
 
 impl From<Request<RecvStream>> for HttpRequest {

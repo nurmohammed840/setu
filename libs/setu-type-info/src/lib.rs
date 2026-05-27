@@ -62,8 +62,8 @@ impl Func<FnMetaData> {
     }
 }
 
-pub trait TypeDefinition  {
-    fn type_definition( r: &mut TypeRegistry) -> Vec<Func<FnMetaData>>;
+pub trait TypeDefinition {
+    fn type_definition(r: &mut TypeRegistry) -> Vec<Func<FnMetaData>>;
 }
 
 pub trait AsyncFnOutputType {

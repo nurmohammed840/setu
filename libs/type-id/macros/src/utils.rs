@@ -1,4 +1,3 @@
-
 macro_rules! crate_path {
     [$($tt:tt)*] => ({
         let mut path = proc_macro2::TokenStream::new();

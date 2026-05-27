@@ -142,7 +142,7 @@ fn get_discriminant(
     quote(move |t| match (discriminant, enum_repr) {
         (Some((_, expr)), Some(ty)) => {
             quote!(t, { __crate::Discriminant::from(#expr as #ty) });
-        },
+        }
         (Some((_, expr)), None) => {
             quote!(t, { __crate::Discriminant::from(#expr) });
         }

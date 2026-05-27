@@ -39,7 +39,6 @@ ty! {
     }
 }
 
-
 macro_rules! impl_for_typles {
     [$(($($ty: ident)*))*]  => ($(
         impl<$($ty),*> TypeId for ($($ty,)*)
