@@ -42,11 +42,11 @@ impl<T> Func<T> {
 
 impl Func<FnMetaData> {
     pub fn with_meta<F, Args>(
-        f: &F,
         r: &mut TypeRegistry,
         docs: &str,
+        f: &F,
         index: u16,
-        ident: Ident,
+        ident: &str,
     ) -> Func<FnMetaData>
     where
         F: std_lib::FnOnce<Args>,
@@ -56,10 +56,14 @@ impl Func<FnMetaData> {
         let meta = FnMetaData {
             docs: docs.to_string(),
             index,
-            ident,
+            ident: Ident(ident.into()),
         };
         Func::new(f, r, meta)
     }
+}
+
+pub trait TypeDefinition  {
+    fn type_definition( r: &mut TypeRegistry) -> Vec<Func<FnMetaData>>;
 }
 
 pub trait AsyncFnOutputType {

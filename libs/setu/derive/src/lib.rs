@@ -9,18 +9,14 @@ use syn::Ident;
 
 pub fn expend_export(crate_path: &TokenStream, list: &RpcList, t: &mut TokenStream) {
     let rpcs = quote(|t| {
-        for rpc in &list.rpcs {
-            let Rpc { name, index, .. } = rpc;
+        for Rpc { name, index, .. } in &list.rpcs {
             quote!(t, {
                 #index => #crate_path::Output::process(#name, req, res),
             });
         }
     });
 
-    let name = match list.name {
-        Some(ref name) => name.name.clone(),
-        None => Ident::new("App", Span::call_site()),
-    };
+    let name = interface_name(list);
 
     quote!(t, {
         #[derive(::std::clone::Clone)]
@@ -39,4 +35,36 @@ pub fn expend_export(crate_path: &TokenStream, list: &RpcList, t: &mut TokenStre
             }
         }
     });
+}
+
+pub fn expend_type_definition(crate_path: &TokenStream, list: &RpcList, t: &mut TokenStream) {
+    let body = quote(|t| {
+        for Rpc { name, index, .. } in &list.rpcs {
+            let raw = name.to_string();
+            quote!(t, {
+                Func::with_meta(r, "", &#name, #index, #raw)
+            });
+        }
+    });
+    
+    let name = interface_name(&list);
+    quote!(t, {
+        const _: () = {
+            use #crate_path::__private::setu_message::{FnMetaData, Func, TypeDefinition};
+            use #crate_path::__private::type_id::TypeRegistry;
+
+            impl TypeDefinition for #name {
+                fn type_definition(r: &mut TypeRegistry) -> ::std::vec::Vec<Func<FnMetaData>> {
+                    ::std::vec![ #body ]
+                }
+            }
+        };
+    });
+}
+
+fn interface_name(list: &RpcList) -> Ident {
+    match list.name {
+        Some(ref name) => name.name.clone(),
+        None => Ident::new("App", Span::call_site()),
+    }
 }

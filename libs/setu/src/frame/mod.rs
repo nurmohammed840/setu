@@ -92,6 +92,8 @@ impl FrameDecoder {
         let header = FrameHeader::parse(self.read_byte(stream).await?);
         let len = self.parse_len_big_endian(stream, header.len_size).await?;
 
+        // TODO: `len` should less then 16MB
+
         let bytes = self.read_bytes(stream, len).await?;
 
         Ok(MaybeCompressed {
