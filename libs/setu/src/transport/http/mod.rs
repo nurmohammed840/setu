@@ -56,8 +56,7 @@ impl HttpServer {
         let addr = self.addr.unwrap_or_else(|| {
             env::var("SERVER_ADDR")
                 .ok()
-                .map(|a| a.parse::<SocketAddr>().ok())
-                .flatten()
+                .and_then(|a| a.parse::<SocketAddr>().ok())
                 .unwrap_or(SocketAddr::from(([0, 0, 0, 0], 0)))
         });
 

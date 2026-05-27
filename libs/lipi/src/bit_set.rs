@@ -164,7 +164,7 @@ mod tests {
         assert_eq!(BitSetMut::remove(&mut bs, 5), Some(false));
         assert!(!bs.has(5));
 
-        assert_eq!(bs.set(5).unwrap(), false);
+        assert!(!bs.set(5).unwrap());
         assert!(bs.has(5));
 
         assert_eq!(BitSetMut::remove(&mut bs, 5), Some(true));
@@ -181,8 +181,8 @@ mod tests {
 
         assert_eq!(BitSetMut::remove(&mut bs, 8), None);
 
-        assert_eq!(bs.has(8), false);
-        assert_eq!(bs.has(9999), false);
+        assert!(!bs.has(8));
+        assert!(!bs.has(9999));
     }
 
     #[test]

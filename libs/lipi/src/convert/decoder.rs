@@ -15,10 +15,10 @@ pub fn decode_field_id_and_ty(reader: &mut &[u8]) -> Result<(u64, DataType)> {
         id
     };
 
-    Ok((id, unsafe { std::mem::transmute(ty) }))
+    Ok((id, unsafe { std::mem::transmute::<u8, DataType>(ty) }))
 }
 
-pub fn decode_packed_bools<'de>(reader: &mut &'de [u8], len: usize) -> Result<Vec<bool>> {
+pub fn decode_packed_bools(reader: &mut &[u8], len: usize) -> Result<Vec<bool>> {
     let packed = utils::read_bytes(reader, utils::bool_packed_len(len))?;
     Ok(bit_set::bitvec_to_bools(len, packed))
 }

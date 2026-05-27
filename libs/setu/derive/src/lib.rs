@@ -47,7 +47,7 @@ pub fn expend_type_definition(crate_path: &TokenStream, list: &RpcList, t: &mut 
         }
     });
 
-    let name = interface_name(&list);
+    let name = interface_name(list);
     quote!(t, {
         const _: () = {
             use #crate_path::__private::setu_message::{FnMetaData, Func, TypeDefinition};

@@ -24,7 +24,7 @@ pub fn exrta_fields(count: usize, unnamed: &Punctuated<Field, Comma>) -> TokenSt
         let mut err_spans = unnamed.iter();
         err_spans.next(); // skip
         let start = err_spans.next().span();
-        let end = err_spans.last().span();
+        let end = err_spans.next_back().span();
         start.join(end).unwrap_or_else(|| unnamed.last().span())
     };
 

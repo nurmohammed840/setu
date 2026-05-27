@@ -53,12 +53,12 @@ where
 
             let result = poll_fn(|cx| {
                 if let Some(timer) = timer.as_mut()
-                    && let Poll::Ready(()) = timer.poll_unpin(cx)
+                    && timer.poll_unpin(cx).is_ready()
                 {
                     return Poll::Ready(CallStatus::Timeout);
                 }
 
-                if let Poll::Ready(_) = res.poll_reset(cx) {
+                if res.poll_reset(cx).is_ready() {
                     return Poll::Ready(CallStatus::Canceled);
                 }
 

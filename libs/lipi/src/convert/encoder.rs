@@ -190,10 +190,12 @@ encode! {
     }
 
     u16, u32, u64 = UInt (self, writer) {
+        #[allow(clippy::useless_conversion)]
         encode_uint(writer, (*self).into())
     }
 
     i16, i32, i64 = Int (self, writer) {
+        #[allow(clippy::useless_conversion)]
         encode_int(writer, (*self).into())
     }
 

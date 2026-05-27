@@ -83,7 +83,7 @@ pub fn expand(
             });
 
             for (alias, key, _, _) in &struct_fields {
-                if let Some(_) = key {
+                if key.is_some() {
                     quote!(t, {
                         let mut #alias = ::std::option::Option::None;
                     });

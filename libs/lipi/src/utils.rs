@@ -80,6 +80,7 @@ pub fn try_collect<T, E>(len: usize, mut f: impl FnMut() -> Result<T, E>) -> Res
 }
 
 #[inline]
+#[allow(clippy::manual_div_ceil)]
 pub fn bool_packed_len(len: usize) -> usize {
     (len + 7) / 8
 }
@@ -99,7 +100,7 @@ mod tests {
         assert_eq!(16u8.div_ceil(8), 2);
         assert_eq!(17u8.div_ceil(8), 3);
 
-        for len in 0..=1000 as usize {
+        for len in 0..=1000_usize {
             assert_eq!(len.div_ceil(8), bool_packed_len(len));
         }
     }
