@@ -62,6 +62,20 @@ impl Func<FnMetaData> {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct TypeInfo {
+    pub registry: TypeRegistry,
+    pub fns: Vec<Func<FnMetaData>>,
+}
+
+impl TypeInfo {
+    pub fn from<T: TypeDefinition>() -> TypeInfo {
+        let mut registry = TypeRegistry::new();
+        let fns = T::type_definition(&mut registry);
+        TypeInfo { registry, fns }
+    }
+}
+
 pub trait TypeDefinition {
     fn type_definition(r: &mut TypeRegistry) -> Vec<Func<FnMetaData>>;
 }

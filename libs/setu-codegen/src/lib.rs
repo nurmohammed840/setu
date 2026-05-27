@@ -1,12 +1,3 @@
-use setu_type_info::TypeDefinition;
-use type_id::TypeRegistry;
+pub mod typescript;
 
-mod typescript;
-
-pub fn generate<T: TypeDefinition>() {
-    let mut r = TypeRegistry::new();
-    let tys = T::type_definition(&mut r);
-
-    println!("type_definition: {tys:#?}");
-    println!("TypeRegistry: {r:#?}");
-}
+pub use setu_type_info as type_info;

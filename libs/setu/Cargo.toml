@@ -32,6 +32,3 @@ setu-macros = { path = "./macros", version = "0.1" }
 std-lib = { path = "../std-lib", version = "0.1" }
 type-id = { path = "../type-id", version = "0.2" }
 setu-type-info = { path = "../setu-type-info", version = "0.1" }
-
-[dev-dependencies]
-setu-codegen = { path = "../setu-codegen", version = "0.1" }

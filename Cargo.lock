@@ -239,6 +239,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
+name = "demo"
+version = "0.1.0"
+dependencies = [
+ "nio",
+ "setu",
+ "setu-codegen",
+]
+
+[[package]]
 name = "dunce"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -866,7 +875,6 @@ dependencies = [
  "http",
  "lipi",
  "nio",
- "setu-codegen",
  "setu-macros",
  "setu-type-info",
  "std-lib",

@@ -1,3 +1,7 @@
 [workspace]
-members = ["libs/*"]
+members = [
+    "libs/*",
+    # ---
+    "demo",
+]
 resolver = "3"
