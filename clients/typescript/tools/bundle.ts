@@ -1,17 +1,21 @@
 import { bundle } from "jsr:@deno/emit";
 import { measurePerf } from "./utils.ts";
+import { ensureDirSync } from "jsr:@std/fs/ensure-dir";
 
-let input = "./src/mod.ts"
-let output = "./dist/index.js"
+let input = "./src/mod.ts";
+let outDir = "./javascript";
 
-let { code, map } = await bundle(input, {
-    // minify: true,
-    compilerOptions: {
-        sourceMap: true
-    }
-});
+async function bundleJs() {
+    let { code, map } = await bundle(input, {
+        minify: false,
+        compilerOptions: {
+            sourceMap: true
+        }
+    });
 
-measurePerf("Done", () => {
-    if (map) Deno.writeTextFileSync(`${output}.map`, map);
-    Deno.writeTextFileSync(output, code)
-});
+    ensureDirSync(outDir);
+    Deno.writeTextFileSync(`${outDir}/mod.js`, code)
+    if (map) Deno.writeTextFileSync(`${outDir}/mod.js.map`, map);
+}
+
+measurePerf(bundleJs);

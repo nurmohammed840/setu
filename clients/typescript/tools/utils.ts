@@ -1,6 +1,7 @@
-export function measurePerf<T>(label: string, f: () => T) {
-    console.time(label);
-    let res = f();
-    console.timeEnd(label);
+export async function measurePerf<T>(f: () => T) {
+    let name = f.name;
+    console.time(name);
+    let res = await f();
+    console.timeEnd(name);
     return res;
 }

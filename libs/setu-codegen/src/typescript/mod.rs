@@ -1,16 +1,18 @@
 use setu_type_info::TypeInfo;
-use std::path::PathBuf;
+use std::{fs, io, path::PathBuf};
+
+use crate::utils::copy_dir;
 
 #[derive(Debug, Clone)]
 pub struct Config {
-    pub output: PathBuf,
+    pub out_dir: PathBuf,
     pub preserve_import_extension: bool,
 }
 
 impl Config {
-    pub fn new(output: PathBuf) -> Self {
+    pub fn out_dir(path: PathBuf) -> Self {
         Self {
-            output,
+            out_dir: path,
             preserve_import_extension: false,
         }
     }
@@ -22,5 +24,18 @@ impl Config {
 }
 
 impl Config {
-    pub fn generate(&self, info: &TypeInfo) {}
+    pub fn generate(&self, _info: &TypeInfo) -> io::Result<()> {
+        fs::create_dir_all(&self.out_dir)?;
+
+        let deps = self.out_dir.join("deps");
+        if !deps.exists() {
+            let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("clients/typescript");
+
+            copy_dir(&src, &deps, 1, |file| {
+                file.extension().is_some_and(|ext| ext == "ts")
+            })?;
+        }
+        Ok(())
+        // println!("path: {:#?}", path);
+    }
 }
