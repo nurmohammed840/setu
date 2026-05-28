@@ -1,5 +1,10 @@
 import { assert } from "../utils/common.ts";
 
+export * from "./decoder.ts"
+export * from "./encoder.ts"
+export * from "./varint.ts"
+export * from "./zigzag.ts"
+
 export enum DataType {
     False = 0,
     True = 1,
