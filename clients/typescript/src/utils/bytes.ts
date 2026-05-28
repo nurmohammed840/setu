@@ -23,7 +23,7 @@ export class Bytes {
     nextByte() {
         let [[byte], ptr] = takeBytes(1, this.data);
         this.data = ptr;
-        return byte
+        return byte as number
     }
 
     take(len: number) {

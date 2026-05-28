@@ -6,7 +6,9 @@ import { Buffer } from "../utils/buffer.ts";
 
 export class MaybeCompressed<T> {
     constructor(
+        // @ts-ignore
         private isCompressed: boolean,
+        // @ts-ignore
         private data: T
     ) { }
 }

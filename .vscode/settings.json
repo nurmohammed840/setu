@@ -11,7 +11,6 @@
     "**/.DS_Store": true,
     "**/Thumbs.db": true,
     // ---------------------
-    // ".cargo": true,
     "LICENSE": true,
     "README.md": true,
     // ================

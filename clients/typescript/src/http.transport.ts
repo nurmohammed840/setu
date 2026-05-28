@@ -45,7 +45,7 @@ export async function rpc({ path, call_id, body, ctx }: CallArgs) {
 
 export class HttpResponse {
     eos = false; // end of stream
-    constructor(private reader: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>>) { }
+    constructor(private reader: ReadableStreamDefaultReader<Uint8Array>) { }
 
     [Symbol.dispose]() {
         this.reader.cancel()

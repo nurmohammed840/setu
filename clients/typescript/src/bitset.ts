@@ -62,8 +62,8 @@ export class BitVec implements BitSetRead, BitSetWrite {
 
         assert(slotIdx < this.bytes.length, () => `Out of bounds slot index: ${slotIdx}`);
 
-        const oldValue = (this.bytes[slotIdx] & mask) !== 0;
-        this.bytes[slotIdx] |= mask;
+        const oldValue = (this.bytes[slotIdx]! & mask) !== 0;
+        this.bytes[slotIdx]! |= mask;
 
         return oldValue;
     }
@@ -76,8 +76,8 @@ export class BitVec implements BitSetRead, BitSetWrite {
             return undefined;
         }
 
-        const oldValue = (this.bytes[slotIdx] & mask) !== 0;
-        this.bytes[slotIdx] &= ~mask;
+        const oldValue = (this.bytes[slotIdx]! & mask) !== 0;
+        this.bytes[slotIdx]! &= ~mask;
 
         return oldValue;
     }

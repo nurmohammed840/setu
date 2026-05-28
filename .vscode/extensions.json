@@ -1,5 +1,8 @@
 {
   "recommendations": [
-    "denoland.vscode-deno"
+    "nur.just-black",
+    "denoland.vscode-deno",
+    "usernamehw.errorlens",
+    "rust-lang.rust-analyzer"
   ]
 }

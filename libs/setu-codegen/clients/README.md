@@ -1,5 +1,8 @@
-This folder contain symlink, For example:
+This folder contain symlinks:
 
-```bash
+```sh
+❯ cd libs\setu-codegen\clients
+
 mklink /D typescript ..\..\..\clients\typescript\src
+mklink /D javascript ..\..\..\clients\typescript\javascript
 ```
