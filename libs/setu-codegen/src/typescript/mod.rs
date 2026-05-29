@@ -50,7 +50,7 @@ export const $etu = { RPC: $.RPC };
 
 pub fn generate_code(info: &TypeInfo) -> String {
     let mut c = CodeWriter::new();
-    c.line(TS_PRELUDE);
+    c.write_line(TS_PRELUDE);
     interface::generate(&mut c, info);
     c.buffer
 }

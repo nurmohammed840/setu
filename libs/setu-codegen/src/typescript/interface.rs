@@ -12,9 +12,9 @@ pub fn generate(c: &mut CodeWriter, info: &TypeInfo) {
         c.block(format_args!("export interface {name}"), |c| {
             for (arg, ty) in f.meta.args.iter().zip(&f.input_ty) {
                 if let Some(ty) = ty.optional() {
-                    c.fmt_line(format_args!("{}?: {},", arg.0, data_ty(ty)))
+                    c.line(format_args!("{}?: {},", arg.0, data_ty(ty)))
                 } else {
-                    c.fmt_line(format_args!("{}: {},", arg.0, data_ty(ty)))
+                    c.line(format_args!("{}: {},", arg.0, data_ty(ty)))
                 }
             }
         });

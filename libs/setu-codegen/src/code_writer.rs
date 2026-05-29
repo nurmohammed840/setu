@@ -25,8 +25,15 @@ impl CodeWriter {
         self.indent_level -= 1;
     }
 
-    pub fn line(&mut self, s: &str) {
-        self.write_with_indent(s);
+    pub fn write_line(&mut self, s: &str) {
+        self.write_indent();
+        self.buffer.push_str(s);
+        self.newline();
+    }
+
+    pub fn line(&mut self, args: Arguments<'_>) {
+        self.write_indent();
+        let _ = self.buffer.write_fmt(args);
         self.newline();
     }
 
@@ -36,19 +43,14 @@ impl CodeWriter {
         }
     }
 
-    pub fn write_with_indent(&mut self, s: &str) {
-        self.write_indent();
-        self.buffer.push_str(s);
-    }
-
     pub fn newline(&mut self) {
         self.buffer.push('\n');
     }
 
     pub fn block(&mut self, header: impl Display, f: impl FnOnce(&mut Self)) {
-        self.fmt_line(format_args!("{header} {{"));
+        self.line(format_args!("{header} {{"));
         self.scope(f);
-        self.line("}");
+        self.write_line("}");
     }
 
     pub fn scope(&mut self, f: impl FnOnce(&mut Self)) {
@@ -56,17 +58,4 @@ impl CodeWriter {
         f(self);
         self.dedent();
     }
-
-    // -----------------------------
-
-    pub fn fmt_line(&mut self, args: Arguments<'_>) {
-        self.fmt_with_indent(args);
-        self.newline();
-    }
-
-    pub fn fmt_with_indent(&mut self, args: Arguments<'_>) {
-        self.write_indent();
-        let _ = self.buffer.write_fmt(args);
-    }
-
 }
