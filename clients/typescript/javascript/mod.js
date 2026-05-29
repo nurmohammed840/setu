@@ -345,6 +345,9 @@ class StructEncoder {
     List(f) {
         return this.Field(this.e.List(f));
     }
+    end() {
+        this.e.writeByte(DataType.StructEnd);
+    }
 }
 function RawBytes(v) {
     return new Uint8Array(v.buffer, v.byteOffset, v.byteLength);
@@ -501,7 +504,7 @@ class Trailer {
         0
     ];
 }
-function encodeAsFrame(msg) {
+function encodeAsLastFrame(msg) {
     let len = new LenBE(msg.length);
     let frame = new Buffer();
     frame.appendMany([
@@ -516,9 +519,48 @@ const mod1 = {
     FrameHeader,
     LenBE,
     FrameDecoder,
-    encodeAsFrame,
+    encodeAsLastFrame,
     Trailer
 };
+var _computedKey1;
+_computedKey1 = Symbol.dispose;
+class MPSC {
+    #controller;
+    #closed = false;
+    stream = new ReadableStream({
+        start: (controller)=>{
+            this.#controller = controller;
+        },
+        cancel: ()=>{
+            this.#closed = true;
+        }
+    });
+    [_computedKey1]() {
+        this.close();
+    }
+    send(val) {
+        assert(!this.#closed, "Channel is closed");
+        this.#controller.enqueue(val);
+    }
+    close() {
+        this.#closed = true;
+        this.#controller.close();
+    }
+    get isClosed() {
+        return this.#closed;
+    }
+}
+class Input {
+    channel = new MPSC();
+    sendAndClose(f) {
+        let e = new Encode();
+        let s = new StructEncoder(e);
+        f(s);
+        s.end();
+        this.channel.send(encodeAsLastFrame(e.data()));
+        this.channel.close();
+    }
+}
 var TimeoutUnit;
 (function(TimeoutUnit) {
     TimeoutUnit["Hour"] = "H";
@@ -588,35 +630,41 @@ class Timeout {
 }
 export { TimeoutUnit as TimeoutUnit };
 export { Timeout as Timeout };
-var _computedKey1;
-const SETTINGS = {
-    unaryTimeout: Timeout.minute(2)
-};
-async function rpc({ path, call_id, body, ctx }) {
-    ctx ??= {
-        timeout: SETTINGS.unaryTimeout
-    };
-    let headers = {
-        "content-type": "application/setu",
-        "rpc-id": call_id.toString()
-    };
-    if (ctx.timeout) {
-        headers["rpc-timeout"] = ctx.timeout.toString();
+var _computedKey2;
+class RPC {
+    static URL = new URL("/", "https://localhost:443");
+    static TIMEOUT = Timeout.minute(2);
+    static async call(id, body, timeout = RPC.TIMEOUT, url = RPC.URL) {
+        let headers = {
+            "content-type": "application/setu",
+            "rpc-id": id.toString()
+        };
+        if (timeout) {
+            headers["rpc-timeout"] = timeout.toString();
+        }
+        let res = await fetch(url, {
+            method: "POST",
+            headers,
+            body
+        });
+        if (!res.ok) {
+            throw new Error(`${res.statusText}: ${await res.text()}`);
+        }
+        let contentType = res.headers.get("content-type");
+        assert(contentType == "application/setu", ()=>`unexpected content-type: ${contentType ?? "none"}`);
+        assert(res.body, "No response body");
+        return res.body;
     }
-    let res = await fetch(path, {
-        method: "POST",
-        headers,
-        body
-    });
-    if (!res.ok) {
-        throw new Error(`${res.statusText}: ${await res.text()}`);
-    }
-    let contentType = res.headers.get("content-type");
-    assert(contentType == "application/setu", ()=>`unexpected content-type: ${contentType ?? "none"}`);
-    assert(res.body, "No response body");
-    return new HttpResponse(res.body.getReader());
 }
-_computedKey1 = Symbol.dispose;
+function rpc(id, { timeout, url }) {
+    let input = new Input();
+    let output = RPC.call(id, input.channel.stream, timeout, url);
+    return [
+        input,
+        output
+    ];
+}
+_computedKey2 = Symbol.dispose;
 class HttpResponse {
     reader;
     eos;
@@ -624,7 +672,7 @@ class HttpResponse {
         this.reader = reader;
         this.eos = false;
     }
-    [_computedKey1]() {
+    [_computedKey2]() {
         this.reader.cancel();
     }
     async read() {
@@ -643,6 +691,7 @@ class HttpResponse {
         return buf.data();
     }
 }
+export { RPC as RPC };
 export { rpc as rpc };
 export { HttpResponse as HttpResponse };
 export { mod as lipi };

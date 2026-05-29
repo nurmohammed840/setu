@@ -1,46 +1,46 @@
+import { Input } from "./input.ts";
 import { Timeout } from "./timeout.ts";
 import { Buffer } from "./utils/buffer.ts";
 import { assert } from "./utils/common.ts";
 
-const SETTINGS = {
-    unaryTimeout: Timeout.minute(2)
-};
+export class RPC {
+    static URL = new URL("/", "https://localhost:443");
+    static TIMEOUT = Timeout.minute(2);
 
-interface Context {
-    timeout?: Timeout
+    static async call(id: number, body: BodyInit, timeout: Timeout | null = RPC.TIMEOUT, url: URL = RPC.URL) {
+        let headers: HeadersInit = {
+            "content-type": "application/setu",
+            "rpc-id": id.toString(),
+        };
+
+        if (timeout) {
+            headers["rpc-timeout"] = timeout.toString();
+        }
+
+        let res = await fetch(url, { method: "POST", headers, body });
+
+        if (!res.ok) {
+            throw new Error(`${res.statusText}: ${await res.text()}`);
+        }
+
+        let contentType = res.headers.get("content-type");
+
+        assert(contentType == "application/setu", () => `unexpected content-type: ${contentType ?? "none"}`);
+        assert(res.body, "No response body");
+
+        return res.body;
+    }
 }
 
-interface CallArgs {
-    path: string | URL,
-    call_id: number,
-    body: BodyInit,
-    ctx?: Context
+export interface Context {
+    url?: URL,
+    timeout?: Timeout | null
 }
 
-export async function rpc({ path, call_id, body, ctx }: CallArgs) {
-    ctx ??= { timeout: SETTINGS.unaryTimeout };
-
-    let headers: HeadersInit = {
-        "content-type": "application/setu",
-        "rpc-id": call_id.toString(),
-    };
-
-    if (ctx.timeout) {
-        headers["rpc-timeout"] = ctx.timeout.toString();
-    }
-
-    let res = await fetch(path, { method: "POST", headers, body });
-
-    if (!res.ok) {
-        throw new Error(`${res.statusText}: ${await res.text()}`);
-    }
-
-    let contentType = res.headers.get("content-type");
-
-    assert(contentType == "application/setu", () => `unexpected content-type: ${contentType ?? "none"}`);
-    assert(res.body, "No response body");
-
-    return new HttpResponse(res.body.getReader());
+export function rpc(id: number, { timeout, url }: Context) {
+    let input = new Input();
+    let output = RPC.call(id, input.channel.stream, timeout, url);
+    return [input, output] as const;
 }
 
 export class HttpResponse {
@@ -70,9 +70,3 @@ export class HttpResponse {
         return buf.data();
     }
 }
-
-// console.log(await rpc({
-//     path: "https://127.0.0.1:4433/",
-//     call_id: 7,
-//     body: ""
-// }));

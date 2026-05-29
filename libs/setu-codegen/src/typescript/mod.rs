@@ -27,15 +27,14 @@ impl Config {
     pub fn generate(&self, _info: &TypeInfo) -> io::Result<()> {
         fs::create_dir_all(&self.out_dir)?;
 
-        let deps = self.out_dir.join("deps");
-        if !deps.exists() {
+        let lib = self.out_dir.join("lib");
+        if !lib.exists() {
             let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("clients/typescript");
 
-            copy_dir(&src, &deps, 1, |file| {
+            copy_dir(&src, &lib, 1, |file| {
                 file.extension().is_some_and(|ext| ext == "ts")
             })?;
         }
         Ok(())
-        // println!("path: {:#?}", path);
     }
 }

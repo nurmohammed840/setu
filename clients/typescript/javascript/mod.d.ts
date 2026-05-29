@@ -109,6 +109,7 @@ declare module "lipi/encoder" {
         List<T>(f: Encoder<T>): (id: number, v: Iterable<T> & {
             length: number;
         }) => void;
+        end(): void;
     }
 }
 declare module "lipi/mod" {
@@ -162,6 +163,32 @@ declare module "status" {
         function toString(status: Status): string;
     }
 }
+declare module "setu/trailer" {
+    export class Trailer {
+        static OK_ENCODED: number[];
+    }
+}
+declare module "setu/frame.writer" {
+    export function encodeAsLastFrame(msg: Uint8Array): Uint8Array;
+}
+declare module "utils/mpsc" {
+    export class MPSC<T> {
+        #private;
+        readonly stream: ReadableStream<T>;
+        [Symbol.dispose](): void;
+        send(val: T): void;
+        close(): void;
+        get isClosed(): boolean;
+    }
+}
+declare module "input" {
+    import { StructEncoder } from "lipi/encoder";
+    import { MPSC } from "utils/mpsc";
+    export class Input {
+        channel: MPSC<Uint8Array>;
+        sendAndClose(f: (s: StructEncoder) => void): void;
+    }
+}
 declare module "timeout" {
     export enum TimeoutUnit {
         Hour = "H",
@@ -184,17 +211,18 @@ declare module "timeout" {
     }
 }
 declare module "http.transport" {
+    import { Input } from "input";
     import { Timeout } from "timeout";
-    interface Context {
-        timeout?: Timeout;
+    export class RPC {
+        static URL: URL;
+        static TIMEOUT: Timeout;
+        static call(id: number, body: BodyInit, timeout?: Timeout | null, url?: URL): Promise<ReadableStream<Uint8Array>>;
     }
-    interface CallArgs {
-        path: string | URL;
-        call_id: number;
-        body: BodyInit;
-        ctx?: Context;
+    export interface Context {
+        url?: URL;
+        timeout?: Timeout | null;
     }
-    export function rpc({ path, call_id, body, ctx }: CallArgs): Promise<HttpResponse>;
+    export function rpc(id: number, { timeout, url }: Context): readonly [Input, Promise<ReadableStream<Uint8Array>>];
     export class HttpResponse {
         private reader;
         eos: boolean;
@@ -255,14 +283,6 @@ declare module "setu/frame" {
         readByte(): Promise<number>;
         readData(): Promise<Bytes>;
     }
-}
-declare module "setu/trailer" {
-    export class Trailer {
-        static OK_ENCODED: number[];
-    }
-}
-declare module "setu/frame.writer" {
-    export function encodeAsFrame(msg: Uint8Array): Uint8Array;
 }
 declare module "setu/mod" {
     export * from "setu/frame";

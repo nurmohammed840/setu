@@ -175,6 +175,10 @@ export class StructEncoder {
     List<T>(f: Encoder<T>) {
         return this.Field(this.e.List(f))
     }
+
+    end() {
+        this.e.writeByte(DataType.StructEnd);
+    }
 }
 
 // ===========================================================

@@ -2,7 +2,7 @@ import { assertEquals, assert, assertRejects } from "jsr:@std/assert";
 import { FrameHeader, FrameDecoder, LenBE } from "../src/setu/frame.ts";
 import { Status } from "../src/status.ts";
 import { HttpResponse } from "../src/http.transport.ts";
-import { encodeAsFrame } from "../src/setu/frame.writer.ts";
+import { encodeAsLastFrame } from "../src/setu/frame.writer.ts";
 
 
 Deno.test("Setu Frame Header", () => {
@@ -57,6 +57,6 @@ Deno.test("LenBE basic", () => {
 });
 
 Deno.test("encode as frame", () => {
-    let raw = encodeAsFrame(new TextEncoder().encode("67"));
+    let raw = encodeAsLastFrame(new TextEncoder().encode("67"));
     assertEquals!([...raw], [0, 2, 54, 55, 2, 0]);
 });
