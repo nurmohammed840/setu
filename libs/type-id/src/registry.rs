@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, btree_map::Entry};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Debug, Clone, Hash)]
+#[derive(Default, Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TypeRegistry {
     registry: BTreeMap<Ident, ComplexData>,

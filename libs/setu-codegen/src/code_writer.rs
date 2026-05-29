@@ -59,3 +59,9 @@ impl CodeWriter {
         self.dedent();
     }
 }
+
+impl Default for CodeWriter {
+    fn default() -> Self {
+        Self::new()
+    }
+}

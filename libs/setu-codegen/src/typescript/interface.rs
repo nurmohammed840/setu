@@ -47,7 +47,7 @@ fn data_ty(ty: &Type) -> fmt!(type) {
             f.write_fmt(format_args!("Map<{}, {}>", data_ty(&ty.0), data_ty(&ty.1)))
         }
 
-        Type::Option(ty) => f.write_fmt(format_args!("{} | undefined", data_ty(&ty))),
+        Type::Option(ty) => f.write_fmt(format_args!("{} | undefined", data_ty(ty))),
         Type::Tuple(_) | Type::Result(_) | Type::Char | Type::U128 | Type::I128 => {
             unimplemented!()
         }

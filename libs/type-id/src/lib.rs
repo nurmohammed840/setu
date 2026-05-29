@@ -12,7 +12,7 @@ pub trait TypeId {
     fn ty(_: &mut TypeRegistry) -> Type;
 }
 
-#[derive(Debug, Clone, Hash, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Type {
     // ===== Numbers =====
@@ -75,7 +75,7 @@ impl Type {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ListVariant {
     BTreeSet,
@@ -86,7 +86,7 @@ pub enum ListVariant {
     Vec,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MapVariant {
     HashMap,
@@ -99,7 +99,7 @@ pub type Ident = Box<str>;
 
 macro_rules! discriminant {
     [$($id:tt : $ty:ty)*] => {
-        #[derive(Debug, Clone, Hash)]
+        #[derive(Debug, Clone)]
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub enum Discriminant {
             $($id($ty),)*
@@ -126,7 +126,7 @@ discriminant! {
     I64: i64
 }
 
-#[derive(Default, Debug, Clone, Hash)]
+#[derive(Default, Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Attributes {
     pub docs: String,
@@ -140,7 +140,7 @@ impl Attributes {
 
 // ===========================================================
 
-#[derive(Default, Debug, Clone, Hash)]
+#[derive(Default, Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ComplexData {
     pub attrs: Attributes,
@@ -149,7 +149,7 @@ pub struct ComplexData {
     pub ty: ComplexDataType,
 }
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ComplexDataType {
     Enum {
@@ -183,7 +183,7 @@ impl ComplexDataType {
     }
 }
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct EnumField {
     pub name: Ident,
@@ -191,7 +191,7 @@ pub struct EnumField {
     pub discriminant: Discriminant,
 }
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum EnumFieldType {
     Unit,
@@ -209,7 +209,7 @@ impl EnumFieldType {
     }
 }
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct StructField {
     pub name: Ident,

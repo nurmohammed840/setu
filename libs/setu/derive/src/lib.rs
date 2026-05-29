@@ -39,7 +39,10 @@ pub fn expend_export(crate_path: &TokenStream, list: &RpcList, t: &mut TokenStre
 
 pub fn expend_type_definition(crate_path: &TokenStream, list: &RpcList, t: &mut TokenStream) {
     let body = quote(|t| {
-        for Rpc { name, index, args, .. } in &list.rpcs {
+        for Rpc {
+            name, index, args, ..
+        } in &list.rpcs
+        {
             let raw = name.to_string();
             let args = quote(|t| {
                 for arg in args {
