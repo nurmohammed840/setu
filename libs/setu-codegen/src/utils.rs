@@ -24,3 +24,11 @@ pub fn copy_dir(src: &Path, dst: &Path, depth: u8, filter: fn(&Path) -> bool) ->
     }
     Ok(())
 }
+
+#[macro_export]
+macro_rules! fmt {
+    (type $lt: lifetime) => { std::fmt::FromFn<impl Fn(&mut core::fmt::Formatter<'_>) -> core::fmt::Result + $lt> };
+    (type) => { std::fmt::FromFn<impl Fn(&mut core::fmt::Formatter<'_>) -> core::fmt::Result> };
+}
+
+pub use fmt;

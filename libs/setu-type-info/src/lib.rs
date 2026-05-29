@@ -20,6 +20,7 @@ pub struct FnMetaData {
     pub docs: String,
     pub index: u16,
     pub ident: Ident,
+    pub args: Vec<Ident>,
 }
 
 impl<T> Func<T> {
@@ -47,6 +48,7 @@ impl Func<FnMetaData> {
         f: &F,
         index: u16,
         ident: &str,
+        args: &[&str],
     ) -> Func<FnMetaData>
     where
         F: std_lib::FnOnce<Args>,
@@ -57,12 +59,13 @@ impl Func<FnMetaData> {
             docs: docs.to_string(),
             index,
             ident: Ident(ident.into()),
+            args: args.iter().copied().map(Ident::from).collect(),
         };
         Func::new(f, r, meta)
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct TypeInfo {
     pub registry: TypeRegistry,
     pub fns: Vec<Func<FnMetaData>>,

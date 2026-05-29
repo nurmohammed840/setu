@@ -1,7 +1,9 @@
+pub mod interface;
+
 use setu_type_info::TypeInfo;
 use std::{fs, io, path::PathBuf};
 
-use crate::utils::copy_dir;
+use crate::{CodeWriter, utils::copy_dir};
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -24,7 +26,7 @@ impl Config {
 }
 
 impl Config {
-    pub fn generate(&self, _info: &TypeInfo) -> io::Result<()> {
+    pub fn generate(&self, info: &TypeInfo) -> io::Result<()> {
         fs::create_dir_all(&self.out_dir)?;
 
         let lib = self.out_dir.join("lib");
@@ -35,6 +37,20 @@ impl Config {
                 file.extension().is_some_and(|ext| ext == "ts")
             })?;
         }
-        Ok(())
+
+        let code = generate_code(info);
+        fs::write(self.out_dir.join("mod.ts"), code)
     }
+}
+
+static TS_PRELUDE: &str = r#"
+import * as $ from "./lib/mod.ts";
+export const $etu = { RPC: $.RPC };
+"#;
+
+pub fn generate_code(info: &TypeInfo) -> String {
+    let mut c = CodeWriter::new();
+    c.line(TS_PRELUDE);
+    interface::generate(&mut c, info);
+    c.buffer
 }

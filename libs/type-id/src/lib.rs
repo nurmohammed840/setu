@@ -2,6 +2,8 @@ mod registry;
 mod types;
 mod utils;
 
+use std::ops;
+
 pub use registry::TypeRegistry;
 pub use type_id_macros::TypeId;
 
@@ -66,6 +68,15 @@ pub enum Type {
     Complex(Ident),
 }
 
+impl Type {
+    pub fn optional(&self) -> Option<&Self> {
+        match self {
+            Self::Option(ty) => Some(ty),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Hash, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ListVariant {
@@ -93,6 +104,14 @@ pub struct Ident(pub String);
 impl<T: Into<String>> From<T> for Ident {
     fn from(value: T) -> Self {
         Ident(value.into())
+    }
+}
+
+impl ops::Deref for Ident {
+    type Target = str;
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
