@@ -2,8 +2,6 @@ mod registry;
 mod types;
 mod utils;
 
-use std::ops;
-
 pub use registry::TypeRegistry;
 pub use type_id_macros::TypeId;
 
@@ -97,23 +95,7 @@ pub enum MapVariant {
 
 // ===========================================================
 
-#[derive(Debug, Hash, Clone, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct Ident(pub String);
-
-impl<T: Into<String>> From<T> for Ident {
-    fn from(value: T) -> Self {
-        Ident(value.into())
-    }
-}
-
-impl ops::Deref for Ident {
-    type Target = str;
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+pub type Ident = Box<str>;
 
 macro_rules! discriminant {
     [$($id:tt : $ty:ty)*] => {
@@ -158,23 +140,13 @@ impl Attributes {
 
 // ===========================================================
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Default, Debug, Clone, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ComplexData {
     pub attrs: Attributes,
     pub name: Ident,
     // pub generics: Generics,
     pub ty: ComplexDataType,
-}
-
-impl Default for ComplexData {
-    fn default() -> Self {
-        Self {
-            attrs: Attributes::default(),
-            name: Ident(String::new()),
-            ty: ComplexDataType::Struct { fields: vec![] },
-        }
-    }
 }
 
 #[derive(Debug, Clone, Hash)]
@@ -189,6 +161,12 @@ pub enum ComplexDataType {
     Tuple {
         fields: Vec<(Attributes, Type)>,
     },
+}
+
+impl Default for ComplexDataType {
+    fn default() -> Self {
+        ComplexDataType::Struct { fields: vec![] }
+    }
 }
 
 impl ComplexDataType {

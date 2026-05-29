@@ -58,7 +58,7 @@ impl Func<FnMetaData> {
         let meta = FnMetaData {
             docs: docs.to_string(),
             index,
-            ident: Ident(ident.into()),
+            ident: Ident::from(ident),
             args: args.iter().copied().map(Ident::from).collect(),
         };
         Func::new(f, r, meta)

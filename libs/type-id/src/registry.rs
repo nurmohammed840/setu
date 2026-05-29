@@ -24,7 +24,7 @@ impl TypeRegistry {
         name: String,
         init: impl FnOnce(&mut Self, Ident) -> ComplexData,
     ) -> Type {
-        let ident = Ident(name);
+        let ident = Ident::from(name);
         if let Entry::Vacant(entry) = self.registry.entry(ident.clone()) {
             entry.insert(ComplexData::default()); // Mark as seen, so that recursive types can be handled.
 

@@ -17,9 +17,9 @@ fn test_bad_cycle() {
 
     let ty = A::ty(&mut reg);
     assert_eq!(reg.len(), 2);
-    assert!(matches!(ty, Type::Complex(id) if id.0 == "basic::A"));
+    assert!(matches!(ty, Type::Complex(id) if &*id == "basic::A"));
 
     let ty = B::ty(&mut reg);
     assert_eq!(reg.len(), 2);
-    assert!(matches!(ty, Type::Complex(id) if id.0 == "basic::B"));
+    assert!(matches!(ty, Type::Complex(id) if &*id == "basic::B"));
 }
