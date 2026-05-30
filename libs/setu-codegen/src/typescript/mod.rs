@@ -1,9 +1,14 @@
+pub mod class;
 pub mod interface;
 
-use setu_type_info::TypeInfo;
 use std::{fs, io, path::PathBuf};
 
+use type_id::Type;
+
+use crate::symbol_trie::SymbolTrie;
 use crate::{CodeWriter, utils::copy_dir};
+use crate::{Context, utils::fmt};
+pub use std::fmt::from_fn as fmt;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -26,7 +31,7 @@ impl Config {
 }
 
 impl Config {
-    pub fn generate(&self, info: &TypeInfo) -> io::Result<()> {
+    pub fn generate(&self, ctx: &Context) -> io::Result<()> {
         fs::create_dir_all(&self.out_dir)?;
 
         let lib = self.out_dir.join("lib");
@@ -38,7 +43,7 @@ impl Config {
             })?;
         }
 
-        let code = generate_code(info);
+        let code = ctx.generate_typescript_code();
         fs::write(self.out_dir.join("mod.ts"), code)
     }
 }
@@ -48,9 +53,67 @@ import * as $ from "./lib/mod.ts";
 export const $etu = { RPC: $.RPC };
 "#;
 
-pub fn generate_code(info: &TypeInfo) -> String {
-    let mut c = CodeWriter::new();
-    c.write_line(TS_PRELUDE);
-    interface::generate(&mut c, info);
-    c.buffer
+impl Context {
+    pub fn generate_typescript_code(&self) -> String {
+        let mut c = CodeWriter::new();
+        c.write_line(TS_PRELUDE);
+        interface::generate(&mut c, self);
+        class::generate(&mut c, self);
+        c.buffer
+    }
+
+    fn data_ty(&self, ty: &Type) -> fmt!(type) {
+        fmt(|f| match ty {
+            Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::F32
+            | Type::F64
+            | Type::I8
+            | Type::I16
+            | Type::I32 => f.write_str("number"),
+
+            Type::U64 | Type::I64 => f.write_str("bigint"),
+
+            Type::Bool => f.write_str("boolean"),
+            Type::String => f.write_str("string"),
+
+            Type::Complex(path) => f.write_str(&self.symbol.class_name(path)),
+
+            Type::List { ty, .. } | Type::Array { ty, .. } => {
+                f.write_fmt(format_args!("Array<{}>", self.data_ty(ty)))
+            }
+            Type::Map { ty, .. } => f.write_fmt(format_args!(
+                "Map<{}, {}>",
+                self.data_ty(&ty.0),
+                self.data_ty(&ty.1)
+            )),
+
+            Type::Option(ty) => f.write_fmt(format_args!("{} | undefined", self.data_ty(ty))),
+            Type::Tuple(_) | Type::Result(_) | Type::Char | Type::U128 | Type::I128 => {
+                unimplemented!()
+            }
+        })
+    }
+}
+
+impl SymbolTrie {
+    fn class_name(&self, path: &str) -> String {
+        let mut w: Vec<_> = self
+            .shortest_symbol(path)
+            .flat_map(|part| {
+                let mut chars = part.chars();
+                let ch = chars.next()?.to_ascii_uppercase();
+                let rest = chars.as_str();
+
+                let mut s = String::with_capacity(1 + rest.len());
+                s.push(ch);
+                s.push_str(rest);
+                Some(s)
+            })
+            .collect();
+
+        w.reverse();
+        w.join("")
+    }
 }

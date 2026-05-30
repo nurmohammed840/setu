@@ -73,8 +73,8 @@ pub fn expand(crate_path: &TokenStream, input: &DeriveInput, output: &mut TokenS
                 fn ty(__r: &mut __crate::TypeRegistry) -> __crate::Type {
                     __r.register(
                         ::std::format!(#fmt_args, ::std::module_path!()),
-                        |__r, name| __crate::ComplexData {
-                            name,
+                        |__r, path| __crate::ComplexData {
+                            path,
                             attrs: #attrs,
                             ty: __crate::ComplexDataType::#fields,
                         },

@@ -144,7 +144,7 @@ impl Attributes {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ComplexData {
     pub attrs: Attributes,
-    pub name: Ident,
+    pub path: Ident,
     // pub generics: Generics,
     pub ty: ComplexDataType,
 }
