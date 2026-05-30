@@ -66,12 +66,22 @@ pub enum Type {
     Complex(Ident),
 }
 
-impl Type {
-    pub fn optional(&self) -> Option<&Self> {
-        match self {
-            Self::Option(ty) => Some(ty),
+macro_rules! option {
+    [$self:expr, $pattern:pat => $val:expr] => {
+        match $self {
+            $pattern => Some($val),
             _ => None,
         }
+    };
+}
+
+impl Type {
+    pub fn optional(&self) -> Option<&Self> {
+        option!(self, Self::Option(ty) => ty)
+    }
+
+    pub fn complex(&self) -> Option<&str> {
+        option!(self, Self::Complex(ty) => ty)
     }
 }
 
