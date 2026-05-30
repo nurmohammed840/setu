@@ -155,8 +155,8 @@ impl Attributes {
 pub struct ComplexData {
     pub attrs: Attributes,
     pub path: Ident,
-    // pub generics: Generics,
     pub ty: ComplexDataType,
+    // pub generics: Generics,
 }
 
 #[derive(Debug, Clone)]
@@ -222,6 +222,7 @@ impl EnumFieldType {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct StructField {
+    pub key: u32,
     pub name: Ident,
     pub ty: Type,
 }

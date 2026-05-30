@@ -24,7 +24,15 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                     // ...
                 }
                 if ctx.is_encoder_needed(path) {
-                    // ...
+                    c.line(args!(
+                        "static encoder = $.Obj<{class_name}>((s, args) => {{"
+                    ));
+                    c.scope(|c| {
+                        for (_, StructField { name, ty, key }) in fields {
+                            c.line(args!("{}({key}, args.{name});", ctx.lipi_ty(ty)));
+                        }
+                    });
+                    c.write_line("});");
                 }
             }
             _ => unimplemented!(),

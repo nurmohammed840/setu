@@ -1,38 +1,38 @@
-use std::collections;
+use std::{collections, slice::Iter};
 
-use setu_type_info::{FnOutputTy, TypeInfo};
+use setu_type_info::{FnMetaData, FnOutputTy, Func, TypeInfo};
 use type_id::{Ident, Type};
 
 #[derive(Debug)]
-pub struct PathOfComplexTypes {
+pub struct PathsOfComplexType {
     paths: collections::HashSet<Ident>,
 }
 
-impl PathOfComplexTypes {
+impl PathsOfComplexType {
+    fn new<'a, I>(info: &'a TypeInfo, f: fn(_: Iter<'a, Func<FnMetaData>>) -> I) -> Self
+    where
+        I: Iterator<Item = &'a Type>,
+    {
+        let paths = f(info.fns.iter())
+            .flat_map(|ty| ty.complex())
+            .map(From::from)
+            .collect();
+
+        Self { paths }
+    }
+
+    pub fn from_fn_input(info: &TypeInfo) -> Self {
+        Self::new(info, |fns| fns.flat_map(|f| &f.input_ty))
+    }
+
+    pub fn from_fn_output(info: &TypeInfo) -> Self {
+        Self::new(info, |fns| {
+            fns.flat_map(|f| OutputTypeIter::new(&f.output_ty))
+        })
+    }
+
     pub fn contains(&self, path: &str) -> bool {
         self.paths.contains(path)
-    }
-
-    pub fn input_types(info: &TypeInfo) -> Self {
-        let fns = info.fns.iter();
-        let paths = fns
-            .flat_map(|f| &f.input_ty)
-            .flat_map(|ty| ty.complex())
-            .map(From::from)
-            .collect();
-
-        Self { paths }
-    }
-
-    pub fn output_types(info: &TypeInfo) -> Self {
-        let fns = info.fns.iter();
-        let paths = fns
-            .flat_map(|f| OutputTypeIter::new(&f.output_ty))
-            .flat_map(|ty| ty.complex())
-            .map(From::from)
-            .collect();
-
-        Self { paths }
     }
 }
 

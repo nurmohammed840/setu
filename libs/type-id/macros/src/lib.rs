@@ -12,6 +12,6 @@ pub fn type_id(input: TokenStream) -> TokenStream {
     };
 
     let mut output = proc_macro2::TokenStream::new();
-    type_id_derive::expand(&utils::crate_path!(::type_id), &input, &mut output);
+    type_id_derive::expand(&utils::crate_path!(::type_id), &input, &mut output, "key");
     output.into()
 }

@@ -11,21 +11,21 @@ pub use code_writer::CodeWriter;
 use symbol_trie::SymbolTrie;
 use type_info::TypeInfo;
 
-use crate::path_of_complex_type::PathOfComplexTypes;
+use crate::path_of_complex_type::PathsOfComplexType;
 
 pub struct Context {
     pub info: TypeInfo,
     pub symbol: SymbolTrie,
 
-    obj_that_needed_encoder: PathOfComplexTypes,
-    obj_that_needed_decoder: PathOfComplexTypes,
+    obj_that_needed_encoder: PathsOfComplexType,
+    obj_that_needed_decoder: PathsOfComplexType,
 }
 
 impl Context {
     pub fn new(info: TypeInfo) -> Self {
         Self {
-            obj_that_needed_encoder: PathOfComplexTypes::input_types(&info),
-            obj_that_needed_decoder: PathOfComplexTypes::output_types(&info),
+            obj_that_needed_encoder: PathsOfComplexType::from_fn_input(&info),
+            obj_that_needed_decoder: PathsOfComplexType::from_fn_output(&info),
             symbol: SymbolTrie::from(&info),
             info,
         }

@@ -1,3 +1,5 @@
+mod utils;
+
 use std::mem;
 
 pub use quote2;
@@ -8,7 +10,12 @@ use proc_macro2::TokenStream;
 use quote2::{Quote, QuoteFn, quote};
 use syn::*;
 
-pub fn expand(crate_path: &TokenStream, input: &DeriveInput, output: &mut TokenStream) {
+pub fn expand(
+    crate_path: &TokenStream,
+    input: &DeriveInput,
+    output: &mut TokenStream,
+    key_attr: &str,
+) {
     let DeriveInput {
         attrs,
         ident,
@@ -19,7 +26,7 @@ pub fn expand(crate_path: &TokenStream, input: &DeriveInput, output: &mut TokenS
 
     let fields = quote(|t| match data {
         Data::Struct(DataStruct { fields, .. }) => {
-            if write_fields(t, fields).is_none() {
+            if write_fields(t, fields, key_attr).is_none() {
                 panic!("`{ident}` struct needs at most one field")
             }
         }
@@ -40,7 +47,7 @@ pub fn expand(crate_path: &TokenStream, input: &DeriveInput, output: &mut TokenS
                     let discriminant = get_discriminant(discriminant, enum_repr);
 
                     let field_ty = quote(|t| {
-                        if write_fields(t, fields).is_none() {
+                        if write_fields(t, fields, key_attr).is_none() {
                             quote!(t, { Unit });
                         }
                     });
@@ -96,7 +103,7 @@ fn enum_repr(attrs: &[Attribute]) -> Option<&TokenStream> {
     None
 }
 
-fn write_fields(t: &mut TokenStream, fields: &Fields) -> Option<()> {
+fn write_fields(t: &mut TokenStream, fields: &Fields, key_attr: &str) -> Option<()> {
     match fields {
         Fields::Named(FieldsNamed { named, .. }) => {
             let fields = quote(|t| {
@@ -104,17 +111,20 @@ fn write_fields(t: &mut TokenStream, fields: &Fields) -> Option<()> {
                     attrs, ident, ty, ..
                 } in named
                 {
-                    let attrs = get_attrs(attrs);
-                    let field_name = ident.as_ref().map(Ident::to_string);
-                    quote!(t, {
-                        (
-                            #attrs,
-                            __crate::StructField {
-                                name: __crate::Ident::from(#field_name),
-                                ty: <#ty as __crate::TypeId>::ty(__r)
-                            }
-                        ),
-                    });
+                    if let Some(key) = utils::get_attr(attrs, key_attr) {
+                        let attrs = get_attrs(attrs);
+                        let field_name = ident.as_ref().map(Ident::to_string);
+                        quote!(t, {
+                            (
+                                #attrs,
+                                __crate::StructField {
+                                    key: #key,
+                                    name: __crate::Ident::from(#field_name),
+                                    ty: <#ty as __crate::TypeId>::ty(__r)
+                                }
+                            ),
+                        });
+                    }
                 }
             });
             quote!(t, { as_struct(::std::vec![#fields]) });

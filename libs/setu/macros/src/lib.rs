@@ -27,7 +27,7 @@ pub fn input(input: TokenStream) -> TokenStream {
 
     let mut t = proc_macro2::TokenStream::new();
     lipi_derive::decoder::expand(&lipi_path, &input, &mut t, "key", "default");
-    type_id_derive::expand(&type_id_path, &input, &mut t);
+    type_id_derive::expand(&type_id_path, &input, &mut t, "key");
     t.into()
 }
 
@@ -42,7 +42,7 @@ pub fn output(input: TokenStream) -> TokenStream {
 
     let mut t = proc_macro2::TokenStream::new();
     lipi_derive::encoder::expand(&lipi_path, &input, &mut t, "key");
-    type_id_derive::expand(&type_id_path, &input, &mut t);
+    type_id_derive::expand(&type_id_path, &input, &mut t, "key");
     t.into()
 }
 
@@ -58,6 +58,6 @@ pub fn message(input: TokenStream) -> TokenStream {
     let mut t = proc_macro2::TokenStream::new();
     lipi_derive::encoder::expand(&lipi_path, &input, &mut t, "key");
     lipi_derive::decoder::expand(&lipi_path, &input, &mut t, "key", "default");
-    type_id_derive::expand(&type_id_path, &input, &mut t);
+    type_id_derive::expand(&type_id_path, &input, &mut t, "key");
     t.into()
 }

@@ -108,6 +108,32 @@ impl Context {
             }
         }
     }
+
+    fn lipi_ty(&self, ty: &Type) -> fmt!(type) {
+        fmt(|f| match ty {
+            Type::U8 => f.write_str("s.U8"),
+            Type::I8 => f.write_str("s.I8"),
+            Type::F32 => f.write_str("s.F32"),
+            Type::F64 => f.write_str("s.F64"),
+
+            Type::U16 | Type::U32 | Type::U64 => f.write_str("s.UInt"),
+            Type::I16 | Type::I32 | Type::I64 => f.write_str("s.Int"),
+
+            Type::Bool => f.write_str("s.Bool"),
+            Type::String => f.write_str("s.Str"),
+
+            Type::Option(ty) => f.write_fmt(args!("s.Option({})", self.lipi_ty(ty))),
+
+            Type::Complex(path) => {
+                f.write_fmt(args!("s.Field({}.encoder)", self.symbol.class_name(path)))
+            }
+
+            Type::Tuple(_) | Type::Result(_) | Type::Char | Type::U128 | Type::I128 => {
+                unimplemented!()
+            }
+            _ => unimplemented!(),
+        })
+    }
 }
 
 impl SymbolTrie {
