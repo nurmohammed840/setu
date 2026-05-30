@@ -4,3 +4,5 @@ export * as setu from "./setu/mod.ts"
 export * from "./http.transport.ts"
 export * from "./status.ts"
 export * from "./timeout.ts"
+
+export type Args<T> = T;

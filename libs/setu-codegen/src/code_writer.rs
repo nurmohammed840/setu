@@ -1,4 +1,5 @@
 use std::fmt::{Arguments, Display, Write};
+use std::format_args as args;
 
 #[derive(Clone)]
 pub struct CodeWriter {
@@ -47,8 +48,8 @@ impl CodeWriter {
         self.buffer.push('\n');
     }
 
-    pub fn block(&mut self, header: impl Display, f: impl FnOnce(&mut Self)) {
-        self.line(format_args!("{header} {{"));
+    pub fn block(&mut self, args: impl Display, f: impl FnOnce(&mut Self)) {
+        self.line(args!("{args} {{"));
         self.scope(f);
         self.write_line("}");
     }

@@ -1,9 +1,9 @@
 pub mod class;
 pub mod interface;
 
+use std::format_args as args;
 use std::{fs, io, path::PathBuf};
-
-use type_id::Type;
+use type_id::{Ident, Type};
 
 use crate::symbol_trie::SymbolTrie;
 use crate::{CodeWriter, utils::copy_dir};
@@ -81,19 +81,32 @@ impl Context {
             Type::Complex(path) => f.write_str(&self.symbol.class_name(path)),
 
             Type::List { ty, .. } | Type::Array { ty, .. } => {
-                f.write_fmt(format_args!("Array<{}>", self.data_ty(ty)))
+                f.write_fmt(args!("Array<{}>", self.data_ty(ty)))
             }
-            Type::Map { ty, .. } => f.write_fmt(format_args!(
+            Type::Map { ty, .. } => f.write_fmt(args!(
                 "Map<{}, {}>",
                 self.data_ty(&ty.0),
                 self.data_ty(&ty.1)
             )),
 
-            Type::Option(ty) => f.write_fmt(format_args!("{} | undefined", self.data_ty(ty))),
+            Type::Option(ty) => f.write_fmt(args!("{} | undefined", self.data_ty(ty))),
             Type::Tuple(_) | Type::Result(_) | Type::Char | Type::U128 | Type::I128 => {
                 unimplemented!()
             }
         })
+    }
+
+    fn write_object_tys<'a, I>(&'a self, c: &mut CodeWriter, sep: char, fields: I)
+    where
+        I: Iterator<Item = (&'a Ident, &'a Type)>,
+    {
+        for (name, ty) in fields {
+            if let Some(ty) = ty.optional() {
+                c.line(args!("{name}?: {}{sep}", self.data_ty(ty)))
+            } else {
+                c.line(args!("{name}: {}{sep}", self.data_ty(ty)))
+            }
+        }
     }
 }
 
