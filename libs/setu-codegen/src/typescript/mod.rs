@@ -134,7 +134,6 @@ impl Context {
                 Type::String => f.write_str("s.ListStr"),
 
                 Type::Bool => f.write_str("s.ListBool"),
-
                 Type::Option(_) => unreachable!(),
 
                 _ => unimplemented!(),
@@ -146,8 +145,8 @@ impl Context {
 
             Type::Map { .. } => unimplemented!(),
 
-            Type::Option(ty) => f.write_fmt(args!("s.Option({})", self.lipi_ty(ty))),
             Type::Bool => f.write_str("s.Bool"),
+            Type::Option(ty) => f.write_fmt(args!("s.Option({})", self.lipi_ty(ty))),
 
             Type::Tuple(_) | Type::Result(_) | Type::Char | Type::U128 | Type::I128 => {
                 unimplemented!()
@@ -157,7 +156,7 @@ impl Context {
 }
 
 impl CodeWriter {
-    fn inline_arrow_fn(&mut self, args: impl Display, f: impl FnOnce(&mut Self)) {
+    fn arrow_fn(&mut self, args: impl Display, f: impl FnOnce(&mut Self)) {
         self.line(args!("{args} => {{"));
         self.scope(f);
         self.write("});\n");

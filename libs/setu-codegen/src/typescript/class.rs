@@ -9,7 +9,8 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
     for ComplexData { path, ty, .. } in ctx.info.registry.values() {
         let class_name = ctx.symbol.class_name(path);
 
-        c.block(args!("\nexport class {class_name}"), |c| match ty {
+        c.newline();
+        c.block(args!("export class {class_name}"), |c| match ty {
             ComplexDataType::Struct { fields } => {
                 ctx.write_object_tys(c, ';', fields.iter().map(|(_, s)| (&s.name, &s.ty)));
 
@@ -23,7 +24,7 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                     // ...
                 }
                 if ctx.is_encoder_needed(path) {
-                    c.inline_arrow_fn(
+                    c.arrow_fn(
                         args!("static encoder = $.Obj<{class_name}>((s, args)"),
                         |c| {
                             for (_, StructField { name, ty, key }) in fields {

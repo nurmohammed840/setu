@@ -9,7 +9,8 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
             index, ident, args, ..
         } = meta;
 
-        c.block(args!("\nexport interface {ident}"), |c| {
+        c.newline();
+        c.block(args!("export interface {ident}"), |c| {
             ctx.write_object_tys(c, ',', args.iter().zip(input_ty));
         });
 
@@ -18,7 +19,7 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
             |c| {
                 c.line(args!("let [i, o] = $.rpc({index}, ctx);"));
 
-                c.inline_arrow_fn("i.sendAndClose(s", |c| {
+                c.arrow_fn("i.sendAndClose(s", |c| {
                     for (key, (name, ty)) in args.iter().zip(input_ty).enumerate() {
                         c.line(args!("{}({key}, args.{name});", ctx.lipi_ty(ty)));
                     }

@@ -40,6 +40,10 @@ impl CodeWriter {
     pub fn line(&mut self, args: Arguments<'_>) {
         self.write_indent();
         let _ = self.buffer.write_fmt(args);
+        self.newline();
+    }
+
+    pub fn newline(&mut self) {
         self.buffer.push('\n');
     }
 
