@@ -128,31 +128,47 @@ impl Context {
                 f.write_fmt(args!("s.Field({}.encoder)", self.symbol.class_name(path)))
             }
 
+            Type::Array { ty, len } => unimplemented!(),
+            Type::List { variant, ty } => unimplemented!(),
+            Type::Map { variant, ty } => unimplemented!(),
+
             Type::Tuple(_) | Type::Result(_) | Type::Char | Type::U128 | Type::I128 => {
                 unimplemented!()
             }
-            _ => unimplemented!(),
         })
     }
 }
 
+mod cached {
+    use crate::utils::LocalCachedTable;
+    use std::rc::Rc;
+    use type_id::Ident;
+
+    thread_local! {
+       pub static SYMBOL: LocalCachedTable<Ident, str> = LocalCachedTable::new();
+    }
+
+    pub fn get_symbol(path: &str, set: impl FnOnce() -> String) -> Rc<str> {
+        SYMBOL.with(|cached| cached.get_or_insert_with(path, set))
+    }
+}
+
 impl SymbolTrie {
-    fn class_name(&self, path: &str) -> String {
-        let mut w: Vec<_> = self
-            .shortest_symbol(path)
-            .flat_map(|part| {
-                let mut chars = part.chars();
-                let ch = chars.next()?.to_ascii_uppercase();
-                let rest = chars.as_str();
+    fn class_name(&self, path: &str) -> std::rc::Rc<str> {
+        cached::get_symbol(path, || {
+            self.shortest_symbol(path)
+                .flat_map(|part| {
+                    let mut chars = part.chars();
 
-                let mut s = String::with_capacity(1 + rest.len());
-                s.push(ch);
-                s.push_str(rest);
-                Some(s)
-            })
-            .collect();
+                    let ch = chars.next()?.to_ascii_uppercase();
+                    let rest = chars.as_str();
 
-        w.reverse();
-        w.join("")
+                    Some(format!("{ch}{rest}"))
+                })
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect()
+        })
     }
 }

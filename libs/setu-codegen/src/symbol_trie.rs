@@ -59,7 +59,7 @@ impl<'a> Iterator for ShortestSymbolIter<'_, 'a> {
         }
 
         let part = self.parts.next()?;
-        let node = self.nodes.get(&Box::from(part))?;
+        let node = self.nodes.get(part)?;
 
         if node.count == 1 {
             self.done = true;
