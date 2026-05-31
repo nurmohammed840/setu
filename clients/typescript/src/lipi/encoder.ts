@@ -144,37 +144,79 @@ export class StructEncoder {
         this.e.write_field_id_and_ty(id, DataType.fromBool(bool));
     }
 
-    U8(id: number, num: number) {
-        this.Field(this.e.U8)(id, num)
+    get U8() {
+        return this.Field(this.e.U8)
     }
 
-    I8(id: number, num: number) {
-        this.Field(this.e.I8)(id, num)
+    get I8() {
+        return this.Field(this.e.I8)
     }
 
-    F32(id: number, num: number) {
-        this.Field(this.e.F32)(id, num)
+    get F32() {
+        return this.Field(this.e.F32)
     }
 
-    F64(id: number, num: number) {
-        this.Field(this.e.F64)(id, num)
+    get F64() {
+        return this.Field(this.e.F64)
     }
 
-    UInt(id: number, num: number | bigint) {
-        this.Field(this.e.UInt)(id, num)
+    get UInt() {
+        return this.Field(this.e.UInt)
     }
 
-    Int(id: number, num: number | bigint) {
-        this.Field(this.e.Int)(id, num)
+    get Int() {
+        return this.Field(this.e.Int)
     }
 
-    Str(id: number, text: string) {
-        this.Field(this.e.Str)(id, text)
+    get Str() {
+        return this.Field(this.e.Str)
     }
+
+    // ===================================
 
     List<T>(f: Encoder<T>) {
         return this.Field(this.e.List(f))
     }
+
+    get ListU8() {
+        return this.Field(this.e.ListU8)
+    }
+
+    get ListI8() {
+        return this.Field(this.e.ListI8)
+    }
+
+    get ListF32() {
+        return this.Field(this.e.ListF32)
+    }
+
+    get ListF64() {
+        return this.Field(this.e.ListF64)
+    }
+
+    get ListUint() {
+        return this.List(this.e.UInt)
+    }
+
+    get ListInt() {
+        return this.List(this.e.Int)
+    }
+
+    get ListStr() {
+        return this.List(this.e.Str)
+    }
+
+    get ListBool() {
+        return this.Field(this.e.ListBool)
+    }
+
+    // ===================================
+
+    Table<K, V>(k: Encoder<K>, v: Encoder<V>) {
+        return this.Field(this.e.Table(k, v))
+    }
+
+    // ===================================
 
     end() {
         this.e.writeByte(DataType.StructEnd);

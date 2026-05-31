@@ -119,18 +119,34 @@ impl Context {
             Type::U16 | Type::U32 | Type::U64 => f.write_str("s.UInt"),
             Type::I16 | Type::I32 | Type::I64 => f.write_str("s.Int"),
 
-            Type::Bool => f.write_str("s.Bool"),
             Type::String => f.write_str("s.Str"),
 
-            Type::Option(ty) => f.write_fmt(args!("s.Option({})", self.lipi_ty(ty))),
+            Type::Array { ty, .. } | Type::List { ty, .. } => match ty.as_ref() {
+                Type::U8 => f.write_str("s.ListU8"),
+                Type::I8 => f.write_str("s.ListI8"),
+                Type::F32 => f.write_str("s.ListF32"),
+                Type::F64 => f.write_str("s.ListF64"),
+
+                Type::U16 | Type::U32 | Type::U64 => f.write_str("s.ListUint"),
+                Type::I16 | Type::I32 | Type::I64 => f.write_str("s.ListInt"),
+
+                Type::String => f.write_str("s.ListStr"),
+
+                Type::Bool => f.write_str("s.ListBool"),
+
+                Type::Option(_) => unreachable!(),
+
+                _ => unimplemented!(),
+            },
 
             Type::Complex(path) => {
                 f.write_fmt(args!("s.Field({}.encoder)", self.symbol.class_name(path)))
             }
 
-            Type::Array { ty, len } => unimplemented!(),
-            Type::List { variant, ty } => unimplemented!(),
-            Type::Map { variant, ty } => unimplemented!(),
+            Type::Map { .. } => unimplemented!(),
+
+            Type::Option(ty) => f.write_fmt(args!("s.Option({})", self.lipi_ty(ty))),
+            Type::Bool => f.write_str("s.Bool"),
 
             Type::Tuple(_) | Type::Result(_) | Type::Char | Type::U128 | Type::I128 => {
                 unimplemented!()
