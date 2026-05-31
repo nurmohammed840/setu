@@ -11,8 +11,8 @@ pub struct CodeWriter {
 impl CodeWriter {
     pub fn new() -> Self {
         Self {
-            buffer: String::new(),
-            indent: "    ",
+            buffer: String::with_capacity(32 * 1024),
+            indent: "\t",
             indent_level: 0,
         }
     }
@@ -26,32 +26,27 @@ impl CodeWriter {
         self.indent_level -= 1;
     }
 
-    pub fn write_line(&mut self, s: &str) {
-        self.write_indent();
-        self.buffer.push_str(s);
-        self.newline();
-    }
-
-    pub fn line(&mut self, args: Arguments<'_>) {
-        self.write_indent();
-        let _ = self.buffer.write_fmt(args);
-        self.newline();
-    }
-
     pub fn write_indent(&mut self) {
         for _ in 0..self.indent_level {
             self.buffer.push_str(self.indent);
         }
     }
 
-    pub fn newline(&mut self) {
+    pub fn write(&mut self, s: &str) {
+        self.write_indent();
+        self.buffer.push_str(s);
+    }
+
+    pub fn line(&mut self, args: Arguments<'_>) {
+        self.write_indent();
+        let _ = self.buffer.write_fmt(args);
         self.buffer.push('\n');
     }
 
     pub fn block(&mut self, args: impl Display, f: impl FnOnce(&mut Self)) {
         self.line(args!("{args} {{"));
         self.scope(f);
-        self.write_line("}");
+        self.write("}\n");
     }
 
     pub fn scope(&mut self, f: impl FnOnce(&mut Self)) {

@@ -1,6 +1,7 @@
 pub mod class;
-pub mod interface;
+pub mod function;
 
+use std::fmt::Display;
 use std::format_args as args;
 use std::{fs, io, path::PathBuf};
 use type_id::{Ident, Type};
@@ -56,9 +57,9 @@ export const $etu = { RPC: $.RPC };
 impl Context {
     pub fn generate_typescript_code(&self) -> String {
         let mut c = CodeWriter::new();
-        c.write_line(TS_PRELUDE);
-        interface::generate(&mut c, self);
+        c.write(TS_PRELUDE);
         class::generate(&mut c, self);
+        function::generate(&mut c, self);
         c.buffer
     }
 
@@ -152,6 +153,14 @@ impl Context {
                 unimplemented!()
             }
         })
+    }
+}
+
+impl CodeWriter {
+    fn inline_arrow_fn(&mut self, args: impl Display, f: impl FnOnce(&mut Self)) {
+        self.line(args!("{args} => {{"));
+        self.scope(f);
+        self.write("});\n");
     }
 }
 
