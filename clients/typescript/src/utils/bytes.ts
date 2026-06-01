@@ -37,8 +37,3 @@ export class Bytes {
     }
 }
 
-export function isLittleEndian() {
-    const buf = new ArrayBuffer(4);
-    new Uint32Array(buf)[0] = 0x11_22_33_44;
-    return new Uint8Array(buf)[0] == 0x44;
-}

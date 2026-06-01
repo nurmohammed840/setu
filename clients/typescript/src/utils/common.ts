@@ -2,7 +2,7 @@ type ErrorClass = new (message?: string) => Error;
 type ErrorMessage = (() => string) | string;
 
 export function expected<T>(data?: T, err = "expected value"): T {
-    assert(data != undefined, TypeError, err);
+    assert(data !== undefined, TypeError, err);
     return data;
 }
 
@@ -19,3 +19,11 @@ export function checkOverflow<T>(num: T, min: T, max: T) {
         throw new RangeError(`expected ${min}..=${max}, got: ${num}`);
     }
 }
+
+function isLittleEndian() {
+    const buf = new ArrayBuffer(4);
+    new Uint32Array(buf)[0] = 0x11_22_33_44;
+    return new Uint8Array(buf)[0] == 0x44;
+}
+
+export const IS_LITTLE_ENDIAN = isLittleEndian();

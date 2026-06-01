@@ -1,13 +1,11 @@
-import { DataType } from "./mod.ts";
+import { DataType } from "./type.ts";
 import { encodeVarInt } from "./varint.ts";
 import { zigzagEncode } from "./zigzag.ts";
 import { Buffer } from "../utils/buffer.ts";
-import { assert, checkOverflow } from "../utils/common.ts";
+import { assert, checkOverflow, IS_LITTLE_ENDIAN } from "../utils/common.ts";
 import { bitvecFrom } from "../bitset.ts";
-import { isLittleEndian } from "../utils/bytes.ts";
 
-const IS_LITTLE_ENDIAN = isLittleEndian()
-const utf8Encoder = new TextEncoder();
+const UTF8_ENCODER = new TextEncoder();
 
 type Encoder<T> = (this: Encode, val: T) => void;
 
@@ -70,7 +68,7 @@ export class Encode extends Writer {
     }
 
     Str(text: string) {
-        this.writeBytes(utf8Encoder.encode(text));
+        this.writeBytes(UTF8_ENCODER.encode(text));
     }
 
     List<T>(f: Encoder<T>) {
