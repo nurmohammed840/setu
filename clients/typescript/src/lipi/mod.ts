@@ -37,7 +37,7 @@ export namespace DataType {
     }
     export function fromStr(str: string): DataType {
         let ty = DataType[str as "F32"];
-        assert(ty !== undefined, () => `invalid type: ${str}`);
+        assert(ty !== undefined, TypeError, () => `invalid type: ${str}`);
         return ty
     }
 }

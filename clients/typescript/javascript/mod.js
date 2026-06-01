@@ -1,20 +1,21 @@
 function expected(data, err = "expected value") {
-    assert(data != undefined, err);
+    assert(data != undefined, TypeError, err);
     return data;
 }
-function assert(expr, msg = "") {
-    if (!expr) {
-        throw new Error(typeof msg === "string" ? msg : msg());
-    }
+function assert(expr, err = Error, msg = "") {
+    if (expr) return;
+    const e = new err(typeof msg === "string" ? msg : msg());
+    Error.captureStackTrace(e, assert);
+    throw e;
 }
 function checkOverflow(num, min, max) {
     if (num < min || num > max) {
-        throw new Error(`expected ${min}..=${max}, got: ${num}`);
+        throw new RangeError(`expected ${min}..=${max}, got: ${num}`);
     }
 }
 function encodeVarInt(num) {
     num = BigInt(num);
-    assert(num >= 0n, ()=>`expected unsigned number: found ${num}`);
+    assert(num >= 0n, RangeError, ()=>`expected unsigned number: found ${num}`);
     let buf = [];
     while(num > 0b111_1111){
         buf.push(Number(num & 0xFFn | 0b1000_0000n));
@@ -107,7 +108,7 @@ class BitVec {
     set(index) {
         const slotIdx = Math.floor(index / 8);
         const mask = 1 << index % 8;
-        assert(slotIdx < this.bytes.length, ()=>`Out of bounds slot index: ${slotIdx}`);
+        assert(slotIdx < this.bytes.length, RangeError, ()=>`Out of bounds slot index: ${slotIdx}`);
         const oldValue = (this.bytes[slotIdx] & mask) !== 0;
         this.bytes[slotIdx] |= mask;
         return oldValue;
@@ -124,7 +125,7 @@ class BitVec {
     }
 }
 function boolPackedLen(len) {
-    assert(len >= 0, ()=>`length ${len} cannot be negative`);
+    assert(len >= 0, RangeError, ()=>`length ${len} cannot be negative`);
     return Math.floor((len + 7) / 8);
 }
 function bitvec(len) {
@@ -140,7 +141,7 @@ function bitvecFrom(bools) {
     return bv;
 }
 function takeBytes(N, buf) {
-    assert(N <= buf.length, ()=>`takeBytes(${N}) exceeds buffer length ${buf.length}`);
+    assert(N <= buf.length, RangeError, ()=>`takeBytes(${N}) exceeds buffer length ${buf.length}`);
     return [
         buf.subarray(0, N),
         buf.subarray(N)
@@ -206,7 +207,7 @@ var DataType;
     DataType.fromBool = fromBool;
     function fromStr(str) {
         let ty = DataType[str];
-        assert(ty !== undefined, ()=>`invalid type: ${str}`);
+        assert(ty !== undefined, TypeError, ()=>`invalid type: ${str}`);
         return ty;
     }
     DataType.fromStr = fromStr;
@@ -221,7 +222,7 @@ class Writer extends Buffer {
         this.append(bytes);
     }
     write_field_id_and_ty(num, ty) {
-        assert(Number.isInteger(num) && num >= 0, ()=>`expected non-negative integer, got: ${num}`);
+        assert(Number.isInteger(num) && num >= 0, RangeError, ()=>`expected non-negative integer, got: ${num}`);
         if (num < 15) return this.writeByte(num << 4 | ty);
         this.writeByte(0b1111 << 4 | ty);
         this.writeUint(num - 15);
@@ -321,29 +322,56 @@ class StructEncoder {
     Bool(id, bool) {
         this.e.write_field_id_and_ty(id, DataType.fromBool(bool));
     }
-    U8(id, num) {
-        this.Field(this.e.U8)(id, num);
+    get U8() {
+        return this.Field(this.e.U8);
     }
-    I8(id, num) {
-        this.Field(this.e.I8)(id, num);
+    get I8() {
+        return this.Field(this.e.I8);
     }
-    F32(id, num) {
-        this.Field(this.e.F32)(id, num);
+    get F32() {
+        return this.Field(this.e.F32);
     }
-    F64(id, num) {
-        this.Field(this.e.F64)(id, num);
+    get F64() {
+        return this.Field(this.e.F64);
     }
-    UInt(id, num) {
-        this.Field(this.e.UInt)(id, num);
+    get UInt() {
+        return this.Field(this.e.UInt);
     }
-    Int(id, num) {
-        this.Field(this.e.Int)(id, num);
+    get Int() {
+        return this.Field(this.e.Int);
     }
-    Str(id, text) {
-        this.Field(this.e.Str)(id, text);
+    get Str() {
+        return this.Field(this.e.Str);
     }
     List(f) {
         return this.Field(this.e.List(f));
+    }
+    get ListU8() {
+        return this.Field(this.e.ListU8);
+    }
+    get ListI8() {
+        return this.Field(this.e.ListI8);
+    }
+    get ListF32() {
+        return this.Field(this.e.ListF32);
+    }
+    get ListF64() {
+        return this.Field(this.e.ListF64);
+    }
+    get ListUint() {
+        return this.List(this.e.UInt);
+    }
+    get ListInt() {
+        return this.List(this.e.Int);
+    }
+    get ListStr() {
+        return this.List(this.e.Str);
+    }
+    get ListBool() {
+        return this.Field(this.e.ListBool);
+    }
+    Table(k, v) {
+        return this.Field(this.e.Table(k, v));
     }
     end() {
         this.e.writeByte(DataType.StructEnd);
@@ -392,7 +420,78 @@ var Status;
     Status.toString = toString;
 })(Status || (Status = {}));
 export { Status as Status };
-var _computedKey;
+class EndOfData extends Error {
+}
+class ProtocolError extends Error {
+}
+var _computedKey, _computedKey1;
+_computedKey = Symbol.dispose;
+class Stream {
+    reader;
+    eos;
+    constructor(reader){
+        this.reader = reader;
+        this.eos = false;
+    }
+    [_computedKey]() {
+        this.reader.cancel();
+    }
+    async read() {
+        assert(!this.eos, EndOfData, "read after eos");
+        const { done, value } = await this.reader.read();
+        if (done) {
+            this.eos = true;
+            return;
+        }
+        return value;
+    }
+    async toBytes() {
+        let chunk;
+        let buf = new Buffer();
+        while(chunk = await this.read())buf.append(chunk);
+        return buf.data();
+    }
+}
+_computedKey1 = Symbol.dispose;
+class StreamReader {
+    stream;
+    data;
+    constructor(stream){
+        this.stream = stream;
+        this.data = Bytes.empty();
+    }
+    [_computedKey1]() {
+        this.stream[Symbol.dispose]();
+    }
+    async readBytes(len) {
+        if (len == 0) {
+            return new Uint8Array();
+        }
+        let data = await this.read();
+        if (len <= data.length) {
+            return data.take(len);
+        }
+        let buf = new Buffer();
+        while(buf.len < len){
+            let data = await this.read();
+            let remaining = len - buf.len;
+            let takeN = Math.min(remaining, data.length);
+            buf.append(data.take(takeN));
+        }
+        return buf.data();
+    }
+    async readByte() {
+        let data = await this.read();
+        return data.nextByte();
+    }
+    async read() {
+        while(this.data.isEmpty()){
+            let bytes = expected(await this.stream.read(), "unexpected end of message");
+            this.data = new Bytes(bytes);
+        }
+        return this.data;
+    }
+}
 class MaybeCompressed {
     isCompressed;
     data;
@@ -427,7 +526,7 @@ class LenBE {
         else if (len <= 0xFF_FF) this.size = 2;
         else if (len <= 0xFF_FF_FF) this.size = 3;
         else {
-            assert(len <= 0xFF_FF_FF_FF, ()=>`len: ${len} must fit in u32`);
+            assert(len <= 0xFF_FF_FF_FF, RangeError, ()=>`len: ${len} must fit in u32`);
             this.size = 4;
         }
     }
@@ -435,17 +534,7 @@ class LenBE {
         return new Uint8Array(this.#buf, 4 - this.size);
     }
 }
-_computedKey = Symbol.dispose;
-class FrameDecoder {
-    res;
-    data;
-    constructor(res){
-        this.res = res;
-        this.data = Bytes.empty();
-    }
-    [_computedKey]() {
-        this.res[Symbol.dispose]();
-    }
+class FrameDecoder extends StreamReader {
     async parseFrame() {
         let header = FrameHeader.parse(await this.readByte());
         let len = await this.parseLenBigEndian(header.lenSize);
@@ -465,34 +554,6 @@ class FrameDecoder {
             len = len << 8 | await this.readByte();
         }
         return 0;
-    }
-    async readBytes(len) {
-        if (len == 0) {
-            return new Uint8Array();
-        }
-        let data = await this.readData();
-        if (len <= data.length) {
-            return data.take(len);
-        }
-        let buf = new Buffer();
-        while(buf.len < len){
-            let data = await this.readData();
-            let remaining = len - buf.len;
-            let takeN = Math.min(remaining, data.length);
-            buf.append(data.take(takeN));
-        }
-        return buf.data();
-    }
-    async readByte() {
-        let data = await this.readData();
-        return data.nextByte();
-    }
-    async readData() {
-        while(this.data.isEmpty()){
-            let bytes = expected(await this.res.read(), "unexpected end of message");
-            this.data = new Bytes(bytes);
-        }
-        return this.data;
     }
 }
 class Trailer {
@@ -522,8 +583,8 @@ const mod1 = {
     encodeAsLastFrame,
     Trailer
 };
-var _computedKey1;
-_computedKey1 = Symbol.dispose;
+var _computedKey2;
+_computedKey2 = Symbol.dispose;
 class MPSC {
     #controller;
     #closed = false;
@@ -535,11 +596,11 @@ class MPSC {
             this.#closed = true;
         }
     });
-    [_computedKey1]() {
+    [_computedKey2]() {
         this.close();
     }
     send(val) {
-        assert(!this.#closed, "Channel is closed");
+        assert(!this.#closed, Error, "Channel is closed");
         this.#controller.enqueue(val);
     }
     close() {
@@ -603,11 +664,11 @@ class Timeout {
         }
     }
     static fromString(input) {
-        assert(input.length >= 2, "timeout: invalid format");
+        assert(input.length >= 2, SyntaxError, "timeout: invalid format");
         const numPart = input.slice(0, -1);
         const unit = input.slice(-1);
         const value = Number.parseInt(numPart, 10);
-        assert(Number.isFinite(value), "timeout: invalid number");
+        assert(Number.isFinite(value), TypeError, "timeout: invalid number");
         switch(unit){
             case "H":
                 return Timeout.hour(value);
@@ -630,7 +691,6 @@ class Timeout {
 }
 export { TimeoutUnit as TimeoutUnit };
 export { Timeout as Timeout };
-var _computedKey2;
 class RPC {
     static URL = new URL("/", "https://localhost:443");
     static TIMEOUT = Timeout.minute(2);
@@ -651,8 +711,8 @@ class RPC {
             throw new Error(`${res.statusText}: ${await res.text()}`);
         }
         let contentType = res.headers.get("content-type");
-        assert(contentType == "application/setu", ()=>`unexpected content-type: ${contentType ?? "none"}`);
-        assert(res.body, "No response body");
+        assert(contentType == "application/setu", ProtocolError, ()=>`unexpected content-type: ${contentType ?? "none"}`);
+        assert(res.body, ProtocolError, "No response body");
         return res.body;
     }
 }
@@ -664,35 +724,15 @@ function rpc(id, { timeout, url }) {
         output
     ];
 }
-_computedKey2 = Symbol.dispose;
-class HttpResponse {
-    reader;
-    eos;
-    constructor(reader){
-        this.reader = reader;
-        this.eos = false;
-    }
-    [_computedKey2]() {
-        this.reader.cancel();
-    }
-    async read() {
-        assert(!this.eos, "read after eos");
-        const { done, value } = await this.reader.read();
-        if (done) {
-            this.eos = true;
-            return;
-        }
-        return value;
-    }
-    async toBytes() {
-        let chunk;
-        let buf = new Buffer();
-        while(chunk = await this.read())buf.append(chunk);
-        return buf.data();
-    }
-}
 export { RPC as RPC };
 export { rpc as rpc };
-export { HttpResponse as HttpResponse };
+function Obj(f) {
+    return function Struct(args) {
+        let s = new StructEncoder(this);
+        f(s, args);
+        s.end();
+    };
+}
+export { Obj as Obj };
 export { mod as lipi };
 export { mod1 as setu };

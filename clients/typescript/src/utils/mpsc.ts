@@ -18,7 +18,7 @@ export class MPSC<T> {
     }
 
     send(val: T) {
-        assert(!this.#closed, "Channel is closed");
+        assert(!this.#closed, Error, "Channel is closed");
         this.#controller.enqueue(val);
     }
 

@@ -1,6 +1,7 @@
 import { assert, expected } from "./common.ts";
 import { Buffer } from "./buffer.ts";
 import { Bytes } from "./bytes.ts";
+import { EndOfData } from "../errors.ts";
 
 export class Stream {
     eos = false; // end of stream
@@ -11,7 +12,7 @@ export class Stream {
     }
 
     async read() {
-        assert(!this.eos, "read after eos");
+        assert(!this.eos, EndOfData, "read after eos");
         const { done, value } = await this.reader.read();
         if (done) {
             this.eos = true;

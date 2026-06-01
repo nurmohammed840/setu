@@ -60,7 +60,7 @@ export class BitVec implements BitSetRead, BitSetWrite {
         const slotIdx = Math.floor(index / 8);
         const mask = 1 << (index % 8);
 
-        assert(slotIdx < this.bytes.length, () => `Out of bounds slot index: ${slotIdx}`, RangeError);
+        assert(slotIdx < this.bytes.length, RangeError, () => `Out of bounds slot index: ${slotIdx}`);
 
         const oldValue = (this.bytes[slotIdx]! & mask) !== 0;
         this.bytes[slotIdx]! |= mask;
@@ -85,7 +85,7 @@ export class BitVec implements BitSetRead, BitSetWrite {
 
 
 export function boolPackedLen(len: number) {
-    assert(len >= 0, () => `length ${len} cannot be negative`);
+    assert(len >= 0, RangeError, () => `length ${len} cannot be negative`);
     return Math.floor((len + 7) / 8);
 }
 

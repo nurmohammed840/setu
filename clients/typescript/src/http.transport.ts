@@ -1,3 +1,4 @@
+import { ProtocolError } from "./errors.ts";
 import { Input } from "./input.ts";
 import { Timeout } from "./timeout.ts";
 import { assert } from "./utils/common.ts";
@@ -24,8 +25,8 @@ export class RPC {
 
         let contentType = res.headers.get("content-type");
 
-        assert(contentType == "application/setu", () => `unexpected content-type: ${contentType ?? "none"}`);
-        assert(res.body, "No response body");
+        assert(contentType == "application/setu", ProtocolError, () => `unexpected content-type: ${contentType ?? "none"}`);
+        assert(res.body, ProtocolError, "No response body");
 
         return res.body;
     }

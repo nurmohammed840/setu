@@ -1,6 +1,8 @@
 declare module "utils/common" {
+    type ErrorClass = new (message?: string) => Error;
+    type ErrorMessage = (() => string) | string;
     export function expected<T>(data?: T, err?: string): T;
-    export function assert(expr: unknown, msg?: (() => string) | string): asserts expr;
+    export function assert(expr: unknown, err?: ErrorClass, msg?: ErrorMessage): asserts expr;
     export function checkOverflow<T>(num: T, min: T, max: T): void;
 }
 declare module "utils/bytes" {
@@ -99,16 +101,31 @@ declare module "lipi/encoder" {
         Field<T>(f: Encoder<T>): (id: number, v: T) => void;
         Option<T>(f: (this: this, id: number, value: T) => void): (id: number, val?: T) => void;
         Bool(id: number, bool: boolean): void;
-        U8(id: number, num: number): void;
-        I8(id: number, num: number): void;
-        F32(id: number, num: number): void;
-        F64(id: number, num: number): void;
-        UInt(id: number, num: number | bigint): void;
-        Int(id: number, num: number | bigint): void;
-        Str(id: number, text: string): void;
+        get U8(): (id: number, v: number) => void;
+        get I8(): (id: number, v: number) => void;
+        get F32(): (id: number, v: number) => void;
+        get F64(): (id: number, v: number) => void;
+        get UInt(): (id: number, v: number | bigint) => void;
+        get Int(): (id: number, v: number | bigint) => void;
+        get Str(): (id: number, v: string) => void;
         List<T>(f: Encoder<T>): (id: number, v: Iterable<T> & {
             length: number;
         }) => void;
+        get ListU8(): (id: number, v: Uint8Array) => void;
+        get ListI8(): (id: number, v: Int8Array) => void;
+        get ListF32(): (id: number, v: Float32Array) => void;
+        get ListF64(): (id: number, v: Float64Array) => void;
+        get ListUint(): (id: number, v: Iterable<number | bigint> & {
+            length: number;
+        }) => void;
+        get ListInt(): (id: number, v: Iterable<number | bigint> & {
+            length: number;
+        }) => void;
+        get ListStr(): (id: number, v: Iterable<string> & {
+            length: number;
+        }) => void;
+        get ListBool(): (id: number, v: boolean[]) => void;
+        Table<K, V>(k: Encoder<K>, v: Encoder<V>): (id: number, v: Map<K, V>) => void;
         end(): void;
     }
 }
@@ -163,6 +180,76 @@ declare module "status" {
         function toString(status: Status): string;
     }
 }
+declare module "errors" {
+    export class EndOfData extends Error {
+    }
+    export class ProtocolError extends Error {
+    }
+}
+declare module "utils/stream" {
+    import { Bytes } from "utils/bytes";
+    export class Stream {
+        private reader;
+        eos: boolean;
+        constructor(reader: ReadableStreamDefaultReader<Uint8Array>);
+        [Symbol.dispose](): void;
+        read(): Promise<Uint8Array | undefined>;
+        toBytes(): Promise<Uint8Array>;
+    }
+    export class StreamReader {
+        stream: Stream;
+        data: Bytes;
+        constructor(stream: Stream);
+        [Symbol.dispose](): void;
+        readBytes(len: number): Promise<Uint8Array>;
+        readByte(): Promise<number>;
+        read(): Promise<Bytes>;
+    }
+}
+declare module "setu/frame" {
+    import { Status } from "status";
+    import { StreamReader } from "utils/stream";
+    export class MaybeCompressed<T> {
+        private isCompressed;
+        private data;
+        constructor(isCompressed: boolean, data: T);
+    }
+    export type Frame = MessageFrame | TrailerFrame;
+    export interface MessageFrame {
+        type: "message";
+        bytes: Uint8Array;
+    }
+    export interface TrailerFrame {
+        type: "trailer";
+        status: Status;
+        bytes: Uint8Array;
+    }
+    interface FrameHeaderArgs {
+        lenSize: number;
+        isCompressed?: boolean;
+        trailer?: Status;
+    }
+    export class FrameHeader {
+        isCompressed: boolean;
+        isTrailer: boolean;
+        lenSize: number;
+        code: number;
+        constructor(isCompressed: boolean, isTrailer: boolean, lenSize: number, code: number);
+        static new: ({ lenSize, trailer, isCompressed }: FrameHeaderArgs) => FrameHeader;
+        static parse: (byte: number) => FrameHeader;
+        encode(): number;
+    }
+    export class LenBE {
+        #private;
+        size: number;
+        constructor(len: number);
+        asBytes(): Uint8Array;
+    }
+    export class FrameDecoder extends StreamReader {
+        parseFrame(): Promise<MaybeCompressed<Frame>>;
+        parseLenBigEndian(size: number): Promise<number>;
+    }
+}
 declare module "setu/trailer" {
     export class Trailer {
         static OK_ENCODED: number[];
@@ -170,6 +257,11 @@ declare module "setu/trailer" {
 }
 declare module "setu/frame.writer" {
     export function encodeAsLastFrame(msg: Uint8Array): Uint8Array;
+}
+declare module "setu/mod" {
+    export * from "setu/frame";
+    export * from "setu/frame.writer";
+    export * from "setu/trailer";
 }
 declare module "utils/mpsc" {
     export class MPSC<T> {
@@ -223,71 +315,10 @@ declare module "http.transport" {
         timeout?: Timeout | null;
     }
     export function rpc(id: number, { timeout, url }: Context): readonly [Input, Promise<ReadableStream<Uint8Array>>];
-    export class HttpResponse {
-        private reader;
-        eos: boolean;
-        constructor(reader: ReadableStreamDefaultReader<Uint8Array>);
-        [Symbol.dispose](): void;
-        read(): Promise<Uint8Array | undefined>;
-        toBytes(): Promise<Uint8Array>;
-    }
 }
-declare module "setu/frame" {
-    import { Status } from "status";
-    import { HttpResponse } from "http.transport";
-    import { Bytes } from "utils/bytes";
-    export class MaybeCompressed<T> {
-        private isCompressed;
-        private data;
-        constructor(isCompressed: boolean, data: T);
-    }
-    export type Frame = MessageFrame | TrailerFrame;
-    export interface MessageFrame {
-        type: "message";
-        bytes: Uint8Array;
-    }
-    export interface TrailerFrame {
-        type: "trailer";
-        status: Status;
-        bytes: Uint8Array;
-    }
-    interface FrameHeaderArgs {
-        lenSize: number;
-        isCompressed?: boolean;
-        trailer?: Status;
-    }
-    export class FrameHeader {
-        isCompressed: boolean;
-        isTrailer: boolean;
-        lenSize: number;
-        code: number;
-        constructor(isCompressed: boolean, isTrailer: boolean, lenSize: number, code: number);
-        static new: ({ lenSize, trailer, isCompressed }: FrameHeaderArgs) => FrameHeader;
-        static parse: (byte: number) => FrameHeader;
-        encode(): number;
-    }
-    export class LenBE {
-        #private;
-        size: number;
-        constructor(len: number);
-        asBytes(): Uint8Array;
-    }
-    export class FrameDecoder {
-        res: HttpResponse;
-        data: Bytes;
-        constructor(res: HttpResponse);
-        [Symbol.dispose](): void;
-        parseFrame(): Promise<MaybeCompressed<Frame>>;
-        parseLenBigEndian(size: number): Promise<number>;
-        readBytes(len: number): Promise<Uint8Array>;
-        readByte(): Promise<number>;
-        readData(): Promise<Bytes>;
-    }
-}
-declare module "setu/mod" {
-    export * from "setu/frame";
-    export * from "setu/frame.writer";
-    export * from "setu/trailer";
+declare module "helper" {
+    import { Encode, StructEncoder } from "lipi/mod";
+    export function Obj<T>(f: (s: StructEncoder, args: T) => void): (this: Encode, args: T) => void;
 }
 declare module "mod" {
     export * as lipi from "lipi/mod";
@@ -295,4 +326,5 @@ declare module "mod" {
     export * from "http.transport";
     export * from "status";
     export * from "timeout";
+    export * from "helper";
 }

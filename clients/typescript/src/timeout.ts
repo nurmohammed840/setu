@@ -50,14 +50,14 @@ export class Timeout {
     }
 
     static fromString(input: string): Timeout {
-        assert(input.length >= 2, "timeout: invalid format");
+        assert(input.length >= 2, SyntaxError, "timeout: invalid format");
 
         const numPart = input.slice(0, -1);
         const unit = input.slice(-1);
 
         const value = Number.parseInt(numPart, 10);
 
-        assert(Number.isFinite(value), "timeout: invalid number");
+        assert(Number.isFinite(value), TypeError, "timeout: invalid number");
 
         switch (unit) {
             case "H":

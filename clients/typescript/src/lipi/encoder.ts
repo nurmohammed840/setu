@@ -22,7 +22,7 @@ export class Writer extends Buffer {
     }
 
     write_field_id_and_ty(num: number, ty: DataType) {
-        assert(Number.isInteger(num) && num >= 0, () => `expected non-negative integer, got: ${num}`);
+        assert(Number.isInteger(num) && num >= 0, RangeError, () => `expected non-negative integer, got: ${num}`);
 
         if (num < 15) return this.writeByte((num << 4) | ty);
 

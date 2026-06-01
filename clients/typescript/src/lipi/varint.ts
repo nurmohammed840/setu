@@ -3,7 +3,7 @@ import { assert } from "../utils/common.ts";
 
 export function encodeVarInt(num: bigint | number) {
     num = BigInt(num);
-    assert(num >= 0n, () => `expected unsigned number: found ${num}`);
+    assert(num >= 0n, RangeError, () => `expected unsigned number: found ${num}`);
 
     let buf = [];
     while (num > 0b111_1111) {

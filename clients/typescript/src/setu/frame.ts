@@ -73,7 +73,7 @@ export class LenBE {
         else if (len <= 0xFF_FF) this.size = 2;
         else if (len <= 0xFF_FF_FF) this.size = 3;
         else {
-            assert(len <= 0xFF_FF_FF_FF, () => `len: ${len} must fit in u32`);
+            assert(len <= 0xFF_FF_FF_FF, RangeError, () => `len: ${len} must fit in u32`);
             this.size = 4;
         }
     }
