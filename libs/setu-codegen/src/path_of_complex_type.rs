@@ -1,11 +1,11 @@
 use std::{collections, slice::Iter};
 
 use setu_type_info::{FnMetaData, FnOutputTy, Func, TypeInfo};
-use type_id::{Ident, Type};
+use type_id::{PathIdent, Type};
 
 #[derive(Debug)]
 pub struct PathsOfComplexType {
-    paths: collections::HashSet<Ident>,
+    paths: collections::HashSet<PathIdent>,
 }
 
 impl PathsOfComplexType {
@@ -15,7 +15,7 @@ impl PathsOfComplexType {
     {
         let paths = f(info.fns.iter())
             .flat_map(|ty| ty.complex())
-            .map(From::from)
+            .map(PathIdent::clone)
             .collect();
 
         Self { paths }

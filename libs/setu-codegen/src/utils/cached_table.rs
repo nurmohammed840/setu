@@ -1,6 +1,10 @@
-use std::hash::Hash;
-use std::rc::Rc;
-use std::{borrow::Borrow, cell::RefCell, collections::HashMap};
+use std::{
+    borrow::Borrow,
+    cell::RefCell,
+    collections::{HashMap, hash_map::Entry},
+    hash::Hash,
+    rc::Rc,
+};
 
 #[derive(Debug, Default)]
 pub struct LocalCachedTable<K, V: ?Sized> {
@@ -14,7 +18,21 @@ impl<K: Eq + Hash, V: ?Sized> LocalCachedTable<K, V> {
         }
     }
 
-    pub fn get_or_insert_with<'k, Q, T>(&self, k: &'k Q, f: impl FnOnce() -> T) -> Rc<V>
+    pub fn get_or_insert_with<T>(&self, k: K, f: impl FnOnce() -> T) -> Rc<V>
+    where
+        Rc<V>: From<T>,
+    {
+        match self.map.borrow_mut().entry(k) {
+            Entry::Occupied(cached) => cached.get().clone(),
+            Entry::Vacant(map) => {
+                let val: Rc<V> = Rc::from(f());
+                map.insert(val.clone());
+                val
+            }
+        }
+    }
+
+    pub fn _get_by_ref_or_insert_with<'k, Q, T>(&self, k: &'k Q, f: impl FnOnce() -> T) -> Rc<V>
     where
         K: Borrow<Q>,
         K: From<&'k Q>,

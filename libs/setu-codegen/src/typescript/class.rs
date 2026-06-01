@@ -6,7 +6,7 @@ use type_id::{ComplexData, ComplexDataType};
 use crate::{CodeWriter, Context};
 
 pub fn generate(c: &mut CodeWriter, ctx: &Context) {
-    for ComplexData { path, ty, .. } in ctx.info.registry.values() {
+    for (path, ComplexData { ty, .. }) in ctx.info.registry.iter() {
         let class_name = ctx.symbol.class_name(path);
 
         c.newline();

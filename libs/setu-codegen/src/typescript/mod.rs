@@ -4,7 +4,7 @@ pub mod function;
 use std::fmt::Display;
 use std::format_args as args;
 use std::{fs, io, path::PathBuf};
-use type_id::{Ident, Type};
+use type_id::{Ident, PathIdent, Type};
 
 use crate::symbol_trie::SymbolTrie;
 use crate::{CodeWriter, utils::copy_dir};
@@ -166,19 +166,19 @@ impl CodeWriter {
 mod cached {
     use crate::utils::LocalCachedTable;
     use std::rc::Rc;
-    use type_id::Ident;
+    use type_id::PathIdent;
 
     thread_local! {
-       pub static SYMBOL: LocalCachedTable<Ident, str> = LocalCachedTable::new();
+       pub static SYMBOL: LocalCachedTable<PathIdent, str> = LocalCachedTable::new();
     }
 
-    pub fn get_symbol(path: &str, set: impl FnOnce() -> String) -> Rc<str> {
-        SYMBOL.with(|cached| cached.get_or_insert_with(path, set))
+    pub fn get_symbol(path: &PathIdent, set: impl FnOnce() -> String) -> Rc<str> {
+        SYMBOL.with(|cached| cached.get_or_insert_with(path.clone(), set))
     }
 }
 
 impl SymbolTrie {
-    fn class_name(&self, path: &str) -> std::rc::Rc<str> {
+    fn class_name(&self, path: &PathIdent) -> std::rc::Rc<str> {
         cached::get_symbol(path, || {
             self.shortest_symbol(path)
                 .flat_map(|part| {

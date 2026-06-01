@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use setu_type_info::{FnOutputTy, Func, type_id};
-use type_id::{Ident, Type, TypeId};
+use type_id::{PathIdent, Type, TypeId};
 
 async fn func() {}
 
@@ -32,7 +32,7 @@ fn test_async_fn() {
 
     assert!(r.is_empty());
     let f = Func::new(&func_with_arg, &mut r, ());
-    assert_eq!(f.input_ty, [Type::Complex(Ident::from("basic::User"))]);
+    assert_eq!(f.input_ty, [Type::Complex(PathIdent::from("basic::User"))]);
     assert_eq!(r.len(), 1);
 }
 

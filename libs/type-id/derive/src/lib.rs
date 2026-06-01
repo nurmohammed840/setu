@@ -80,8 +80,7 @@ pub fn expand(
                 fn ty(__r: &mut __crate::TypeRegistry) -> __crate::Type {
                     __r.register(
                         ::std::format!(#fmt_args, ::std::module_path!()),
-                        |__r, path| __crate::ComplexData {
-                            path,
+                        |__r| __crate::ComplexData {
                             attrs: #attrs,
                             ty: __crate::ComplexDataType::#fields,
                         },

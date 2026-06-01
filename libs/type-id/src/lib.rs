@@ -2,6 +2,8 @@ mod registry;
 mod types;
 mod utils;
 
+use std::sync::Arc;
+
 pub use registry::TypeRegistry;
 pub use type_id_macros::TypeId;
 
@@ -63,7 +65,7 @@ pub enum Type {
     ///                         \                /
     /// Type::Complex("<path>::Bar" | "<path>::Foo")
     /// ```
-    Complex(Ident),
+    Complex(PathIdent),
 }
 
 macro_rules! option {
@@ -80,7 +82,7 @@ impl Type {
         option!(self, Self::Option(ty) => ty)
     }
 
-    pub fn complex(&self) -> Option<&str> {
+    pub fn complex(&self) -> Option<&PathIdent> {
         option!(self, Self::Complex(ty) => ty)
     }
 }
@@ -105,6 +107,8 @@ pub enum MapVariant {
 
 // ===========================================================
 
+/// Cheap Clone
+pub type PathIdent = Arc<str>;
 pub type Ident = Box<str>;
 
 macro_rules! discriminant {
@@ -150,11 +154,10 @@ impl Attributes {
 
 // ===========================================================
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ComplexData {
     pub attrs: Attributes,
-    pub path: Ident,
     pub ty: ComplexDataType,
     // pub generics: Generics,
 }
@@ -171,12 +174,6 @@ pub enum ComplexDataType {
     Tuple {
         fields: Vec<(Attributes, Type)>,
     },
-}
-
-impl Default for ComplexDataType {
-    fn default() -> Self {
-        ComplexDataType::Struct { fields: vec![] }
-    }
 }
 
 impl ComplexDataType {
