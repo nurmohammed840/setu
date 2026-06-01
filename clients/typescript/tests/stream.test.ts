@@ -1,20 +1,7 @@
-import { assertEquals, assert, assertRejects } from "jsr:@std/assert";
-import { FrameHeader, FrameDecoder, LenBE } from "../src/setu/frame.ts";
-import { Status } from "../src/status.ts";
-import { HttpResponse } from "../src/http.transport.ts";
+import { assertEquals, assertRejects } from "jsr:@std/assert";
 import { encodeAsLastFrame } from "../src/setu/frame.writer.ts";
+import { Stream, StreamReader } from "../src/utils/stream.ts";
 
-
-Deno.test("Setu Frame Header", () => {
-    let raw = FrameHeader.new({ lenSize: 4, trailer: Status.Cancelled }).encode();
-    assertEquals(raw, 0b1_11_1_0);
-
-    let h = FrameHeader.parse(raw);
-    assert(!h.isCompressed);
-    assert(h.isTrailer);
-    assertEquals(h.lenSize, 4);
-    assertEquals(h.code, 1);
-});
 
 function createStream(...s: number[][]) {
     const stream = new ReadableStream<Uint8Array<ArrayBuffer>>({
@@ -23,7 +10,7 @@ function createStream(...s: number[][]) {
             c.close();
         }
     });
-    return new FrameDecoder(new HttpResponse(stream.getReader()))
+    return new StreamReader(new Stream(stream.getReader()))
 }
 
 Deno.test("read byte", async () => {
@@ -48,12 +35,6 @@ Deno.test("read bytes", async () => {
 Deno.test("stream eof", async () => {
     let de = createStream([1], [2]);
     await assertRejects(async () => await de.readBytes(3));
-});
-
-Deno.test("LenBE basic", () => {
-    assertEquals([...new LenBE(0x1234).asBytes()], [0x12, 0x34]);
-    assertEquals([...new LenBE(0x123456).asBytes()], [0x12, 0x34, 0x56]);
-    assertEquals([...new LenBE(0x12345678).asBytes()], [0x12, 0x34, 0x56, 0x78]);
 });
 
 Deno.test("encode as frame", () => {

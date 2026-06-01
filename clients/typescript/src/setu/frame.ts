@@ -1,8 +1,6 @@
 import { Status } from "../status.ts";
-import { HttpResponse } from "../http.transport.ts";
-import { assert, expected } from "../utils/common.ts";
-import { Bytes } from "../utils/bytes.ts";
-import { Buffer } from "../utils/buffer.ts";
+import { assert } from "../utils/common.ts";
+import { StreamReader } from "../utils/stream.ts";
 
 export class MaybeCompressed<T> {
     constructor(
@@ -85,14 +83,7 @@ export class LenBE {
     }
 }
 
-export class FrameDecoder {
-    data = Bytes.empty();
-    constructor(public res: HttpResponse) { }
-
-    [Symbol.dispose]() {
-        this.res[Symbol.dispose]()
-    }
-
+export class FrameDecoder extends StreamReader {
     async parseFrame(): Promise<MaybeCompressed<Frame>> {
         let header = FrameHeader.parse(await this.readByte());
         let len = await this.parseLenBigEndian(header.lenSize);
@@ -112,42 +103,5 @@ export class FrameDecoder {
             len = (len << 8) | await this.readByte();
         }
         return 0;
-    }
-
-    async readBytes(len: number) {
-        if (len == 0) {
-            return new Uint8Array();
-        }
-
-        let data = await this.readData();
-
-        if (len <= data.length) {
-            return data.take(len);
-        }
-
-        let buf = new Buffer();
-
-        while (buf.len < len) {
-            let data = await this.readData();
-
-            let remaining = len - buf.len;
-            let takeN = Math.min(remaining, data.length);
-            buf.append(data.take(takeN));
-        }
-
-        return buf.data()
-    }
-
-    async readByte() {
-        let data = await this.readData();
-        return data.nextByte()
-    }
-
-    async readData() {
-        while (this.data.isEmpty()) {
-            let bytes = expected(await this.res.read(), "unexpected end of message");
-            this.data = new Bytes(bytes);
-        }
-        return this.data;
     }
 }

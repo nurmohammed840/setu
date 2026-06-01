@@ -1,6 +1,5 @@
 import { Input } from "./input.ts";
 import { Timeout } from "./timeout.ts";
-import { Buffer } from "./utils/buffer.ts";
 import { assert } from "./utils/common.ts";
 
 export class RPC {
@@ -41,32 +40,4 @@ export function rpc(id: number, { timeout, url }: Context) {
     let input = new Input();
     let output = RPC.call(id, input.channel.stream, timeout, url);
     return [input, output] as const;
-}
-
-export class HttpResponse {
-    eos = false; // end of stream
-    constructor(private reader: ReadableStreamDefaultReader<Uint8Array>) { }
-
-    [Symbol.dispose]() {
-        this.reader.cancel()
-    }
-
-    async read() {
-        assert(!this.eos, "read after eos");
-        const { done, value } = await this.reader.read();
-        if (done) {
-            this.eos = true;
-            return;
-        }
-        return value;
-    }
-
-    async toBytes() {
-        let chunk;
-        let buf = new Buffer();
-        while (chunk = await this.read())
-            buf.append(chunk);
-
-        return buf.data();
-    }
 }
