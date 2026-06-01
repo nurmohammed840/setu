@@ -172,8 +172,8 @@ mod cached {
        pub static SYMBOL: LocalCachedTable<PathIdent, str> = LocalCachedTable::new();
     }
 
-    pub fn get_symbol(path: &PathIdent, set: impl FnOnce() -> String) -> Rc<str> {
-        SYMBOL.with(|cached| cached.get_or_insert_with(path.clone(), set))
+    pub fn get_symbol(path: &PathIdent, init: impl FnOnce() -> String) -> Rc<str> {
+        SYMBOL.with(|cached| cached.get_or_insert_with(path.clone(), init))
     }
 }
 

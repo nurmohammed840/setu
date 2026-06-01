@@ -16,20 +16,28 @@ pub struct SymbolTrie {
 
 impl From<&TypeInfo> for SymbolTrie {
     fn from(info: &TypeInfo) -> Self {
-        let mut trie = SymbolTrie::default();
-        for path in info.registry.keys() {
-            trie.insert(path);
-        }
-        trie
+        Self::from_iter(info.registry.keys())
     }
 }
 
 impl SymbolTrie {
+    pub fn from_iter<I>(paths: I) -> SymbolTrie
+    where
+        I: IntoIterator,
+        I::Item: AsRef<str>,
+    {
+        let mut trie = SymbolTrie::default();
+        for path in paths {
+            trie.insert(path.as_ref());
+        }
+        trie
+    }
+
     pub fn insert(&mut self, path: &str) {
         let mut child = &mut self.child;
 
         for part in path.rsplit("::") {
-            let node = child.entry(Box::from(part)).or_default();
+            let node = child.entry(part.into()).or_default();
             node.count += 1;
             child = &mut node.child;
         }
@@ -76,12 +84,7 @@ mod tests {
 
     #[test]
     fn test_shortest_path() {
-        let input = ["Z::A::X", "Z::A::B", "Z::X::A", "Z::X::B", "Y::X::A"];
-
-        let mut trie = SymbolTrie::default();
-        for s in input {
-            trie.insert(s);
-        }
+        let trie = SymbolTrie::from_iter(["Z::A::X", "Z::A::B", "Z::X::A", "Z::X::B", "Y::X::A"]);
 
         let c = |path| {
             let mut parts: Vec<_> = trie.shortest_symbol(path).collect();
