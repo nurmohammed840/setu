@@ -1,8 +1,9 @@
 import { Bytes } from "../utils/bytes.ts";
-import { IS_LITTLE_ENDIAN } from "../utils/common.ts";
+import { assert, IS_LITTLE_ENDIAN } from "../utils/common.ts";
 import { decodeVarInt } from "./varint.ts";
 import { DataType } from "./type.ts";
 import { zigzagDecode } from "./zigzag.ts";
+import { bitvecToBools, boolPackedLen } from "../bitset.ts";
 
 const { check } = DataType;
 const UTF8_DECODER = new TextDecoder();
@@ -148,6 +149,51 @@ export class Decode extends Deserialize {
         check(DataType.Int, ty);
         return BigInt64Array.from({ length }, () => this.Int());
     }
+
+    ListBool() {
+        let [count, ty] = this.read_len_and_ty();
+        check(DataType.True, ty);
+        const bytes = this.buf.take(boolPackedLen(count));
+        return bitvecToBools(count, bytes);
+    }
+
+    Table<K, V>(k: Decoder<K>, v: Decoder<V>) {
+        let self = this;
+        return function Table(): Map<K, V> {
+            let columnCount = Number(self.read_uint());
+            let length = Number(self.read_uint());
+
+            assert(columnCount == 2, RangeError, () => `invalid column count: ${columnCount}`);
+
+            let [field, ty] = self.read_field_id_and_ty();
+            if (field == 0) {
+                checkDecoder(k, ty);
+                let keys = Array.from({ length }, () => k.call(self));
+
+                let [field2, ty2] = self.read_field_id_and_ty();
+                assert(field2 == 1, TypeError, () => `invalid column (value) id: expected \`1\`, found ${field2}`);
+                checkDecoder(v, ty2);
+
+                let map = new Map();
+                for (let key of keys) map.set(key, v.call(self))
+                return map;
+            }
+            if (field == 1) {
+                checkDecoder(v, ty);
+                let values = Array.from({ length }, () => v.call(self));
+
+                let [field2, ty2] = self.read_field_id_and_ty();
+                assert(field2 === 0, TypeError, () => `invalid column (key) id: expected \`0\`, found ${field2}`);
+                checkDecoder(k, ty2);
+
+                let map = new Map();
+                for (let val of values) map.set(k.call(self), val);
+                return map;
+            }
+
+            throw new TypeError(`invalid column id: expected \`0\` or \`1\`, found ${field}`);
+        }
+    }
 }
 
 // ========================================================
@@ -163,4 +209,3 @@ function view(data: Uint8Array) {
 function checkDecoder<T>(f: Decoder<T>, ty: DataType) {
     check(DataType.fromStr(f.name), ty);
 }
-

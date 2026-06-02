@@ -81,9 +81,22 @@ impl Context {
 
             Type::Complex(path) => f.write_str(&self.symbol.class_name(path)),
 
-            Type::List { ty, .. } | Type::Array { ty, .. } => {
-                f.write_fmt(args!("Array<{}>", self.data_ty(ty)))
-            }
+            Type::List { ty, .. } | Type::Array { ty, .. } => match ty.as_ref() {
+                Type::U8 => f.write_str("Uint8Array"),
+                Type::U16 => f.write_str("Uint16Array"),
+                Type::U32 => f.write_str("Uint32Array"),
+                Type::U64 => f.write_str("BigUint64Array"),
+
+                Type::I8 => f.write_str("Int8Array"),
+                Type::I16 => f.write_str("Int16Array"),
+                Type::I32 => f.write_str("Int32Array"),
+                Type::I64 => f.write_str("BigInt64Array"),
+
+                Type::F32 => f.write_str("Float32Array"),
+                Type::F64 => f.write_str("Float64Array"),
+
+                _ => f.write_fmt(args!("Array<{}>", self.data_ty(ty))),
+            },
             Type::Map { ty, .. } => f.write_fmt(args!(
                 "Map<{}, {}>",
                 self.data_ty(&ty.0),
