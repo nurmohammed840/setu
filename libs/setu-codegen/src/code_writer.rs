@@ -1,4 +1,4 @@
-use std::fmt::{Arguments, Display, Write};
+use std::fmt::{Display, Write};
 use std::format_args as args;
 
 #[derive(Clone)]
@@ -32,15 +32,9 @@ impl CodeWriter {
         }
     }
 
-    pub fn write(&mut self, s: &str) {
+    pub fn line(&mut self, args: impl Display) {
         self.write_indent();
-        self.buffer.push_str(s);
-    }
-
-    pub fn line(&mut self, args: Arguments<'_>) {
-        self.write_indent();
-        let _ = self.buffer.write_fmt(args);
-        self.newline();
+        let _ = self.buffer.write_fmt(args!("{args}\n"));
     }
 
     pub fn newline(&mut self) {
@@ -50,7 +44,7 @@ impl CodeWriter {
     pub fn block(&mut self, args: impl Display, f: impl FnOnce(&mut Self)) {
         self.line(args!("{args} {{"));
         self.scope(f);
-        self.write("}\n");
+        self.line("}");
     }
 
     pub fn scope(&mut self, f: impl FnOnce(&mut Self)) {

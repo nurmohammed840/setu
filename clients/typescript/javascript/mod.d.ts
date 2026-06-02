@@ -3,8 +3,9 @@ declare module "utils/common" {
     type ErrorMessage = (() => string) | string;
     export function expected<T>(data?: T, err?: string): T;
     export function assert(expr: unknown, err?: ErrorClass, msg?: ErrorMessage): asserts expr;
+    export function checkOverflowInt(num: number, bit: number): number;
+    export function checkOverflowUint(num: number, bit: number): number;
     export const IS_LITTLE_ENDIAN: boolean;
-    export function checkOverflow(num: number, bit: number, signed?: boolean): number;
 }
 declare module "utils/bytes" {
     export function takeBytes(N: number, buf: Uint8Array): [Uint8Array, Uint8Array];
@@ -102,35 +103,39 @@ declare module "lipi/decoder" {
         I8(): number;
         F32(): number;
         F64(): number;
-        U16: (this: Decode) => bigint;
-        U32: (this: Decode) => bigint;
+        U16: (this: Decode) => number;
+        U32: (this: Decode) => number;
         U64: (this: Decode) => bigint;
-        Int(): bigint;
         I16: (this: Decode) => number;
-        I32: (this: Decode) => bigint;
+        I32: (this: Decode) => number;
         I64: (this: Decode) => bigint;
         Str(): string;
         List<T>(f: Decoder<T>): () => Array<T>;
-        ListU8(): Uint8Array;
-        ListI8(): Int8Array;
-        ListF32(): Float32Array;
-        ListF64(): Float64Array;
-        ListU16(): Uint16Array;
-        ListU32(): Uint32Array;
-        ListU64(): BigUint64Array;
-        ListI16(): Int16Array;
-        ListI32(): Int32Array;
-        ListI64(): BigInt64Array;
-        ListBool(): boolean[];
+        ListU8: (this: Decode) => Uint8Array;
+        ListI8: (this: Decode) => Int8Array;
+        ListF32: (this: Decode) => Float32Array;
+        ListF64: (this: Decode) => Float64Array;
+        ListU16: (this: Decode) => Uint16Array;
+        ListU32: (this: Decode) => Uint32Array;
+        ListU64: (this: Decode) => BigUint64Array;
+        ListI16: (this: Decode) => Int16Array;
+        ListI32: (this: Decode) => Int32Array;
+        ListI64: (this: Decode) => BigInt64Array;
+        ListBool: (this: Decode) => boolean[];
         Table<K, V>(k: Decoder<K>, v: Decoder<V>): () => Map<K, V>;
     }
-    type Schema = readonly [string, number, Decoder<unknown>, boolean];
+    type Schema = readonly [
+        name: string,
+        id: number,
+        decoder: Decoder<unknown>,
+        required: boolean
+    ];
     type Transform<T extends readonly Schema[]> = {
         [E in T[number] as E[3] extends true ? E[0] : never]: ReturnType<E[2]>;
     } & {
         [E in T[number] as E[3] extends false ? E[0] : never]?: ReturnType<E[2]>;
     };
-    export function StructDecoder<T extends Schema[]>(self: Decode, schemas: T): Transform<T>;
+    export function StructDecoder<const T extends readonly Schema[]>(self: Decode, schemas: T): Transform<T>;
 }
 declare module "utils/buffer" {
     export class Buffer {
@@ -153,12 +158,17 @@ declare module "lipi/encoder" {
         write_len_and_ty(num: number, ty: DataType): void;
     }
     export class Encode extends Writer {
+        Bool(_: boolean): void;
         U8(num: number): void;
         I8(num: number): void;
         F32(num: number): void;
         F64(num: number): void;
-        UInt(num: number | bigint): void;
-        Int(num: number | bigint): void;
+        U16: (this: Encode, num: number) => void;
+        U32: (this: Encode, num: number) => void;
+        U64: (this: Encode, num: number | bigint) => void;
+        I16: (this: Encode, num: number) => void;
+        I32: (this: Encode, num: number) => void;
+        I64: (this: Encode, num: number | bigint) => void;
         Str(text: string): void;
         List<T>(f: Encoder<T>): (vals: Iterable<T> & {
             length: number;
@@ -167,42 +177,24 @@ declare module "lipi/encoder" {
         ListI8: (this: Encode, v: Int8Array) => void;
         ListF32: (this: Encode, v: Float32Array) => void;
         ListF64: (this: Encode, v: Float64Array) => void;
+        ListU16: (this: Encode, v: Uint16Array) => void;
+        ListU32: (this: Encode, v: Uint32Array) => void;
+        ListU64: (this: Encode, v: BigUint64Array) => void;
+        ListI16: (this: Encode, v: Int16Array) => void;
+        ListI32: (this: Encode, v: Int32Array) => void;
+        ListI64: (this: Encode, v: BigInt64Array) => void;
         ListBool: (this: Encode, bools: Array<boolean>) => void;
         Table<K, V>(k: Encoder<K>, v: Encoder<V>): (map: Map<K, V>) => void;
     }
-    export class StructEncoder {
-        e: Encode;
-        constructor(e: Encode);
-        Field<T>(f: Encoder<T>): (id: number, v: T) => void;
-        Option<T>(f: (this: this, id: number, value: T) => void): (id: number, val?: T) => void;
-        Bool(id: number, bool: boolean): void;
-        get U8(): (id: number, v: number) => void;
-        get I8(): (id: number, v: number) => void;
-        get F32(): (id: number, v: number) => void;
-        get F64(): (id: number, v: number) => void;
-        get UInt(): (id: number, v: number | bigint) => void;
-        get Int(): (id: number, v: number | bigint) => void;
-        get Str(): (id: number, v: string) => void;
-        List<T>(f: Encoder<T>): (id: number, v: Iterable<T> & {
-            length: number;
-        }) => void;
-        get ListU8(): (id: number, v: Uint8Array) => void;
-        get ListI8(): (id: number, v: Int8Array) => void;
-        get ListF32(): (id: number, v: Float32Array) => void;
-        get ListF64(): (id: number, v: Float64Array) => void;
-        get ListUint(): (id: number, v: Iterable<number | bigint> & {
-            length: number;
-        }) => void;
-        get ListInt(): (id: number, v: Iterable<number | bigint> & {
-            length: number;
-        }) => void;
-        get ListStr(): (id: number, v: Iterable<string> & {
-            length: number;
-        }) => void;
-        get ListBool(): (id: number, v: boolean[]) => void;
-        Table<K, V>(k: Encoder<K>, v: Encoder<V>): (id: number, v: Map<K, V>) => void;
-        end(): void;
-    }
+    type Field<T> = readonly [
+        id: number,
+        value: T | undefined,
+        encoder: Encoder<T>
+    ];
+    type Fields<T extends readonly any[]> = [...{
+        [K in keyof T]: Field<T[K]>;
+    }];
+    export function StructEncoder<const T extends readonly any[]>(self: Encode, fields: Fields<T>): void;
 }
 declare module "lipi/mod" {
     export * from "lipi/decoder";
@@ -328,11 +320,11 @@ declare module "utils/mpsc" {
     }
 }
 declare module "input" {
-    import { StructEncoder } from "lipi/encoder";
+    import { Encode } from "lipi/encoder";
     import { MPSC } from "utils/mpsc";
     export class Input {
         channel: MPSC<Uint8Array>;
-        sendAndClose(f: (s: StructEncoder) => void): void;
+        sendAndClose(f: (this: Encode) => void): void;
     }
 }
 declare module "timeout" {
@@ -370,15 +362,10 @@ declare module "http.transport" {
     }
     export function rpc(id: number, { timeout, url }: Context): readonly [Input, Promise<ReadableStream<Uint8Array>>];
 }
-declare module "helper" {
-    import { Encode, StructEncoder } from "lipi/mod";
-    export function Obj<T>(f: (s: StructEncoder, args: T) => void): (this: Encode, args: T) => void;
-}
 declare module "mod" {
     export * as lipi from "lipi/mod";
     export * as setu from "setu/mod";
     export * from "http.transport";
     export * from "status";
     export * from "timeout";
-    export * from "helper";
 }

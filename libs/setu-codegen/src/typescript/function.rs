@@ -19,11 +19,17 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
             |c| {
                 c.line(args!("let [i, o] = $.rpc({index}, ctx);"));
 
-                c.arrow_fn("i.sendAndClose(s", |c| {
-                    for (key, (name, ty)) in args.iter().zip(input_ty).enumerate() {
-                        c.line(args!("{}({key}, args.{name});", ctx.lipi_ty(ty)));
-                    }
-                });
+                c.line("i.sendAndClose(function (this: $.lipi.Encode) {");
+                
+                let fields = args
+                    .iter()
+                    .zip(input_ty)
+                    .enumerate()
+                    .map(|(key, (name, ty))| (name.as_ref(), ty, key as u32));
+
+                ctx.struct_encoder(c, fields);
+
+                c.line("});");
             },
         );
     }

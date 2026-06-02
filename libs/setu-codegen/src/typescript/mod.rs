@@ -1,7 +1,6 @@
 pub mod class;
 pub mod function;
 
-use std::fmt::Display;
 use std::format_args as args;
 use std::{fs, io, path::PathBuf};
 use type_id::{Ident, PathIdent, Type};
@@ -57,7 +56,7 @@ export const $etu = { RPC: $.RPC };
 impl Context {
     pub fn generate_typescript_code(&self) -> String {
         let mut c = CodeWriter::new();
-        c.write(TS_PRELUDE);
+        c.buffer.push_str(TS_PRELUDE);
         class::generate(&mut c, self);
         function::generate(&mut c, self);
         c.buffer
@@ -123,8 +122,8 @@ impl Context {
         }
     }
 
-    fn decode_ty(&self, ty: &Type) -> fmt!(type) {
-        fmt(|f| match ty {
+    fn serde_ty(&self, ty: &Type, encoder: bool) -> fmt!(type) {
+        fmt(move |f| match ty {
             Type::U8 => f.write_str("this.U8"),
             Type::I8 => f.write_str("this.I8"),
 
@@ -159,60 +158,28 @@ impl Context {
                 Type::Bool => f.write_str("this.ListBool"),
                 ty => f.write_fmt(args!("this.List({})", self.data_ty(ty))),
             },
+            Type::Complex(path) => {
+                let serde = if encoder { "encoder" } else { "decoder" };
+                f.write_fmt(args!("{}.{serde}", self.symbol.class_name(path)))
+            }
             _ => unimplemented!(),
         })
     }
 
-    fn lipi_ty(&self, ty: &Type) -> fmt!(type) {
-        fmt(|f| match ty {
-            Type::U8 => f.write_str("s.U8"),
-            Type::I8 => f.write_str("s.I8"),
-            Type::F32 => f.write_str("s.F32"),
-            Type::F64 => f.write_str("s.F64"),
-
-            Type::U16 | Type::U32 | Type::U64 => f.write_str("s.UInt"),
-            Type::I16 | Type::I32 | Type::I64 => f.write_str("s.Int"),
-
-            Type::String => f.write_str("s.Str"),
-
-            Type::Array { ty, .. } | Type::List { ty, .. } => match ty.as_ref() {
-                Type::U8 => f.write_str("s.ListU8"),
-                Type::I8 => f.write_str("s.ListI8"),
-                Type::F32 => f.write_str("s.ListF32"),
-                Type::F64 => f.write_str("s.ListF64"),
-
-                Type::U16 | Type::U32 | Type::U64 => f.write_str("s.ListUint"),
-                Type::I16 | Type::I32 | Type::I64 => f.write_str("s.ListInt"),
-
-                Type::String => f.write_str("s.ListStr"),
-
-                Type::Bool => f.write_str("s.ListBool"),
-                Type::Option(_) => unreachable!(),
-
-                _ => unimplemented!(),
-            },
-
-            Type::Complex(path) => {
-                f.write_fmt(args!("s.Field({}.encoder)", self.symbol.class_name(path)))
-            }
-
-            Type::Map { .. } => unimplemented!(),
-
-            Type::Bool => f.write_str("s.Bool"),
-            Type::Option(ty) => f.write_fmt(args!("s.Option({})", self.lipi_ty(ty))),
-
-            Type::Tuple(_) | Type::Result(_) | Type::Char | Type::U128 | Type::I128 => {
-                unimplemented!()
-            }
-        })
-    }
-}
-
-impl CodeWriter {
-    fn arrow_fn(&mut self, args: impl Display, f: impl FnOnce(&mut Self)) {
-        self.line(args!("{args} => {{"));
-        self.scope(f);
-        self.write("});\n");
+    fn struct_encoder<'a, I>(&'a self, c: &mut CodeWriter, fields: I)
+    where
+        I: Iterator<Item = (&'a str, &'a Type, u32)>,
+    {
+        c.scope(|c| {
+            c.line("$.lipi.StructEncoder(this, [");
+            c.scope(|c| {
+                for (name, ty, key) in fields {
+                    let decoder = self.serde_ty(ty, true);
+                    c.line(args!("[{key}, args.{name}, {decoder}],",));
+                }
+            });
+            c.line("]);");
+        });
     }
 }
 

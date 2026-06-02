@@ -30,25 +30,19 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                             c.scope(|c| {
                                 for (_, StructField { name, ty, key }) in fields {
                                     let required = ty.optional().is_none();
-                                    let decoder = ctx.decode_ty(ty);
+                                    let decoder = ctx.serde_ty(ty, false);
 
                                     c.line(args!("[\"{name}\", {key}, {decoder}, {required}],",));
                                 }
                             });
-                            c.write("] as const)));\n");
+                            c.line("])));");
                         },
                     );
-                    // ...
                 }
                 if ctx.is_encoder_needed(path) {
-                    c.arrow_fn(
-                        args!("static encoder = $.Obj<{class_name}>((s, args)"),
-                        |c| {
-                            for (_, StructField { name, ty, key }) in fields {
-                                c.line(args!("{}({key}, args.{name});", ctx.lipi_ty(ty)));
-                            }
-                        },
-                    );
+                    c.block(args!("static encoder = function Encoder(this: $.lipi.Encode, args: {class_name})"), |c| {
+                       ctx.struct_encoder(c, fields.iter().map(|(_, s)| (s.name.as_ref(), &s.ty, s.key)));
+                    });
                 }
             }
             _ => unimplemented!(),

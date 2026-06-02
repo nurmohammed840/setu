@@ -35,6 +35,10 @@ export class Writer extends Buffer {
 }
 
 export class Encode extends Writer {
+    Bool(_: boolean) {
+        throw "unreachable"
+    }
+
     U8(num: number) {
         this.writeByte(num)
     }
@@ -145,110 +149,31 @@ export class Encode extends Writer {
     }
 }
 
-export class StructEncoder {
-    constructor(public e: Encode) { }
+// ================================================================================
 
-    Field<T>(f: Encoder<T>) {
-        return (id: number, v: T) => {
-            this.e.write_field_id_and_ty(id, DataType.fromStr(f.name));
-            f.call(this.e, v);
+type Field<T> = readonly [
+    id: number,
+    value: T | undefined,
+    encoder: Encoder<T>
+];
+
+type Fields<T extends readonly any[]> = [...{ [K in keyof T]: Field<T[K]> }];
+
+export function StructEncoder<const T extends readonly any[]>(self: Encode, fields: Fields<T>) {
+    for (let [id, val, encoder] of fields) {
+        if (val === undefined) continue;
+        if (encoder.name == "Bool") {
+            self.write_field_id_and_ty(id, DataType.fromBool(val));
+            continue;
         }
+        self.write_field_id_and_ty(id, DataType.fromStr(encoder.name));
+        encoder.call(self, val);
     }
-
-    Option<T>(f: (this: this, id: number, value: T) => void) {
-        return (id: number, val?: T) => {
-            if (val === undefined) return;
-            f.call(this, id, val);
-        }
-    }
-
-    Bool(id: number, bool: boolean) {
-        this.e.write_field_id_and_ty(id, DataType.fromBool(bool));
-    }
-
-    get U8() {
-        return this.Field(this.e.U8)
-    }
-
-    get I8() {
-        return this.Field(this.e.I8)
-    }
-
-    get F32() {
-        return this.Field(this.e.F32)
-    }
-
-    get F64() {
-        return this.Field(this.e.F64)
-    }
-
-    get UInt() {
-        return this.Field(this.e.U64)
-    }
-
-    get Int() {
-        return this.Field(this.e.I64)
-    }
-
-    get Str() {
-        return this.Field(this.e.Str)
-    }
-
-    // ===================================
-
-    List<T>(f: Encoder<T>) {
-        return this.Field(this.e.List(f))
-    }
-
-    get ListU8() {
-        return this.Field(this.e.ListU8)
-    }
-
-    get ListI8() {
-        return this.Field(this.e.ListI8)
-    }
-
-    get ListF32() {
-        return this.Field(this.e.ListF32)
-    }
-
-    get ListF64() {
-        return this.Field(this.e.ListF64)
-    }
-
-    get ListUint() {
-        return this.List(this.e.U64)
-    }
-
-    get ListInt() {
-        return this.List(this.e.I64)
-    }
-
-    get ListStr() {
-        return this.List(this.e.Str)
-    }
-
-    get ListBool() {
-        return this.Field(this.e.ListBool)
-    }
-
-    // ===================================
-
-    Table<K, V>(k: Encoder<K>, v: Encoder<V>) {
-        return this.Field(this.e.Table(k, v))
-    }
-
-    // ===================================
-
-    end() {
-        this.e.writeByte(DataType.StructEnd);
-    }
+    self.writeByte(DataType.StructEnd);
 }
 
-// ===========================================================
+// ================================================================================
 
 function RawBytes(v: ArrayBufferView) {
     return new Uint8Array(v.buffer, v.byteOffset, v.byteLength)
 }
-
-// ===========================================================

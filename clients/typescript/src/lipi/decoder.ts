@@ -212,17 +212,31 @@ function next_field_id_and_ty(de: Deserialize): undefined | [number, DataType] {
     return [id, ty] as const
 }
 
-type Schema = readonly [string, number, Decoder<unknown>, boolean];
+type Schema = readonly [
+    name: string,
+    id: number,
+    decoder: Decoder<unknown>,
+    required: boolean
+];
 
-// T[number] make Array<T, T1, ..> => union T | T1 | ..
+// `T[number]` is same as `Array<T1, T2, ..> => union T1 | T2 | ..`
+// where E = T1 | T2 | ...
+// where E = Schema
+//
+// ## `E[3] extends true`
+// is required == true
+//   ? use name (E[0]) as key
+//   : ignore
+//
+// where value is ReturnType of decoder (E[2]) function.
 type Transform<T extends readonly Schema[]> =
     // required fields
-    { [E in T[number]as E[3] extends true ? E[0] : never]: ReturnType<E[2]>; } &
+    { [E in T[number]as E[3] extends true ? E[0] : never]: ReturnType<E[2]>; }
     // optional fields
-    { [E in T[number]as E[3] extends false ? E[0] : never]?: ReturnType<E[2]>; };
+    & { [E in T[number]as E[3] extends false ? E[0] : never]?: ReturnType<E[2]>; }
 
 
-export function StructDecoder<T extends Schema[]>(self: Decode, schemas: T) {
+export function StructDecoder<const T extends readonly Schema[]>(self: Decode, schemas: T) {
     let obj = {} as Transform<T>;
 
     let header: [number, DataType] | undefined;
