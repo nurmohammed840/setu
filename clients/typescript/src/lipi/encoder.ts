@@ -2,7 +2,7 @@ import { DataType } from "./type.ts";
 import { encodeVarInt } from "./varint.ts";
 import { zigzagEncode } from "./zigzag.ts";
 import { Buffer } from "../utils/buffer.ts";
-import { assert, checkOverflow, IS_LITTLE_ENDIAN } from "../utils/common.ts";
+import { assert, checkOverflowInt, IS_LITTLE_ENDIAN } from "../utils/common.ts";
 import { bitvecFrom } from "../bitset.ts";
 
 const UTF8_ENCODER = new TextEncoder();
@@ -40,7 +40,7 @@ export class Encode extends Writer {
     }
 
     I8(num: number) {
-        checkOverflow(num, -128, 127);
+        checkOverflowInt(num, 8);
 
         const buf = new ArrayBuffer(1);
         new DataView(buf).setInt8(0, num);

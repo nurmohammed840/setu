@@ -1,5 +1,5 @@
 import { Bytes } from "../utils/bytes.ts";
-import { assert, IS_LITTLE_ENDIAN } from "../utils/common.ts";
+import { assert, IS_LITTLE_ENDIAN, checkOverflowInt, checkOverflowUint } from "../utils/common.ts";
 import { decodeVarInt } from "./varint.ts";
 import { DataType } from "./type.ts";
 import { zigzagDecode } from "./zigzag.ts";
@@ -43,6 +43,10 @@ export class Deserialize {
 }
 
 export class Decode extends Deserialize {
+    Bool(): boolean {
+        throw "unreachable"
+    }
+
     U8() {
         return this.buf.nextByte();
     }
@@ -59,12 +63,34 @@ export class Decode extends Deserialize {
         return view(this.buf.take(8)).getFloat64(0, true); // true = little-endian
     }
 
-    Uint() {
+    U16 = function Uint(this: Decode) {
+        return checkOverflowUint(Number(this.read_varint()), 16);
+    }
+
+    U32 = function Uint(this: Decode) {
+        return checkOverflowUint(Number(this.read_varint()), 32);
+    }
+
+    U64 = function Uint(this: Decode) {
         return this.read_varint();
     }
 
     Int() {
         return zigzagDecode(this.read_varint())
+    }
+
+    I16 = function Int(this: Decode) {
+        return checkOverflowInt(Number(this.Int()), 16);
+    }
+
+    I32 = function Int(this: Decode) {
+        let val = this.Int();
+        assert(val >= -0x8000_0000 && val <= 0x7FFF_FFFF, RangeError);
+        return val;
+    }
+
+    I64 = function Int(this: Decode) {
+        return this.Int();
     }
 
     Str() {
@@ -121,19 +147,19 @@ export class Decode extends Deserialize {
     ListU16() {
         let [length, ty] = this.read_len_and_ty();
         expected(DataType.UInt, ty);
-        return Uint16Array.from({ length }, () => Number(this.Uint()));
+        return Uint16Array.from({ length }, () => Number(this.read_varint()));
     }
 
     ListU32() {
         let [length, ty] = this.read_len_and_ty();
         expected(DataType.UInt, ty);
-        return Uint32Array.from({ length }, () => Number(this.Uint()));
+        return Uint32Array.from({ length }, () => Number(this.read_varint()));
     }
 
     ListU64() {
         let [length, ty] = this.read_len_and_ty();
         expected(DataType.UInt, ty);
-        return BigUint64Array.from({ length }, () => this.Uint());
+        return BigUint64Array.from({ length }, () => this.read_varint());
     }
 
     ListI16() {
@@ -201,7 +227,58 @@ export class Decode extends Deserialize {
     }
 }
 
-// ========================================================
+// ================================================================================
+
+function next_field_id_and_ty(de: Deserialize): undefined | [number, DataType] {
+    let [id, ty] = de.read_field_id_and_ty();
+    if (ty == DataType.StructEnd) {
+        assert(id == 0, TypeError, () => `invalid struct end id: ${id}, expected \`0\``);
+        return undefined;
+    }
+    return [id, ty] as const
+}
+
+type Schema = readonly [string, number, Decoder<unknown>, boolean];
+
+// T[number] make Array<T, T1, ..> => union T | T1 | ..
+type Transform<T extends readonly Schema[]> =
+    // required fields
+    { [E in T[number]as E[3] extends true ? E[0] : never]: ReturnType<E[2]>; } &
+    // optional fields
+    { [E in T[number]as E[3] extends false ? E[0] : never]?: ReturnType<E[2]>; };
+
+
+export function StructDecoder<T extends Schema[]>(self: Decode, schemas: T) {
+    let obj = {} as Transform<T>;
+
+    let header: [number, DataType] | undefined;
+    while (header = next_field_id_and_ty(self)) {
+        let [field_id, field_ty] = header;
+        // match 
+        for (let [name, id, decoder] of schemas) {
+            if (id == field_id) {
+                if (decoder.name == "Bool") {
+                    (obj as any)[name] = DataType.asBool(field_ty);
+                } else {
+                    expectedTy(decoder, field_ty);
+                    (obj as any)[name] = decoder.call(self);
+                }
+                break;
+            }
+        }
+    }
+
+    // check required fields
+    for (let [name, id, de, isRequired] of schemas) {
+        if (isRequired && !(name in obj)) {
+            throw new Error(`missing required field: ${name} as ${id}; type: ${de.name}`);
+        }
+    }
+
+    return obj;
+}
+
+// ================================================================================
 
 function view(data: Uint8Array) {
     return new DataView(

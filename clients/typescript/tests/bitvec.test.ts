@@ -102,7 +102,7 @@ Deno.test("bools_roundtrip", () => {
     ];
 
     const bs = bitvecFrom(input);
-    const output = bitvecToBools(input.length, bs);
+    const output = bitvecToBools(bs, input.length);
 
     assertEquals(output, input);
 });

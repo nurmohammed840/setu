@@ -14,10 +14,23 @@ export function assert(expr: unknown, err: ErrorClass = Error, msg: ErrorMessage
     throw e;
 }
 
-export function checkOverflow<T>(num: T, min: T, max: T) {
+export function checkOverflowInt(num: number, bit: number) {
+    const min = -(1 << (bit - 1));
+    const max = (1 << (bit - 1)) - 1;
+
     if (num < min || num > max) {
-        throw new RangeError(`expected ${min}..=${max}, got: ${num}`);
+        throw new RangeError(`Int${bit} overflow: ${num}`);
     }
+
+    return num;
+}
+
+export function checkOverflowUint(num: number, bit: number) {
+    const max = 2 ** bit - 1;
+    if (num < 0 || num > max) {
+        throw new RangeError(`Uint${bit} overflow: ${num}`);
+    }
+    return num;
 }
 
 function isLittleEndian() {

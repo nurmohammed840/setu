@@ -49,7 +49,7 @@ impl Config {
     }
 }
 
-static TS_PRELUDE: &str = r#"
+static TS_PRELUDE: &str = r#"// AUTO-GENERATED FILE. DO NOT EDIT.
 import * as $ from "./lib/mod.ts";
 export const $etu = { RPC: $.RPC };
 "#;
@@ -121,6 +121,22 @@ impl Context {
                 c.line(args!("{name}: {}{sep}", self.data_ty(ty)))
             }
         }
+    }
+
+    fn decode_ty(&self, ty: &Type) -> fmt!(type) {
+        fmt(|f| match ty {
+            Type::U8 => f.write_str("this.U8"),
+            Type::I8 => f.write_str("this.I8"),
+
+            Type::F32 => f.write_str("this.F32"),
+            Type::F64 => f.write_str("this.F64"),
+
+            Type::String => f.write_str("this.Str"),
+
+            Type::U16 | Type::U32 | Type::U64 => f.write_str("s.UInt"),
+            Type::I16 | Type::I32 | Type::I64 => f.write_str("s.Int"),
+            _ => todo!(),
+        })
     }
 
     fn lipi_ty(&self, ty: &Type) -> fmt!(type) {

@@ -30,6 +30,12 @@ export namespace DataType {
     export function fromBool(bool: boolean): DataType {
         return +bool;
     }
+
+    export function asBool(ty: DataType) {
+        assert(ty == DataType.False || ty == DataType.True, TypeError, () => `expected: False or True, found: ${DataType[ty]}`);
+        return ty == DataType.True;
+    }
+
     export function fromStr(str: string): DataType {
         let ty = DataType[str as "F32"];
         assert(ty !== undefined, TypeError, () => `invalid type: ${str}`);

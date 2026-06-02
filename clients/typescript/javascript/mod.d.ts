@@ -3,7 +3,8 @@ declare module "utils/common" {
     type ErrorMessage = (() => string) | string;
     export function expected<T>(data?: T, err?: string): T;
     export function assert(expr: unknown, err?: ErrorClass, msg?: ErrorMessage): asserts expr;
-    export function checkOverflow<T>(num: T, min: T, max: T): void;
+    export const IS_LITTLE_ENDIAN: boolean;
+    export function checkOverflow(num: number, bit: number, signed?: boolean): number;
 }
 declare module "utils/bytes" {
     export function takeBytes(N: number, buf: Uint8Array): [Uint8Array, Uint8Array];
@@ -17,26 +18,41 @@ declare module "utils/bytes" {
         take(len: number): Uint8Array;
         remaining(): Uint8Array;
     }
-    export function isLittleEndian(): boolean;
 }
 declare module "lipi/varint" {
     import { Bytes } from "utils/bytes";
     export function encodeVarInt(num: bigint | number): Uint8Array;
     export function decodeVarInt(bytes: Bytes): bigint;
 }
+declare module "lipi/type" {
+    export enum DataType {
+        False = 0,
+        True = 1,
+        U8 = 2,
+        I8 = 3,
+        F32 = 4,
+        F64 = 5,
+        UInt = 6,
+        Int = 7,
+        Str = 8,
+        Struct = 9,
+        StructEnd = 10,
+        Union = 11,
+        List = 12,
+        Table = 13,
+        UnknownI = 14,
+        UnknownII = 15
+    }
+    export namespace DataType {
+        function fromBool(bool: boolean): DataType;
+        function asBool(ty: DataType): ty is DataType.True;
+        function fromStr(str: string): DataType;
+        function expected(expected: DataType, found: DataType): void;
+    }
+}
 declare module "lipi/zigzag" {
     export function zigzagEncode(num: bigint): bigint;
     export function zigzagDecode(num: bigint): bigint;
-}
-declare module "utils/buffer" {
-    export class Buffer {
-        #private;
-        append(buf: ArrayLike<number>): void;
-        appendMany(...bufs: ArrayLike<number>[]): void;
-        writeByte(byte: number): void;
-        get len(): number;
-        data(): Uint8Array;
-    }
 }
 declare module "bitset" {
     export interface BitSetRead {
@@ -65,14 +81,73 @@ declare module "bitset" {
     export function boolPackedLen(len: number): number;
     export function bitvec(len: number | Uint8Array): BitVec;
     export function bitvecFrom(bools: boolean[]): BitVec;
-    export function bitvecToBools(len: number, bitvec: Uint8Array | BitVec): boolean[];
+    export function bitvecToBools(bitvec: Uint8Array | BitVec, len: number): boolean[];
+}
+declare module "lipi/decoder" {
+    import { Bytes } from "utils/bytes";
+    import { DataType } from "lipi/type";
+    type Decoder<T> = (this: Decode) => T;
+    export class Deserialize {
+        buf: Bytes;
+        constructor(buf: Bytes);
+        read_varint(): bigint;
+        read_len(): number;
+        read_bytes(): Uint8Array;
+        read_field_id_and_ty(): readonly [number, DataType];
+        read_len_and_ty(): readonly [number, DataType];
+    }
+    export class Decode extends Deserialize {
+        Bool(): boolean;
+        U8(): number;
+        I8(): number;
+        F32(): number;
+        F64(): number;
+        U16: (this: Decode) => bigint;
+        U32: (this: Decode) => bigint;
+        U64: (this: Decode) => bigint;
+        Int(): bigint;
+        I16: (this: Decode) => number;
+        I32: (this: Decode) => bigint;
+        I64: (this: Decode) => bigint;
+        Str(): string;
+        List<T>(f: Decoder<T>): () => Array<T>;
+        ListU8(): Uint8Array;
+        ListI8(): Int8Array;
+        ListF32(): Float32Array;
+        ListF64(): Float64Array;
+        ListU16(): Uint16Array;
+        ListU32(): Uint32Array;
+        ListU64(): BigUint64Array;
+        ListI16(): Int16Array;
+        ListI32(): Int32Array;
+        ListI64(): BigInt64Array;
+        ListBool(): boolean[];
+        Table<K, V>(k: Decoder<K>, v: Decoder<V>): () => Map<K, V>;
+    }
+    type Schema = readonly [string, number, Decoder<unknown>, boolean];
+    type Transform<T extends readonly Schema[]> = {
+        [E in T[number] as E[3] extends true ? E[0] : never]: ReturnType<E[2]>;
+    } & {
+        [E in T[number] as E[3] extends false ? E[0] : never]?: ReturnType<E[2]>;
+    };
+    export function StructDecoder<T extends Schema[]>(self: Decode, schemas: T): Transform<T>;
+}
+declare module "utils/buffer" {
+    export class Buffer {
+        #private;
+        append(buf: ArrayLike<number>): void;
+        appendMany(...bufs: ArrayLike<number>[]): void;
+        writeByte(byte: number): void;
+        get len(): number;
+        data(): Uint8Array;
+    }
 }
 declare module "lipi/encoder" {
-    import { DataType } from "lipi/mod";
+    import { DataType } from "lipi/type";
     import { Buffer } from "utils/buffer";
     type Encoder<T> = (this: Encode, val: T) => void;
     export class Writer extends Buffer {
-        writeUint(num: number | bigint): void;
+        writeVarint(num: number | bigint): void;
         writeBytes(bytes: Uint8Array): void;
         write_field_id_and_ty(num: number, ty: DataType): void;
         write_len_and_ty(num: number, ty: DataType): void;
@@ -130,31 +205,10 @@ declare module "lipi/encoder" {
     }
 }
 declare module "lipi/mod" {
+    export * from "lipi/decoder";
     export * from "lipi/encoder";
     export * from "lipi/varint";
     export * from "lipi/zigzag";
-    export enum DataType {
-        False = 0,
-        True = 1,
-        U8 = 2,
-        I8 = 3,
-        F32 = 4,
-        F64 = 5,
-        UInt = 6,
-        Int = 7,
-        Str = 8,
-        Struct = 9,
-        StructEnd = 10,
-        Union = 11,
-        List = 12,
-        Table = 13,
-        UnknownI = 14,
-        UnknownII = 15
-    }
-    export namespace DataType {
-        function fromBool(bool: boolean): DataType;
-        function fromStr(str: string): DataType;
-    }
 }
 declare module "status" {
     export enum Status {

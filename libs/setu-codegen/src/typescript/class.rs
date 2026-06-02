@@ -21,6 +21,23 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                 });
 
                 if ctx.is_decoder_needed(path) {
+                    c.block(
+                        "static decoder = function Struct(this: $.lipi.Decode)",
+                        |c| {
+                            c.line(args!(
+                                "return new {class_name}(($.lipi.StructDecoder(this, ["
+                            ));
+                            c.scope(|c| {
+                                for (_, StructField { name, ty, key }) in fields {
+                                    let required = ty.optional().is_none();
+                                    let decoder = ctx.decode_ty(ty);
+
+                                    c.line(args!("[\"{name}\", {key}, {decoder}, {required}],",));
+                                }
+                            });
+                            c.write("] as const)));\n");
+                        },
+                    );
                     // ...
                 }
                 if ctx.is_encoder_needed(path) {

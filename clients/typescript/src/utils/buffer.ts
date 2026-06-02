@@ -1,4 +1,4 @@
-import { checkOverflow } from "./common.ts";
+import { checkOverflowUint } from "./common.ts";
 
 export class Buffer {
     #len = 0;
@@ -15,7 +15,7 @@ export class Buffer {
     }
 
     writeByte(byte: number) {
-        checkOverflow(byte, 0, 255);
+        checkOverflowUint(byte, 8);
         this.#len += 1;
         this.#data.push([byte]);
     }
