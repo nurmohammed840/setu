@@ -2,7 +2,7 @@ import { DataType } from "./type.ts";
 import { encodeVarInt } from "./varint.ts";
 import { zigzagEncode } from "./zigzag.ts";
 import { Buffer } from "../utils/buffer.ts";
-import { assert, checkOverflowInt, IS_LITTLE_ENDIAN } from "../utils/common.ts";
+import { assert, checkOverflowInt, checkOverflowUint, IS_LITTLE_ENDIAN } from "../utils/common.ts";
 import { bitvecFrom } from "../bitset.ts";
 
 const UTF8_ENCODER = new TextEncoder();
@@ -59,11 +59,27 @@ export class Encode extends Writer {
         this.append(new Uint8Array(buf));
     }
 
-    UInt(num: number | bigint) {
+    U16 = function Uint(this: Encode, num: number) {
+        this.writeVarint(checkOverflowUint(num, 16))
+    }
+
+    U32 = function Uint(this: Encode, num: number) {
+        this.writeVarint(checkOverflowUint(num, 32))
+    }
+
+    U64 = function Uint(this: Encode, num: number | bigint) {
         this.writeVarint(num)
     }
 
-    Int(num: number | bigint) {
+    I16 = function Int(this: Encode, num: number) {
+        this.I64(checkOverflowInt(num, 16))
+    }
+
+    I32 = function Int(this: Encode, num: number) {
+        this.I64(checkOverflowInt(num, 32))
+    }
+
+    I64 = function Int(this: Encode, num: number | bigint) {
         this.writeVarint(zigzagEncode(BigInt(num)));
     }
 
@@ -100,6 +116,14 @@ export class Encode extends Writer {
         if (IS_LITTLE_ENDIAN) return this.append(RawBytes(v));
         for (let n of v) this.F64(n)
     }
+
+    ListU16: (this: Encode, v: Uint16Array) => void = this.List(this.U16);
+    ListU32: (this: Encode, v: Uint32Array) => void = this.List(this.U32);
+    ListU64: (this: Encode, v: BigUint64Array) => void = this.List(this.U64);
+
+    ListI16: (this: Encode, v: Int16Array) => void = this.List(this.I16);
+    ListI32: (this: Encode, v: Int32Array) => void = this.List(this.I32);
+    ListI64: (this: Encode, v: BigInt64Array) => void = this.List(this.I64);
 
     ListBool = function List(this: Encode, bools: Array<boolean>) {
         this.write_len_and_ty(bools.length, DataType.True);
@@ -159,11 +183,11 @@ export class StructEncoder {
     }
 
     get UInt() {
-        return this.Field(this.e.UInt)
+        return this.Field(this.e.U64)
     }
 
     get Int() {
-        return this.Field(this.e.Int)
+        return this.Field(this.e.I64)
     }
 
     get Str() {
@@ -193,11 +217,11 @@ export class StructEncoder {
     }
 
     get ListUint() {
-        return this.List(this.e.UInt)
+        return this.List(this.e.U64)
     }
 
     get ListInt() {
-        return this.List(this.e.Int)
+        return this.List(this.e.I64)
     }
 
     get ListStr() {

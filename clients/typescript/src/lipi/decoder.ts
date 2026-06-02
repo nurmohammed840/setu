@@ -75,22 +75,16 @@ export class Decode extends Deserialize {
         return this.read_varint();
     }
 
-    Int() {
-        return zigzagDecode(this.read_varint())
-    }
-
     I16 = function Int(this: Decode) {
-        return checkOverflowInt(Number(this.Int()), 16);
+        return checkOverflowInt(Number(this.I64()), 16);
     }
 
     I32 = function Int(this: Decode) {
-        let val = this.Int();
-        assert(val >= -0x8000_0000 && val <= 0x7FFF_FFFF, RangeError);
-        return val;
+        return checkOverflowInt(Number(this.I64()), 32);
     }
 
     I64 = function Int(this: Decode) {
-        return this.Int();
+        return zigzagDecode(this.read_varint())
     }
 
     Str() {
@@ -106,13 +100,13 @@ export class Decode extends Deserialize {
         }
     }
 
-    ListU8() {
+    ListU8 = function List(this: Decode) {
         let [len, ty] = this.read_len_and_ty();
         expected(DataType.U8, ty);
         return this.buf.take(len);
     }
 
-    ListI8() {
+    ListI8 = function List(this: Decode) {
         let [len, ty] = this.read_len_and_ty();
         expected(DataType.I8, ty);
 
@@ -120,7 +114,7 @@ export class Decode extends Deserialize {
         return new Int8Array(buf.buffer, buf.byteOffset, len);
     }
 
-    ListF32() {
+    ListF32 = function List(this: Decode) {
         let [length, ty] = this.read_len_and_ty();
         expected(DataType.F32, ty);
 
@@ -132,9 +126,9 @@ export class Decode extends Deserialize {
         return Float32Array.from({ length }, () => this.F32());
     }
 
-    ListF64() {
+    ListF64 = function List(this: Decode) {
         let [length, ty] = this.read_len_and_ty();
-        expected(DataType.F32, ty);
+        expected(DataType.F64, ty);
 
         if (IS_LITTLE_ENDIAN) {
             let buf = this.buf.take(length * 8);
@@ -144,43 +138,15 @@ export class Decode extends Deserialize {
         return Float64Array.from({ length }, () => this.F64());
     }
 
-    ListU16() {
-        let [length, ty] = this.read_len_and_ty();
-        expected(DataType.UInt, ty);
-        return Uint16Array.from({ length }, () => Number(this.read_varint()));
-    }
+    ListU16 = ListType(this.U16, Uint16Array.from)
+    ListU32 = ListType(this.U32, Uint32Array.from)
+    ListU64 = ListType(this.U64, BigUint64Array.from)
 
-    ListU32() {
-        let [length, ty] = this.read_len_and_ty();
-        expected(DataType.UInt, ty);
-        return Uint32Array.from({ length }, () => Number(this.read_varint()));
-    }
+    ListI16 = ListType(this.I16, Int16Array.from)
+    ListI32 = ListType(this.I32, Int32Array.from)
+    ListI64 = ListType(this.I64, BigInt64Array.from)
 
-    ListU64() {
-        let [length, ty] = this.read_len_and_ty();
-        expected(DataType.UInt, ty);
-        return BigUint64Array.from({ length }, () => this.read_varint());
-    }
-
-    ListI16() {
-        let [length, ty] = this.read_len_and_ty();
-        expected(DataType.Int, ty);
-        return Int16Array.from({ length }, () => Number(this.Int()));
-    }
-
-    ListI32() {
-        let [length, ty] = this.read_len_and_ty();
-        expected(DataType.Int, ty);
-        return Int32Array.from({ length }, () => Number(this.Int()));
-    }
-
-    ListI64() {
-        let [length, ty] = this.read_len_and_ty();
-        expected(DataType.Int, ty);
-        return BigInt64Array.from({ length }, () => this.Int());
-    }
-
-    ListBool() {
+    ListBool = function List(this: Decode) {
         let [len, ty] = this.read_len_and_ty();
         expected(DataType.True, ty);
 
@@ -224,6 +190,14 @@ export class Decode extends Deserialize {
 
             throw new TypeError(`invalid column id: expected \`0\` or \`1\`, found ${field}`);
         }
+    }
+}
+
+function ListType<T, N>(de: Decoder<N>, from: (_: { length: number }, map: () => N) => T) {
+    return function List(this: Decode): T {
+        let [length, ty] = this.read_len_and_ty();
+        expectedTy(de, ty);
+        return from({ length }, () => de.call(this));
     }
 }
 

@@ -131,11 +131,35 @@ impl Context {
             Type::F32 => f.write_str("this.F32"),
             Type::F64 => f.write_str("this.F64"),
 
+            Type::U16 => f.write_str("this.U16"),
+            Type::U32 => f.write_str("this.U32"),
+            Type::U64 => f.write_str("this.U64"),
+
+            Type::I16 => f.write_str("this.I16"),
+            Type::I32 => f.write_str("this.I32"),
+            Type::I64 => f.write_str("this.I64"),
+
             Type::String => f.write_str("this.Str"),
 
-            Type::U16 | Type::U32 | Type::U64 => f.write_str("s.UInt"),
-            Type::I16 | Type::I32 | Type::I64 => f.write_str("s.Int"),
-            _ => todo!(),
+            Type::Array { ty, .. } | Type::List { ty, .. } => match ty.as_ref() {
+                Type::U8 => f.write_str("this.ListU8"),
+                Type::I8 => f.write_str("this.ListI8"),
+
+                Type::F32 => f.write_str("this.ListF32"),
+                Type::F64 => f.write_str("this.ListF64"),
+
+                Type::U16 => f.write_str("this.ListU16"),
+                Type::U32 => f.write_str("this.ListU32"),
+                Type::U64 => f.write_str("this.ListU64"),
+
+                Type::I16 => f.write_str("this.ListI16"),
+                Type::I32 => f.write_str("this.ListI32"),
+                Type::I64 => f.write_str("this.ListI64"),
+
+                Type::Bool => f.write_str("this.ListBool"),
+                ty => f.write_fmt(args!("this.List({})", self.data_ty(ty))),
+            },
+            _ => unimplemented!(),
         })
     }
 
