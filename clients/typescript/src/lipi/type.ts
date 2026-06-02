@@ -36,7 +36,7 @@ export namespace DataType {
         return ty
     }
 
-    export function check(expected: DataType, found: DataType) {
+    export function expected(expected: DataType, found: DataType) {
         assert(expected == found, TypeError, () => `expected: ${DataType[expected]}, found: ${DataType[found]}`);
     }
 }

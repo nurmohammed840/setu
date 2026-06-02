@@ -10,12 +10,12 @@ const UTF8_ENCODER = new TextEncoder();
 type Encoder<T> = (this: Encode, val: T) => void;
 
 export class Writer extends Buffer {
-    writeUint(num: number | bigint) {
+    writeVarint(num: number | bigint) {
         this.append(encodeVarInt(num));
     }
 
     writeBytes(bytes: Uint8Array) {
-        this.writeUint(bytes.length);
+        this.writeVarint(bytes.length);
         this.append(bytes);
     }
 
@@ -25,7 +25,7 @@ export class Writer extends Buffer {
         if (num < 15) return this.writeByte((num << 4) | ty);
 
         this.writeByte((0b1111 << 4) | ty);
-        this.writeUint(num - 15)
+        this.writeVarint(num - 15)
     }
 
     write_len_and_ty(num: number, ty: DataType) {
@@ -60,11 +60,11 @@ export class Encode extends Writer {
     }
 
     UInt(num: number | bigint) {
-        this.writeUint(num)
+        this.writeVarint(num)
     }
 
     Int(num: number | bigint) {
-        this.writeUint(zigzagEncode(BigInt(num)));
+        this.writeVarint(zigzagEncode(BigInt(num)));
     }
 
     Str(text: string) {
@@ -109,8 +109,8 @@ export class Encode extends Writer {
     Table<K, V>(k: Encoder<K>, v: Encoder<V>) {
         let self = this;
         return function Table(map: Map<K, V>) {
-            self.writeUint(2); // Column count
-            self.writeUint(map.size); // Row count
+            self.writeVarint(2); // Column count
+            self.writeVarint(map.size); // Row count
 
             self.write_field_id_and_ty(0, DataType.fromStr(k.name));
             for (let key of map.keys()) k.call(self, key);

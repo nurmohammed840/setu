@@ -1,26 +1,23 @@
 use crate::assert_or_err;
 use crate::{Result, bit_set, convert::DataType, errors, utils, varint, zig_zag};
-use std::collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque};
-use std::hash::Hash;
+use bit_set::bitvec_to_bools;
+use std::{
+    collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque},
+    hash::Hash,
+    mem,
+};
 
 pub fn decode_field_id_and_ty(reader: &mut &[u8]) -> Result<(u64, DataType)> {
     let byte = utils::read_byte(reader)?;
 
     let ty = byte & 0b_1111;
-    let id = (byte >> 4) as u64;
+    let mut id = (byte >> 4) as u64;
 
-    let id = if id == 0b_1111 {
-        varint::read_u64(reader)? + 15
-    } else {
-        id
-    };
+    if id == 0b_1111 {
+        id = varint::read_u64(reader)? + 15
+    }
 
-    Ok((id, unsafe { std::mem::transmute::<u8, DataType>(ty) }))
-}
-
-pub fn decode_packed_bools(reader: &mut &[u8], len: usize) -> Result<Vec<bool>> {
-    let packed = utils::read_bytes(reader, utils::bool_packed_len(len))?;
-    Ok(bit_set::bitvec_to_bools(len, packed))
+    Ok((id, unsafe { mem::transmute::<u8, DataType>(ty) }))
 }
 
 pub fn decode_len(reader: &mut &[u8]) -> Result<usize> {
@@ -182,7 +179,9 @@ decode! {
     Vec<bool> = List (reader) {
         let (len, ty) = decode_list_len_and_ty(reader)?;
         ty.expected(DataType::True)?;
-        decode_packed_bools(reader, len)
+
+        let bitvec = utils::read_bytes(reader, utils::bool_packed_len(len))?;
+        Ok(bitvec_to_bools(bitvec, len))
     }
 
     Vec<T> = List [T: Decode<'de>] (reader) {

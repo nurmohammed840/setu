@@ -5,18 +5,22 @@ import { DataType } from "./type.ts";
 import { zigzagDecode } from "./zigzag.ts";
 import { bitvecToBools, boolPackedLen } from "../bitset.ts";
 
-const { check } = DataType;
+const { expected } = DataType;
 const UTF8_DECODER = new TextDecoder();
 
 type Decoder<T> = (this: Decode) => T;
 export class Deserialize {
     constructor(public buf: Bytes) { }
-    read_uint() {
+    read_varint() {
         return decodeVarInt(this.buf);
     }
 
+    read_len() {
+        return Number(this.read_varint())
+    }
+
     read_bytes() {
-        let len = Number(this.read_uint());
+        let len = this.read_len();
         return this.buf.take(len);
     }
 
@@ -26,8 +30,8 @@ export class Deserialize {
         let ty = byte & 0b1111;
         let id = byte >> 4;
 
-        if (id === 0b1111) {
-            id = Number(this.read_uint()) + 15;
+        if (id == 0b1111) {
+            id = Number(this.read_varint()) + 15;
         }
 
         return [id, ty as DataType] as const;
@@ -56,11 +60,11 @@ export class Decode extends Deserialize {
     }
 
     Uint() {
-        return this.read_uint();
+        return this.read_varint();
     }
 
     Int() {
-        return zigzagDecode(this.read_uint())
+        return zigzagDecode(this.read_varint())
     }
 
     Str() {
@@ -71,20 +75,20 @@ export class Decode extends Deserialize {
         let self = this;
         return function List(): Array<T> {
             let [length, ty] = self.read_len_and_ty();
-            checkDecoder(f, ty);
+            expectedTy(f, ty);
             return Array.from({ length }, () => f.call(self));
         }
     }
 
     ListU8() {
         let [len, ty] = this.read_len_and_ty();
-        check(DataType.U8, ty);
+        expected(DataType.U8, ty);
         return this.buf.take(len);
     }
 
     ListI8() {
         let [len, ty] = this.read_len_and_ty();
-        check(DataType.I8, ty);
+        expected(DataType.I8, ty);
 
         let buf = this.buf.take(len);
         return new Int8Array(buf.buffer, buf.byteOffset, len);
@@ -92,7 +96,7 @@ export class Decode extends Deserialize {
 
     ListF32() {
         let [length, ty] = this.read_len_and_ty();
-        check(DataType.F32, ty);
+        expected(DataType.F32, ty);
 
         if (IS_LITTLE_ENDIAN) {
             let buf = this.buf.take(length * 4);
@@ -104,7 +108,7 @@ export class Decode extends Deserialize {
 
     ListF64() {
         let [length, ty] = this.read_len_and_ty();
-        check(DataType.F32, ty);
+        expected(DataType.F32, ty);
 
         if (IS_LITTLE_ENDIAN) {
             let buf = this.buf.take(length * 8);
@@ -116,75 +120,76 @@ export class Decode extends Deserialize {
 
     ListU16() {
         let [length, ty] = this.read_len_and_ty();
-        check(DataType.UInt, ty);
+        expected(DataType.UInt, ty);
         return Uint16Array.from({ length }, () => Number(this.Uint()));
     }
 
     ListU32() {
         let [length, ty] = this.read_len_and_ty();
-        check(DataType.UInt, ty);
+        expected(DataType.UInt, ty);
         return Uint32Array.from({ length }, () => Number(this.Uint()));
     }
 
     ListU64() {
         let [length, ty] = this.read_len_and_ty();
-        check(DataType.UInt, ty);
+        expected(DataType.UInt, ty);
         return BigUint64Array.from({ length }, () => this.Uint());
     }
 
     ListI16() {
         let [length, ty] = this.read_len_and_ty();
-        check(DataType.Int, ty);
+        expected(DataType.Int, ty);
         return Int16Array.from({ length }, () => Number(this.Int()));
     }
 
     ListI32() {
         let [length, ty] = this.read_len_and_ty();
-        check(DataType.Int, ty);
+        expected(DataType.Int, ty);
         return Int32Array.from({ length }, () => Number(this.Int()));
     }
 
     ListI64() {
         let [length, ty] = this.read_len_and_ty();
-        check(DataType.Int, ty);
+        expected(DataType.Int, ty);
         return BigInt64Array.from({ length }, () => this.Int());
     }
 
     ListBool() {
-        let [count, ty] = this.read_len_and_ty();
-        check(DataType.True, ty);
-        const bytes = this.buf.take(boolPackedLen(count));
-        return bitvecToBools(count, bytes);
+        let [len, ty] = this.read_len_and_ty();
+        expected(DataType.True, ty);
+
+        const bitvec = this.buf.take(boolPackedLen(len));
+        return bitvecToBools(bitvec, len);
     }
 
     Table<K, V>(k: Decoder<K>, v: Decoder<V>) {
         let self = this;
         return function Table(): Map<K, V> {
-            let columnCount = Number(self.read_uint());
-            let length = Number(self.read_uint());
+            let columnCount = Number(self.read_varint());
+            let length = Number(self.read_varint());
 
             assert(columnCount == 2, RangeError, () => `invalid column count: ${columnCount}`);
 
             let [field, ty] = self.read_field_id_and_ty();
             if (field == 0) {
-                checkDecoder(k, ty);
+                expectedTy(k, ty);
                 let keys = Array.from({ length }, () => k.call(self));
 
                 let [field2, ty2] = self.read_field_id_and_ty();
                 assert(field2 == 1, TypeError, () => `invalid column (value) id: expected \`1\`, found ${field2}`);
-                checkDecoder(v, ty2);
+                expectedTy(v, ty2);
 
                 let map = new Map();
                 for (let key of keys) map.set(key, v.call(self))
                 return map;
             }
             if (field == 1) {
-                checkDecoder(v, ty);
+                expectedTy(v, ty);
                 let values = Array.from({ length }, () => v.call(self));
 
                 let [field2, ty2] = self.read_field_id_and_ty();
                 assert(field2 === 0, TypeError, () => `invalid column (key) id: expected \`0\`, found ${field2}`);
-                checkDecoder(k, ty2);
+                expectedTy(k, ty2);
 
                 let map = new Map();
                 for (let val of values) map.set(k.call(self), val);
@@ -206,6 +211,6 @@ function view(data: Uint8Array) {
     )
 }
 
-function checkDecoder<T>(f: Decoder<T>, ty: DataType) {
-    check(DataType.fromStr(f.name), ty);
+function expectedTy<T>(f: Decoder<T>, ty: DataType) {
+    expected(DataType.fromStr(f.name), ty);
 }

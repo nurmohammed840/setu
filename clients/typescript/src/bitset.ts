@@ -105,7 +105,7 @@ export function bitvecFrom(bools: boolean[]) {
     return bv;
 }
 
-export function bitvecToBools(len: number, bitvec: Uint8Array | BitVec) {
+export function bitvecToBools(bitvec: Uint8Array | BitVec, len: number) {
     const bv = bitvec instanceof BitVec ? bitvec : new BitVec(bitvec);
 
     const out: boolean[] = [];
