@@ -86,17 +86,17 @@ pub trait Encode {
 
 // ------------------------------------------------------------------------
 
-pub trait EnumEncoder {
+pub trait FieldEncoder {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u32) -> Result<()>;
 }
 
-impl EnumEncoder for bool {
+impl FieldEncoder for bool {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u32) -> Result<()> {
         encode_field_id_and_ty(writer, id, DataType::from(*self))
     }
 }
 
-impl<T: Encode + ?Sized> EnumEncoder for T {
+impl<T: Encode + ?Sized> FieldEncoder for T {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u32) -> Result<()> {
         encode_field_id_and_ty(writer, id, T::TY)?;
         T::encode(self, writer)
@@ -105,26 +105,26 @@ impl<T: Encode + ?Sized> EnumEncoder for T {
 
 // ------------------------------------------------------------------------
 
-pub trait FieldEncoder {
+pub trait OptionalFieldEncoder {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()>;
 }
 
-impl FieldEncoder for bool {
+impl OptionalFieldEncoder for bool {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
         encode_field_id_and_ty(writer, id.into(), DataType::from(*self))
     }
 }
 
-impl<T: FieldEncoder> FieldEncoder for Option<T> {
+impl<T: OptionalFieldEncoder> OptionalFieldEncoder for Option<T> {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
         match self {
-            Some(val) => FieldEncoder::encode(val, writer, id),
+            Some(val) => OptionalFieldEncoder::encode(val, writer, id),
             None => Ok(()),
         }
     }
 }
 
-impl<T: Encode + ?Sized> FieldEncoder for T {
+impl<T: Encode + ?Sized> OptionalFieldEncoder for T {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
         encode_field_id_and_ty(writer, id.into(), T::TY)?;
         T::encode(self, writer)
@@ -308,6 +308,57 @@ deref_impl! {
     &T, &mut T, Box<T>
 }
 
+// --------------------------------- STD ----------------------------------
+
+macro_rules! error_type {
+    [$($ty: ty)*] => [$(
+        impl Encode for $ty {
+            const TY: DataType = DataType::Str;
+            fn encode(&self, w: &mut (impl Write + ?Sized)) -> io::Result<()> {
+                encode_bytes(w, self.to_string().as_bytes())
+            }
+        }
+    )*];
+}
+
+error_type! {
+    dyn std::error::Error
+    dyn std::error::Error + Send
+    dyn std::error::Error + Send + Sync
+}
+
+impl<T, E> Encode for std::result::Result<T, E>
+where
+    T: OptionalFieldEncoder,
+    E: FieldEncoder,
+{
+    const TY: DataType = DataType::Struct;
+    #[inline]
+    fn encode(&self, w: &mut (impl Write + ?Sized)) -> io::Result<()> {
+        match self {
+            Ok(val) => OptionalFieldEncoder::encode(val, w, 0)?,
+            Err(err) => FieldEncoder::encode(err, w, 1)?,
+        };
+        w.write_all(&[DataType::StructEnd.code()])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn is_encoder<E: Encode>() {}
+    fn encoder<E: Encode>(v: E) {
+        println!("Type: {:?}, {:#?}", E::TY, v.to_bytes());
+    }
+    #[test]
+    fn test_name() {
+        is_encoder::<(Option<u16>, Option<u16>)>();
+        is_encoder::<Box<dyn std::error::Error + Send + Sync>>();
+        is_encoder::<crate::Result<bool>>();
+        encoder::<crate::Result<Option<()>>>(Ok(Some(())));
+    }
+}
+
 // --------------------------------- Other ----------------------------------
 
 /// Tuples encoded as Struct.
@@ -315,7 +366,7 @@ macro_rules! tuples {
     [Len: $len:tt $($name:tt : $idx:tt)*] => {
         impl<$($name,)*> Encode for ($($name,)*)
         where
-            $($name: FieldEncoder,)*
+            $($name: OptionalFieldEncoder,)*
         {
             const TY: DataType = DataType::Struct;
             fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
@@ -326,6 +377,7 @@ macro_rules! tuples {
     }
 }
 
+tuples! { Len: 0 }
 tuples! { Len: 1 T0:0 }
 tuples! { Len: 2 T0:0 T1:1 }
 tuples! { Len: 3 T0:0 T1:1 T2:2 }
