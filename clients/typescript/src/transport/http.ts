@@ -1,7 +1,9 @@
 import { ProtocolError } from "../errors.ts";
 import { Input } from "./input.ts";
+import { Output } from "./output.ts";
 import { Timeout } from "../timeout.ts";
 import { assert } from "../utils/common.ts";
+import { Decoder } from "../lipi/decoder.ts";
 
 export class RPC {
     static URL = new URL("/", "https://localhost:443");
@@ -36,8 +38,8 @@ export interface Context {
     timeout?: Timeout | null
 }
 
-export function rpc(id: number, { timeout, url }: Context) {
+export function rpc<T>(id: number, { timeout, url }: Context, f: Decoder<T>) {
     let input = new Input();
-    let output = RPC.call(id, input, timeout, url);
+    let output = Output<T>(input, RPC.call(id, input, timeout, url), f);
     return [input, output] as const;
 }

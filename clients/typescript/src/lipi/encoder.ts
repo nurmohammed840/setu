@@ -7,7 +7,7 @@ import { bitvecFrom } from "../bitset.ts";
 
 const UTF8_ENCODER = new TextEncoder();
 
-type Encoder<T> = (this: Encode, val: T) => void;
+export type Encoder<T> = (this: Encode, val: T) => void;
 
 export class Writer extends Buffer {
     writeVarint(num: number | bigint) {

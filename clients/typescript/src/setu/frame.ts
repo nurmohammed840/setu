@@ -101,6 +101,6 @@ export class FrameDecoder extends StreamReader {
         for (let i = 0; i < size; i++) {
             len = (len << 8) | await this.readByte();
         }
-        return 0;
+        return len;
     }
 }

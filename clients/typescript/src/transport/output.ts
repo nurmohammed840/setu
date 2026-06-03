@@ -1,4 +1,3 @@
-import { encodeAsLastFrame } from "../setu/frame.writer.ts";
 import { Decode, Decoder } from "../lipi/decoder.ts";
 import { FrameDecoder } from "../setu/frame.ts";
 import { Status } from "../status.ts";
@@ -6,7 +5,6 @@ import { Bytes } from "../utils/bytes.ts";
 import { assert } from "../utils/common.ts";
 import { Stream } from "../utils/stream.ts";
 import { Input } from "./input.ts";
-
 
 export interface Output<T> extends Promise<T> {
     cancle(reason?: any): void;
@@ -52,21 +50,4 @@ export function Output<T>(input: Input, futRes: Promise<ReadableStream<Uint8Arra
     })();
 
     return output;
-}
-
-
-let r = new ReadableStream({
-    start(controller) {
-        let g = encodeAsLastFrame(new Uint8Array([1, 2, 3]));
-        console.log(g);
-        controller.enqueue(g);
-        controller.close()
-    },
-});
-
-let o = Output(new Input(), Promise.resolve(r), () => 42);
-try {
-    console.log(await o);
-} catch (error) {
-    console.log(error)
 }

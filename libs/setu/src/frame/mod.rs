@@ -326,4 +326,26 @@ mod tests {
         assert_eq!(&*LenBE::new(0x123456), [0x12, 0x34, 0x56]);
         assert_eq!(&*LenBE::new(0x12345678), [0x12, 0x34, 0x56, 0x78]);
     }
+
+    #[nio::test]
+    async fn test_encode_frame() -> Result<()> {
+        let mut stream = create_stream(&[&[], &[0, 2], &[54], &[55], &[2], &[0], &[]]);
+
+        let mut de = FrameDecoder::default();
+
+        assert_eq!(
+            de.parse_frame(&mut stream)
+                .await?
+                .data
+                .message()
+                .unwrap()
+                .as_ref(),
+            [54, 55]
+        );
+
+        let (status, data) = de.parse_frame(&mut stream).await?.data.trailer().unwrap();
+        assert_eq!(status, Status::Ok);
+        assert!(data.is_empty());
+        Ok(())
+    }
 }
