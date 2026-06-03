@@ -6,8 +6,7 @@ export class MaybeCompressed<T> {
     constructor(
         // @ts-ignore
         private isCompressed: boolean,
-        // @ts-ignore
-        private data: T
+        public data: T
     ) { }
 }
 

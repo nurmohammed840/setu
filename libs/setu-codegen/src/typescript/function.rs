@@ -20,15 +20,15 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                 c.line(args!("let [i, o] = $.rpc({index}, ctx);"));
 
                 c.line("i.sendAndClose(function (this: $.lipi.Encode) {");
-                
-                let fields = args
-                    .iter()
-                    .zip(input_ty)
-                    .enumerate()
-                    .map(|(key, (name, ty))| (name.as_ref(), ty, key as u32));
+                c.scope(|c| {
+                    let fields = args
+                        .iter()
+                        .zip(input_ty)
+                        .enumerate()
+                        .map(|(key, (name, ty))| (name.as_ref(), ty, key as u32));
 
-                ctx.struct_encoder(c, fields);
-
+                    ctx.struct_encoder(c, fields);
+                });
                 c.line("});");
             },
         );

@@ -8,7 +8,7 @@ import { bitvecToBools, boolPackedLen } from "../bitset.ts";
 const { expected } = DataType;
 const UTF8_DECODER = new TextDecoder();
 
-type Decoder<T> = (this: Decode) => T;
+export type Decoder<T> = (this: Decode) => T;
 export class Deserialize {
     constructor(public buf: Bytes) { }
     read_varint() {

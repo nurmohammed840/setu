@@ -5,7 +5,7 @@ import { EndOfData } from "../errors.ts";
 
 export class Stream {
     eos = false; // end of stream
-    constructor(private reader: ReadableStreamDefaultReader<Uint8Array>) { }
+    constructor(public reader: ReadableStreamDefaultReader<Uint8Array>) { }
 
     [Symbol.dispose]() {
         this.reader.cancel()

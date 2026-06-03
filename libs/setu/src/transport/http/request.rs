@@ -13,10 +13,6 @@ pub struct HttpRequest {
     pub body: HttpBody,
 }
 
-impl HttpRequest {
-    pub fn asds(&self) {}
-}
-
 impl From<Request<RecvStream>> for HttpRequest {
     fn from(req: Request<RecvStream>) -> Self {
         let (header, reader) = req.into_parts();

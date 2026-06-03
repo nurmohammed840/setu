@@ -4,7 +4,7 @@ import { Stream, StreamReader } from "../src/utils/stream.ts";
 
 
 function createStream(...s: number[][]) {
-    const stream = new ReadableStream<Uint8Array<ArrayBuffer>>({
+    const stream = new ReadableStream<Uint8Array>({
         start(c) {
             for (let buf of s) c.enqueue(new Uint8Array(buf));
             c.close();

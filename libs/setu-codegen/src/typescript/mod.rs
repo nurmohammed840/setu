@@ -170,16 +170,14 @@ impl Context {
     where
         I: Iterator<Item = (&'a str, &'a Type, u32)>,
     {
+        c.line("$.lipi.StructEncoder(this, [");
         c.scope(|c| {
-            c.line("$.lipi.StructEncoder(this, [");
-            c.scope(|c| {
-                for (name, ty, key) in fields {
-                    let decoder = self.serde_ty(ty, true);
-                    c.line(args!("[{key}, args.{name}, {decoder}],",));
-                }
-            });
-            c.line("]);");
+            for (name, ty, key) in fields {
+                let decoder = self.serde_ty(ty, true);
+                c.line(args!("[{key}, args.{name}, {decoder}],",));
+            }
         });
+        c.line("]);");
     }
 }
 
