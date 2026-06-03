@@ -1,6 +1,3 @@
-use http::HeaderValue;
-use http::header::CONTENT_TYPE;
-
 use crate::transport::http::HttpResponse;
 use crate::{
     Trailer,
@@ -20,7 +17,7 @@ fn encode_as_frame(msg: Vec<u8>) -> Vec<u8> {
         Vec::with_capacity(1 + len.size as usize + msg.len() + Trailer::OK_ENCODED.len());
 
     frame.push(FrameHeader::new(None, len.size).encode());
-    frame.extend_from_slice(&*len);
+    frame.extend_from_slice(&len);
     frame.extend_from_slice(&msg);
     frame.extend_from_slice(&Trailer::OK_ENCODED);
     frame
@@ -29,7 +26,6 @@ fn encode_as_frame(msg: Vec<u8>) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Status;
 
     #[test]
     fn test_encode_frame() {

@@ -1,4 +1,3 @@
-#![allow(warnings)]
 mod writer;
 
 use crate::{Result, Status};
@@ -9,6 +8,7 @@ type StreamData = Result<Bytes, h2::Error>;
 
 #[derive(Debug)]
 pub struct MaybeCompressed<T> {
+    #[allow(unused)]
     pub is_compressed: bool,
     pub data: T,
 }
@@ -52,6 +52,7 @@ pub struct FrameDecoderStream {
     pub trailer: Option<(Status, MaybeCompressed<RawBytes>)>,
 }
 
+#[allow(unused)]
 impl FrameDecoderStream {
     pub fn is_end(&self) -> bool {
         self.trailer.is_some()
@@ -263,8 +264,8 @@ impl std::ops::Deref for RawBytes {
     #[inline]
     fn deref(&self) -> &Self::Target {
         match self {
-            RawBytes::Bytes(bytes) => &*bytes,
-            RawBytes::Buf(buf) => &*buf,
+            RawBytes::Bytes(bytes) => bytes,
+            RawBytes::Buf(buf) => buf,
         }
     }
 }

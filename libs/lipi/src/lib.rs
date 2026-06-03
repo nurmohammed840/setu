@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 mod bit_set;
 mod convert;
 mod utils;

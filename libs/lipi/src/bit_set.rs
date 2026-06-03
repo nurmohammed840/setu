@@ -7,6 +7,7 @@ pub trait BitSet {
     fn get(&self, index: usize) -> Option<bool>;
 }
 
+#[allow(unused)]
 pub trait BitSetMut {
     fn clear(&mut self);
     fn set(&mut self, index: usize) -> Result<bool, usize>;
