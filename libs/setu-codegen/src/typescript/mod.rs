@@ -122,7 +122,7 @@ impl Context {
         }
     }
 
-    fn serde_ty(&self, ty: &Type, encoder: bool) -> fmt!(type) {
+    fn serde_ty(&self, ty: &Type, codex: &str) -> fmt!(type) {
         fmt(move |f| match ty {
             Type::U8 => f.write_str("this.U8"),
             Type::I8 => f.write_str("this.I8"),
@@ -159,8 +159,7 @@ impl Context {
                 ty => f.write_fmt(args!("this.List({})", self.data_ty(ty))),
             },
             Type::Complex(path) => {
-                let serde = if encoder { "encoder" } else { "decoder" };
-                f.write_fmt(args!("{}.{serde}", self.symbol.class_name(path)))
+                f.write_fmt(args!("{}.{codex}", self.symbol.class_name(path)))
             }
             _ => unimplemented!(),
         })
@@ -173,7 +172,7 @@ impl Context {
         c.line("$.lipi.StructEncoder(this, [");
         c.scope(|c| {
             for (name, ty, key) in fields {
-                let decoder = self.serde_ty(ty, true);
+                let decoder = self.serde_ty(ty, "encoder");
                 c.line(args!("[{key}, args.{name}, {decoder}],",));
             }
         });

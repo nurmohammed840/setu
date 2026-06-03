@@ -8,7 +8,7 @@ use crate::transport::http::{HttpBody, HttpRequest, HttpResponse};
 use crate::{Result, Status};
 
 use futures::FutureExt;
-use lipi::{DecodeOwned, Encode};
+use lipi::DecodeOwned;
 use type_id::TypeId;
 
 pub trait Output {
@@ -29,7 +29,7 @@ enum CallStatus<T> {
 impl<F> Output for F
 where
     F: Future,
-    F::Output: lipi::Encode + TypeId,
+    F::Output: lipi::encoder::OptionalField + TypeId,
 {
     fn process<Args>(
         func: impl std_lib::FnOnce<Args, Output = Self> + 'static,
@@ -69,13 +69,20 @@ where
             match result {
                 CallStatus::Canceled => {}
                 CallStatus::Timeout => res.send_reset(h2::Reason::CANCEL),
-                CallStatus::Output(data) => match data.to_bytes() {
+                CallStatus::Output(data) => match encode_data(data) {
                     Err(err) => res.send_error(http::StatusCode::INTERNAL_SERVER_ERROR, err),
                     Ok(buf) => res.send_final_message(buf),
                 },
             }
         });
     }
+}
+
+fn encode_data(field: impl lipi::encoder::OptionalField) -> std::io::Result<Vec<u8>> {
+    let mut buf: Vec<u8> = Vec::new();
+    field.encode(&mut buf, 0)?;
+    buf.push(lipi::DataType::StructEnd.code());
+    Ok(buf)
 }
 
 impl HttpRequest {

@@ -266,6 +266,29 @@ export function StructDecoder<const T extends readonly Schema[]>(self: Decode, s
     return obj;
 }
 
+export function OutputDecoder<T>(self: Decode, de: Decoder<T>, required: true): T;
+export function OutputDecoder<T>(self: Decode, de: Decoder<T>, required: false): T | undefined;
+export function OutputDecoder<T>(self: Decode, decoder: Decoder<T>, required: boolean) {
+    let header = next_field_id_and_ty(self);
+    let val: T | undefined;
+    if (header) {
+        let [field_id, field_ty] = header;
+        if (field_id == 0) {
+            if (decoder.name == "Bool") {
+                //@ts-ignore
+                val = DataType.asBool(field_ty);
+            } else {
+                expectedTy(decoder, field_ty);
+                val = decoder.call(self)
+            }
+        }
+    }
+    if (required && val !== undefined) {
+        throw new Error(`output required, type: ${decoder.name}`);
+    }
+    return val;
+}
+
 // ================================================================================
 
 function view(data: Uint8Array) {

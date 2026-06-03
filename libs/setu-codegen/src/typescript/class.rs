@@ -25,17 +25,17 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                         "static decoder = function Struct(this: $.lipi.Decode)",
                         |c| {
                             c.line(args!(
-                                "return new {class_name}(($.lipi.StructDecoder(this, ["
+                                "return new {class_name}($.lipi.StructDecoder(this, ["
                             ));
                             c.scope(|c| {
                                 for (_, StructField { name, ty, key }) in fields {
                                     let required = ty.optional().is_none();
-                                    let decoder = ctx.serde_ty(ty, false);
+                                    let decoder = ctx.serde_ty(ty, "decoder");
 
                                     c.line(args!("[\"{name}\", {key}, {decoder}, {required}],",));
                                 }
                             });
-                            c.line("])));");
+                            c.line("]));");
                         },
                     );
                 }

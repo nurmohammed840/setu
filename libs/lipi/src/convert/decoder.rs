@@ -301,9 +301,9 @@ macro_rules! tuples {
                 $(let mut $name: Option<_> = None;)*
 
                 let mut fd = FieldInfoDecoder::new(reader)?;
-                while let Some((key, ty)) = fd.next_field_id_and_ty()? {
+                while let Some((key, _ty)) = fd.next_field_id_and_ty()? {
                     match key {
-                        $($idx => $name = fd.decode(ty, concat!("tuple ", $idx))?,)*
+                        $($idx => $name = fd.decode(_ty, concat!("tuple ", $idx))?,)*
                         _ => {}
                     }
                 }
@@ -316,6 +316,7 @@ macro_rules! tuples {
     }
 }
 
+tuples! { }
 tuples! { T0:0 }
 tuples! { T0:0 T1:1 }
 tuples! { T0:0 T1:1 T2:2 }

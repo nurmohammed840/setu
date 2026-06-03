@@ -1,10 +1,16 @@
-use setu_type_info::{FnMetaData, Func};
+use setu_type_info::{FnMetaData, FnOutputTy, Func};
 
 use crate::{CodeWriter, Context};
 use std::format_args as args;
 
 pub fn generate(c: &mut CodeWriter, ctx: &Context) {
-    for Func { meta, input_ty, .. } in &ctx.info.fns {
+    for Func {
+        meta,
+        input_ty,
+        output_ty,
+        ..
+    } in &ctx.info.fns
+    {
         let FnMetaData {
             index, ident, args, ..
         } = meta;
@@ -16,20 +22,29 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
 
         c.block(
             args!("export function {ident}(args: {ident}, ctx: $.Context = {{}})"),
-            |c| {
-                c.line(args!("let [i, o] = $.rpc({index}, ctx);"));
+            |c| match output_ty {
+                FnOutputTy::Return(return_ty) => {
+                    c.line(args!("let [i, o] = $.rpc({index}, ctx, function () {{"));
+                    c.scope(|c| {
+                        let decoder = ctx.serde_ty(return_ty, "decoder");
+                        c.line(args!("return $.lipi.OutputDecoder(this, {decoder}, true);"));
+                    });
+                    c.line("});");
 
-                c.line("i.sendAndClose(function (this: $.lipi.Encode) {");
-                c.scope(|c| {
-                    let fields = args
-                        .iter()
-                        .zip(input_ty)
-                        .enumerate()
-                        .map(|(key, (name, ty))| (name.as_ref(), ty, key as u32));
+                    c.line("i.sendAndClose(function (this: $.lipi.Encode) {");
+                    c.scope(|c| {
+                        let fields = args
+                            .iter()
+                            .zip(input_ty)
+                            .enumerate()
+                            .map(|(key, (name, ty))| (name.as_ref(), ty, key as u32));
 
-                    ctx.struct_encoder(c, fields);
-                });
-                c.line("});");
+                        ctx.struct_encoder(c, fields);
+                    });
+                    c.line("});");
+                    c.line("return o;");
+                }
+                FnOutputTy::Generator { .. } => {}
             },
         );
     }

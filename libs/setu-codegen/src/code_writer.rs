@@ -22,7 +22,6 @@ impl CodeWriter {
     }
 
     pub fn dedent(&mut self) {
-        debug_assert!(self.indent_level > 0);
         self.indent_level -= 1;
     }
 
