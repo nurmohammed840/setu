@@ -13,10 +13,13 @@ impl PathsOfComplexType {
     where
         I: Iterator<Item = &'a Type>,
     {
-        let paths = f(info.fns.iter())
-            .flat_map(|ty| ty.complex())
-            .map(PathIdent::clone)
-            .collect();
+        let mut paths = collections::HashSet::new();
+
+        for ty in f(info.fns.iter()) {
+            visit_complex_type(ty, &mut |path| {
+                paths.insert(path.clone());
+            });
+        }
 
         Self { paths }
     }
@@ -63,5 +66,24 @@ impl<'a> Iterator for OutputTypeIter<'a> {
     type Item = &'a Type;
     fn next(&mut self) -> Option<Self::Item> {
         self.yield_ty.take().or_else(|| self.return_ty.take())
+    }
+}
+
+fn visit_complex_type<'a>(ty: &'a Type, f: &mut impl FnMut(&'a PathIdent)) {
+    match ty {
+        Type::List { ty, .. } | Type::Array { ty, .. } | Type::Option(ty) => {
+            visit_complex_type(ty, f)
+        }
+        Type::Map { ty, .. } | Type::Result(ty) => {
+            visit_complex_type(&ty.0, f);
+            visit_complex_type(&ty.1, f);
+        }
+        Type::Tuple(items) => {
+            for ty in items.iter() {
+                visit_complex_type(ty, f)
+            }
+        }
+        Type::Complex(ty) => f(ty),
+        _ => {}
     }
 }

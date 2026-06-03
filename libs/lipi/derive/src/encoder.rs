@@ -69,7 +69,7 @@ pub fn expand(crate_path: &TokenStream, input: &DeriveInput, t: &mut TokenStream
                         };
 
                         quote!(t, {
-                            __crate::encoder::OptionalFieldEncoder::encode(#ref_symbol self.#ident, w, #key)?;
+                            __crate::encoder::OptionalField::encode(#ref_symbol self.#ident, w, #key)?;
                         });
                     }
                 }
@@ -117,10 +117,10 @@ pub fn expand(crate_path: &TokenStream, input: &DeriveInput, t: &mut TokenStream
                                 if let Some(key) = get_discriminant() {
                                     match unnamed.len() {
                                         0 => {
-                                            quote!(t, { Self::#ident() => __crate::encoder::FieldEncoder::encode(&false, w, #key), });
+                                            quote!(t, { Self::#ident() => __crate::encoder::Field::encode(&false, w, #key), });
                                         }
                                         1 => {
-                                            quote!(t, { Self::#ident(val) => __crate::encoder::FieldEncoder::encode(val, w, #key), });
+                                            quote!(t, { Self::#ident(val) => __crate::encoder::Field::encode(val, w, #key), });
                                         }
                                         count => {
                                             let err = errors::exrta_fields(count, unnamed);
@@ -133,7 +133,7 @@ pub fn expand(crate_path: &TokenStream, input: &DeriveInput, t: &mut TokenStream
                             }
                             Fields::Unit => {
                                 if let Some(key) = get_discriminant() {
-                                    quote!(t, { Self::#ident => __crate::encoder::FieldEncoder::encode(&false, w, #key), });
+                                    quote!(t, { Self::#ident => __crate::encoder::Field::encode(&false, w, #key), });
                                 }
                             }
                         }

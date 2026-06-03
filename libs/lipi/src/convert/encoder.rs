@@ -86,17 +86,17 @@ pub trait Encode {
 
 // ------------------------------------------------------------------------
 
-pub trait FieldEncoder {
+pub trait Field {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u32) -> Result<()>;
 }
 
-impl FieldEncoder for bool {
+impl Field for bool {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u32) -> Result<()> {
         encode_field_id_and_ty(writer, id, DataType::from(*self))
     }
 }
 
-impl<T: Encode + ?Sized> FieldEncoder for T {
+impl<T: Encode + ?Sized> Field for T {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u32) -> Result<()> {
         encode_field_id_and_ty(writer, id, T::TY)?;
         T::encode(self, writer)
@@ -105,26 +105,26 @@ impl<T: Encode + ?Sized> FieldEncoder for T {
 
 // ------------------------------------------------------------------------
 
-pub trait OptionalFieldEncoder {
+pub trait OptionalField {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()>;
 }
 
-impl OptionalFieldEncoder for bool {
+impl OptionalField for bool {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
         encode_field_id_and_ty(writer, id.into(), DataType::from(*self))
     }
 }
 
-impl<T: OptionalFieldEncoder> OptionalFieldEncoder for Option<T> {
+impl<T: OptionalField> OptionalField for Option<T> {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
         match self {
-            Some(val) => OptionalFieldEncoder::encode(val, writer, id),
+            Some(val) => OptionalField::encode(val, writer, id),
             None => Ok(()),
         }
     }
 }
 
-impl<T: Encode + ?Sized> OptionalFieldEncoder for T {
+impl<T: Encode + ?Sized> OptionalField for T {
     fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
         encode_field_id_and_ty(writer, id.into(), T::TY)?;
         T::encode(self, writer)
@@ -329,15 +329,15 @@ error_type! {
 
 impl<T, E> Encode for std::result::Result<T, E>
 where
-    T: OptionalFieldEncoder,
-    E: FieldEncoder,
+    T: OptionalField,
+    E: Field,
 {
     const TY: DataType = DataType::Struct;
     #[inline]
     fn encode(&self, w: &mut (impl Write + ?Sized)) -> io::Result<()> {
         match self {
-            Ok(val) => OptionalFieldEncoder::encode(val, w, 0)?,
-            Err(err) => FieldEncoder::encode(err, w, 1)?,
+            Ok(val) => OptionalField::encode(val, w, 0)?,
+            Err(err) => Field::encode(err, w, 1)?,
         };
         w.write_all(&[DataType::StructEnd.code()])
     }
@@ -366,7 +366,7 @@ macro_rules! tuples {
     [Len: $len:tt $($name:tt : $idx:tt)*] => {
         impl<$($name,)*> Encode for ($($name,)*)
         where
-            $($name: OptionalFieldEncoder,)*
+            $($name: OptionalField,)*
         {
             const TY: DataType = DataType::Struct;
             fn encode(&self, writer: &mut (impl Write + ?Sized)) -> Result<()> {
