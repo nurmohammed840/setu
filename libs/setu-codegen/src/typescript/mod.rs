@@ -156,11 +156,10 @@ impl Context {
                 Type::I64 => f.write_str("this.ListI64"),
 
                 Type::Bool => f.write_str("this.ListBool"),
-                ty => f.write_fmt(args!("this.List({})", self.data_ty(ty))),
+                ty => f.write_fmt(args!("this.List({})", self.serde_ty(ty, codex))),
             },
-            Type::Complex(path) => {
-                f.write_fmt(args!("{}.{codex}", self.symbol.class_name(path)))
-            }
+            Type::Complex(path) => f.write_fmt(args!("{}.{codex}", self.symbol.class_name(path))),
+            Type::Option(ty) => f.write_fmt(args!("{}", self.serde_ty(ty, codex))),
             _ => unimplemented!(),
         })
     }

@@ -45,7 +45,7 @@ export function Output<T>(input: Input, futRes: Promise<ReadableStream<Uint8Arra
             fut.resolve(f.call(de));
         } catch (error) {
             fut.reject(error)
-            output.cancle()
+            // output.cancle()
         }
     })();
 

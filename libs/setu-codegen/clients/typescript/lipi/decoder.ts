@@ -63,15 +63,15 @@ export class Decode extends Deserialize {
         return view(this.buf.take(8)).getFloat64(0, true); // true = little-endian
     }
 
-    U16 = function Uint(this: Decode) {
+    U16 = function UInt(this: Decode) {
         return checkOverflowUint(Number(this.read_varint()), 16);
     }
 
-    U32 = function Uint(this: Decode) {
+    U32 = function UInt(this: Decode) {
         return checkOverflowUint(Number(this.read_varint()), 32);
     }
 
-    U64 = function Uint(this: Decode) {
+    U64 = function UInt(this: Decode) {
         return this.read_varint();
     }
 
@@ -284,7 +284,7 @@ export function OutputDecoder<T>(self: Decode, decoder: Decoder<T>, required: bo
         }
     }
     if (required && val === undefined) {
-        throw new Error(`output required, type: ${decoder.name}`);
+        throw new Error(`output required of type ${decoder.name}`);
     }
     return val;
 }

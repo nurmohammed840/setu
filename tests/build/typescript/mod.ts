@@ -55,3 +55,20 @@ export function add(args: add, ctx: $.Context = {}) {
 	});
 	return o;
 }
+
+export interface find_in_string {
+	input: string,
+	pat: string,
+}
+export function find_in_string(args: find_in_string, ctx: $.Context = {}) {
+	let [i, o] = $.rpc(3, ctx, function () {
+		return $.lipi.OutputDecoder(this, this.U32, false);
+	});
+	i.sendAndClose(function (this: $.lipi.Encode) {
+		$.lipi.StructEncoder(this, [
+			[0, args.input, this.Str],
+			[1, args.pat, this.Str],
+		]);
+	});
+	return o;
+}

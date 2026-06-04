@@ -1,10 +1,8 @@
 mod greeting;
+mod common;
 
 use greeting::*;
-
-pub async fn add(a: i32, b: i32) -> i32 {
-    a + b
-}
+use common::*;
 
 setu::export! {
     as TestSuite;
@@ -12,4 +10,5 @@ setu::export! {
     fn say_hello(input) = 1;
     
     fn add(a, b) = 2;
+    fn find_in_string(input, pat) = 3;
 }

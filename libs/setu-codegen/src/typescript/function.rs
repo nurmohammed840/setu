@@ -26,8 +26,9 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                 FnOutputTy::Return(return_ty) => {
                     c.line(args!("let [i, o] = $.rpc({index}, ctx, function () {{"));
                     c.scope(|c| {
+                        let required = return_ty.optional().is_none();
                         let decoder = ctx.serde_ty(return_ty, "decoder");
-                        c.line(args!("return $.lipi.OutputDecoder(this, {decoder}, true);"));
+                        c.line(args!("return $.lipi.OutputDecoder(this, {decoder}, {required});"));
                     });
                     c.line("});");
 
