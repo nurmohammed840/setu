@@ -40,7 +40,7 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                     );
                 }
                 if ctx.is_encoder_needed(path) {
-                    c.block(args!("static encoder = function Encoder(this: $.lipi.Encode, args: {class_name})"), |c| {
+                    c.block(args!("static encoder = function Struct(this: $.lipi.Encode, args: {class_name})"), |c| {
                        ctx.struct_encoder(c, fields.iter().map(|(_, s)| (s.name.as_ref(), &s.ty, s.key)));
                     });
                 }

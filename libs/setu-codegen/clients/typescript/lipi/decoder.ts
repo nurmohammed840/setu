@@ -283,7 +283,7 @@ export function OutputDecoder<T>(self: Decode, decoder: Decoder<T>, required: bo
             }
         }
     }
-    if (required && val !== undefined) {
+    if (required && val === undefined) {
         throw new Error(`output required, type: ${decoder.name}`);
     }
     return val;
