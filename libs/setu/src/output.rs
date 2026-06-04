@@ -1,14 +1,11 @@
-use std::future::poll_fn;
-use std::pin::pin;
-use std::str::FromStr;
-use std::task::Poll;
-
-use crate::frame::{self, FrameDecoder};
-use crate::transport::http::{HttpBody, HttpRequest, HttpResponse};
-use crate::{Result, Status};
-
+use std::{future::poll_fn, pin::pin, str::FromStr, task::Poll};
+use crate::{
+    Result, Status,
+    frame::{self, FrameDecoder},
+    transport::http::{HttpBody, HttpRequest, HttpResponse},
+};
 use futures::FutureExt;
-use lipi::DecodeOwned;
+use lipi::{DecodeOwned, encoder::OptionalField};
 use type_id::TypeId;
 
 pub trait Output {
@@ -29,7 +26,7 @@ enum CallStatus<T> {
 impl<F> Output for F
 where
     F: Future,
-    F::Output: lipi::encoder::OptionalField + TypeId,
+    F::Output: OptionalField + TypeId,
 {
     fn process<Args>(
         func: impl std_lib::FnOnce<Args, Output = Self> + 'static,
@@ -78,7 +75,7 @@ where
     }
 }
 
-fn encode_data(field: impl lipi::encoder::OptionalField) -> std::io::Result<Vec<u8>> {
+fn encode_data(field: impl OptionalField) -> std::io::Result<Vec<u8>> {
     let mut buf: Vec<u8> = Vec::new();
     field.encode(&mut buf, 0)?;
     buf.push(lipi::DataType::StructEnd.code());

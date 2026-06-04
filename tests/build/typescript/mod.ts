@@ -72,3 +72,17 @@ export function find_in_string(args: find_in_string, ctx: $.Context = {}) {
 	});
 	return o;
 }
+
+export interface print {
+	msg: string,
+}
+export function print(args: print, ctx: $.Context = {}) {
+	let [i, o] = $.rpc(4, ctx, function () {
+	});
+	i.sendAndClose(function (this: $.lipi.Encode) {
+		$.lipi.StructEncoder(this, [
+			[0, args.msg, this.Str],
+		]);
+	});
+	return o;
+}

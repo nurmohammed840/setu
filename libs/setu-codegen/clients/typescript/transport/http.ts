@@ -15,10 +15,15 @@ export class RPC {
             "rpc-id": id.toString(),
         };
 
+        let timer;
         if (timeout) {
+            timer = setTimeout(() => input.controller.abort(), timeout.duration());
             headers["rpc-timeout"] = timeout.toString();
         }
+
         let res = await fetch(url, { method: "POST", headers, body: input.channel.stream, signal: input.controller.signal });
+
+        clearTimeout(timer);
 
         if (!res.ok) {
             throw new Error(`${res.statusText}: ${await res.text()}`);

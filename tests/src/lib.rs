@@ -11,4 +11,5 @@ setu::export! {
     
     fn add(a, b) = 2;
     fn find_in_string(input, pat) = 3;
+    fn print(msg) = 4;
 }

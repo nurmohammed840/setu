@@ -102,8 +102,16 @@ impl Context {
                 self.data_ty(&ty.1)
             )),
 
+            Type::Tuple(tys) => {
+                f.write_str("[")?;
+                for ty in tys {
+                    f.write_fmt(args!("{}, ", self.data_ty(ty)))?;
+                }
+                f.write_str("]")
+            }
+
             Type::Option(ty) => f.write_fmt(args!("{} | undefined", self.data_ty(ty))),
-            Type::Tuple(_) | Type::Result(_) | Type::Char | Type::U128 | Type::I128 => {
+            Type::Result(_) | Type::Char | Type::U128 | Type::I128 => {
                 unimplemented!()
             }
         })
@@ -160,7 +168,12 @@ impl Context {
             },
             Type::Complex(path) => f.write_fmt(args!("{}.{codex}", self.symbol.class_name(path))),
             Type::Option(ty) => f.write_fmt(args!("{}", self.serde_ty(ty, codex))),
-            _ => unimplemented!(),
+            Type::Map { ty, .. } => f.write_fmt(args!(
+                "this.Table({}, {})",
+                self.serde_ty(&ty.0, codex),
+                self.serde_ty(&ty.1, codex)
+            )),
+            ty => unimplemented!("{ty:?}"),
         })
     }
 

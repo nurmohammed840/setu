@@ -2,6 +2,7 @@ use setu_type_info::{FnMetaData, FnOutputTy, Func};
 
 use crate::{CodeWriter, Context};
 use std::format_args as args;
+use type_id::Type;
 
 pub fn generate(c: &mut CodeWriter, ctx: &Context) {
     for Func {
@@ -26,9 +27,14 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                 FnOutputTy::Return(return_ty) => {
                     c.line(args!("let [i, o] = $.rpc({index}, ctx, function () {{"));
                     c.scope(|c| {
+                        if matches!(return_ty, Type::Tuple(tys) if tys.is_empty()) {
+                            return;
+                        }
                         let required = return_ty.optional().is_none();
                         let decoder = ctx.serde_ty(return_ty, "decoder");
-                        c.line(args!("return $.lipi.OutputDecoder(this, {decoder}, {required});"));
+                        c.line(args!(
+                            "return $.lipi.OutputDecoder(this, {decoder}, {required});"
+                        ));
                     });
                     c.line("});");
 
