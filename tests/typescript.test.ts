@@ -1,6 +1,6 @@
 #!/usr/bin/env -S deno run -A --unsafely-ignore-certificate-errors
 import { assertEquals } from "jsr:@std/assert";
-import { HelloRequest, say_hello } from "./build/typescript/mod.ts";
+import { say_hello, add } from "./build/typescript/mod.ts";
 
-let res = await say_hello({ req: new HelloRequest({ name: "Nur" }) });
-assertEquals(res.message, "Hello Nur!");
+assertEquals(await say_hello({ input: { name: "Nur" } }), { message: "Hello Nur!" });
+assertEquals(await add({ a: 1, b: 2 }), 3);

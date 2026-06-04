@@ -14,8 +14,8 @@ pub struct HelloReply {
     pub message: String,
 }
 
-pub async fn say_hello(req: HelloRequest) -> HelloReply {
+pub async fn say_hello(input: HelloRequest) -> HelloReply {
     HelloReply {
-        message: format!("Hello {}!", req.name),
+        message: format!("Hello {}!", input.name),
     }
 }

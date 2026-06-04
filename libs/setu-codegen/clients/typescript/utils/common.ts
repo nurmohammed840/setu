@@ -15,8 +15,8 @@ export function assert(expr: unknown, err: ErrorClass = Error, msg: ErrorMessage
 }
 
 export function checkOverflowInt(num: number, bit: number) {
-    const min = -(1 << (bit - 1));
-    const max = (1 << (bit - 1)) - 1;
+    const max = 2 ** (bit - 1) - 1;
+    const min = -(2 ** (bit - 1));
 
     if (num < min || num > max) {
         throw new RangeError(`Int${bit} overflow: ${num}`);
