@@ -1,41 +1,47 @@
-use super::sorted_map::SortedMap;
-use std::any::Any;
+use std::any::{Any, TypeId};
 
 pub struct Store {
-    map: SortedMap<u16, Box<dyn Any>>,
+    vals: Vec<Box<dyn Any>>,
 }
 
 impl std::fmt::Debug for Store {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Store")
-            .field("keys", &self.map.keys())
-            .finish()
+        f.debug_struct("Store").finish()
     }
 }
 
 impl Store {
     pub const fn new() -> Self {
-        Self {
-            map: SortedMap::new(),
-        }
+        Self { vals: Vec::new() }
     }
 
-    pub fn get_mut<T: 'static>(&mut self, key: u16) -> Option<&mut T> {
-        self.map.get_mut(&key)?.downcast_mut()
+    fn binary_search<T: 'static>(&self) -> Result<usize, usize> {
+        let id = TypeId::of::<T>();
+        self.vals
+            .binary_search_by_key(&id, |v| v.as_ref().type_id())
     }
 
-    pub fn get_or_insert_with<F, T: 'static>(&mut self, key: u16, f: F) -> &mut T
+    pub fn get<T: 'static>(&mut self) -> Option<&mut T> {
+        let index = self.binary_search::<T>().ok()?;
+        let any = unsafe { self.vals.get_unchecked_mut(index) };
+        Some(unsafe { any.downcast_mut().unwrap_unchecked() })
+    }
+
+    pub fn init<F, T: 'static>(&mut self, f: F) -> &mut T
     where
         F: FnOnce() -> T,
         F::Output: Into<Box<T>>,
     {
-        self.map
-            .get_or_insert_with(&key, || Box::from(f()))
-            .downcast_mut()
-            .unwrap()
+        let any = match self.binary_search::<T>() {
+            Ok(index) => unsafe { self.vals.get_unchecked_mut(index) },
+            Err(index) => self.vals.insert_mut(index, Box::from(f())),
+        };
+        unsafe { any.downcast_mut().unwrap_unchecked() }
     }
 
-    pub fn take<T: 'static>(&mut self, key: u16) -> Box<T> {
-        self.map.take(&key).unwrap().downcast().unwrap()
+    pub fn take<T: 'static>(&mut self) -> Option<Box<T>> {
+        let index = self.binary_search::<T>().ok()?;
+        let any = self.vals.remove(index);
+        Some(unsafe { any.downcast().unwrap_unchecked() })
     }
 }

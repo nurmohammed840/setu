@@ -1,4 +1,3 @@
-mod sorted_map;
 mod store;
 
 use crate::Timeout;
