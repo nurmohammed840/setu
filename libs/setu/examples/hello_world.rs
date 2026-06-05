@@ -1,19 +1,16 @@
 use setu::{
     Application, export,
-    transport::{
-        HttpServer,
-        http::{HttpRequest, HttpResponse},
-    },
+    transport::{HttpServer, http::HttpContext},
 };
 
 #[nio::main]
 async fn main() {
     HttpServer::new()
-        .run(|req: HttpRequest, res: HttpResponse| {
-            if let Some(id) = req.get_rpc_key() {
-                Example::execute(id, req, res);
+        .run(|ctx: HttpContext| {
+            if let Some(id) = ctx.req.get_rpc_key() {
+                Example::execute(id, ctx);
             } else {
-                res.write_unbound("Hello, World").unwrap();
+                ctx.res.write_unbound("Hello, World").unwrap();
             }
         })
         .await

@@ -5,24 +5,30 @@ mod rpc_utils;
 pub use request::{HttpBody, HttpRequest};
 pub use response::{HttpResponse, HttpWriter};
 
-use crate::{Result, transport::tls};
-use std::{env, net::SocketAddr, sync::Arc};
+use crate::{Result, context::State, transport::tls};
+use std::{env, net::SocketAddr, rc::Rc, sync::Arc};
 
 use nio::net::{TcpConnection, TcpListener};
 use tokio_rustls::{TlsAcceptor, rustls};
 
 pub trait HttpHandler: 'static + Send {
-    fn handler(&self, req: HttpRequest, res: HttpResponse);
+    fn handler(&self, ctx: HttpContext);
 }
 
 impl<F> HttpHandler for F
 where
-    F: std::ops::Fn(HttpRequest, HttpResponse) + Send + 'static,
+    F: std::ops::Fn(HttpContext) + Send + 'static,
 {
     #[inline]
-    fn handler(&self, req: HttpRequest, res: HttpResponse) {
-        self(req, res)
+    fn handler(&self, ctx: HttpContext) {
+        self(ctx)
     }
+}
+
+pub struct HttpContext {
+    pub state: Rc<State>,
+    pub req: HttpRequest,
+    pub res: HttpResponse,
 }
 
 #[derive(Default)]
@@ -108,9 +114,15 @@ impl HttpServer {
 
         println!("H2 connection: {addr}");
 
+        let session = State::new(addr);
+
         while let Some(stream) = conn.accept().await {
             let (req, res) = stream?;
-            h.handler(HttpRequest::from(req), HttpResponse::from(res));
+            h.handler(HttpContext {
+                state: session.clone(),
+                req: HttpRequest::from(req),
+                res: HttpResponse::from(res),
+            });
         }
         Ok(())
     }

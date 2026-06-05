@@ -13,7 +13,7 @@ pub fn expend_export(crate_path: &TokenStream, list: &FnList, t: &mut TokenStrea
     let rpcs = quote(|t| {
         for Rpc { name, index, .. } in &list.fns {
             quote!(t, {
-                #index => #crate_path::Output::process(#name, req, res),
+                #index => #crate_path::Output::process(#name, ctx),
             });
         }
     });
@@ -25,14 +25,10 @@ pub fn expend_export(crate_path: &TokenStream, list: &FnList, t: &mut TokenStrea
         pub struct #name;
 
         impl #crate_path::Application for #name {
-            fn execute(
-                id: u32,
-                req: #crate_path::transport::http::HttpRequest,
-                res: #crate_path::transport::http::HttpResponse,
-            ) {
+            fn execute(id: u32, ctx: #crate_path::transport::http::HttpContext) {
                 match id {
                     #rpcs
-                    id => #crate_path::__private::unknown_rpc(id, res)
+                    id => #crate_path::__private::unknown_rpc(id, ctx)
                 }
             }
         }

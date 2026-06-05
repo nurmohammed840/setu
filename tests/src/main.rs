@@ -1,21 +1,15 @@
-use setu::{
-    Application,
-    transport::{
-        HttpServer,
-        http::{HttpRequest, HttpResponse},
-    },
-};
-
+use setu::transport::http::HttpContext;
+use setu::{Application, transport::HttpServer};
 use test_suite::TestSuite;
 
 #[nio::main]
 async fn main() {
     HttpServer::new()
-        .run(|req: HttpRequest, res: HttpResponse| {
-            if let Some(id) = req.get_rpc_key() {
-                TestSuite::execute(id, req, res);
+        .run(|ctx: HttpContext| {
+            if let Some(id) = ctx.req.get_rpc_key() {
+                TestSuite::execute(id, ctx);
             } else {
-                res.write_unbound("Hello, World").unwrap();
+                ctx.res.write_unbound("Hello, World").unwrap();
             }
         })
         .await
