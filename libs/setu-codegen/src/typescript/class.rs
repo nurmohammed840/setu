@@ -15,7 +15,6 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                 c.block(args!("export interface {class_name}"), |c| {
                     ctx.write_object_tys(c, ';', fields.iter().map(|(_, s)| (&s.name, &s.ty)));
                 });
-                
                 c.block(args!("namespace {class_name}"), |c| {
                     if ctx.is_encoder_needed(path) {
                         c.block(args!("export const encoder = function Struct(this: $.lipi.Encode, args: {class_name})"), |c| {
@@ -33,7 +32,6 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                                     for (_, StructField { name, ty, key }) in fields {
                                         let required = ty.optional().is_none();
                                         let decoder = ctx.serde_ty(ty, "decoder");
-    
                                         c.line(args!("[\"{name}\", {key}, {decoder}, {required}],",));
                                     }
                                 });

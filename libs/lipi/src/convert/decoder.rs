@@ -316,7 +316,7 @@ macro_rules! tuples {
     }
 }
 
-tuples! { }
+tuples! {}
 tuples! { T0:0 }
 tuples! { T0:0 T1:1 }
 tuples! { T0:0 T1:1 T2:2 }

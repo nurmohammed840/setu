@@ -2,7 +2,7 @@ mod utils;
 
 use proc_macro::TokenStream;
 use quote2::*;
-use setu_derive::{expend_export, expend_type_definition, check_fn_args_count};
+use setu_derive::{check_fn_args_count, expend_export, expend_type_definition};
 use syn::parse_macro_input;
 
 #[proc_macro]

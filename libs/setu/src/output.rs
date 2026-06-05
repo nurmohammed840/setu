@@ -1,4 +1,3 @@
-use std::{future::poll_fn, pin::pin, str::FromStr, task::Poll};
 use crate::{
     Result, Status,
     frame::{self, FrameDecoder},
@@ -6,6 +5,7 @@ use crate::{
 };
 use futures::FutureExt;
 use lipi::{DecodeOwned, encoder::OptionalField};
+use std::{future::poll_fn, pin::pin, str::FromStr, task::Poll};
 use type_id::TypeId;
 
 pub trait Output {

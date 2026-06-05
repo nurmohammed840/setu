@@ -7,6 +7,8 @@ use quote2::{Quote, quote, quote_spanned};
 pub use parse::*;
 use syn::Ident;
 
+use crate::utils::add_compile_error;
+
 pub fn expend_export(crate_path: &TokenStream, list: &FnList, t: &mut TokenStream) {
     let rpcs = quote(|t| {
         for Rpc { name, index, .. } in &list.fns {
@@ -38,6 +40,19 @@ pub fn expend_export(crate_path: &TokenStream, list: &FnList, t: &mut TokenStrea
 }
 
 pub fn expend_type_definition(crate_path: &TokenStream, list: &FnList, t: &mut TokenStream) {
+    let maybe_errs = quote(|t| {
+        for Rpc { args, .. } in &list.fns {
+            let mut seen = Vec::with_capacity(args.len());
+            for name in args {
+                if seen.contains(&name) {
+                    add_compile_error(t, name.span(), &format!("duplicate: `{name}`"));
+                } else {
+                    seen.push(name);
+                }
+            }
+        }
+    });
+
     let body = quote(|t| {
         for Rpc {
             name, index, args, ..
@@ -64,6 +79,7 @@ pub fn expend_type_definition(crate_path: &TokenStream, list: &FnList, t: &mut T
 
             impl TypeDefinition for #name {
                 fn type_definition(r: &mut TypeRegistry) -> ::std::vec::Vec<Func<FnMetaData>> {
+                    #maybe_errs
                     ::std::vec![ #body ]
                 }
             }
@@ -76,11 +92,16 @@ pub fn check_fn_args_count(crate_path: &TokenStream, list: &FnList, t: &mut Toke
         for rpc in &list.fns {
             let ident = &rpc.name;
             let args_len = rpc.args.len();
-            let panic_args = format!("`{ident}` expected {args_len} arguments");
-            let span = rpc.name.span();
-            quote_spanned!(span, t, {
+
+            let panic_msg = quote(|t| {
+                let span = rpc.name.span();
+                let args = format!("`{ident}` expected {args_len} arguments");
+                quote_spanned!(span, t, { ::std::panic!(#args) });
+            });
+
+            quote!(t, {
                 if __crate::fn_args_count(&#ident) != #args_len {
-                    panic!(#panic_args);
+                    #panic_msg;
                 }
             });
         }
