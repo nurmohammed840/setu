@@ -1,17 +1,46 @@
 mod sorted_map;
 mod store;
 
-use std::{cell::RefCell, net::SocketAddr, rc::Rc};
-
+use crate::Timeout;
+use std::{
+    cell::{RefCell, UnsafeCell},
+    net::SocketAddr,
+    rc::Rc,
+};
 pub use store::Store;
 
-use crate::Timeout;
-
-pub struct Context {
-    pub state: Rc<State>,
-    pub timeout: Option<Timeout>,
+thread_local! {
+    pub static CTX: UnsafeCell<Option<Context>> = const { UnsafeCell::new(None) };
 }
 
+#[derive(Debug)]
+pub struct Context {
+    pub timeout: Option<Timeout>,
+    pub state: Rc<State>,
+}
+
+impl Context {
+    pub fn as_mut(&self) -> std::cell::RefMut<'_, Store> {
+        self.state.state.borrow_mut()
+    }
+}
+
+impl Context {
+    pub(crate) fn swap(this: &mut Option<Self>) {
+        CTX.with(|cell| unsafe {
+            std::mem::swap(&mut (*cell.get()), this);
+        });
+    }
+
+    pub fn get<F, R>(f: F) -> R
+    where
+        F: FnOnce(&Context) -> R,
+    {
+        CTX.with(|cell| unsafe { f((*cell.get()).as_ref().unwrap()) })
+    }
+}
+
+#[derive(Debug)]
 pub struct State {
     pub addr: SocketAddr,
     pub state: RefCell<Store>,
@@ -25,4 +54,3 @@ impl State {
         })
     }
 }
-

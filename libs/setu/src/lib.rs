@@ -1,18 +1,18 @@
 pub(crate) mod frame;
 
+mod context;
 mod status_code;
 mod timeout;
-mod context;
 mod trailer;
 mod utils;
 
 #[doc(hidden)]
 pub mod __private;
 pub mod transport;
+pub use context::Context;
 pub use status_code::Status;
 pub use timeout::Timeout;
 pub use trailer::Trailer;
-pub use context::Context;
 
 mod output;
 pub use setu_macros::*;

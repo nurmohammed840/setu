@@ -17,12 +17,18 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
         } = meta;
 
         c.newline();
-        c.block(args!("export interface {ident}"), |c| {
-            ctx.write_object_tys(c, ',', args.iter().zip(input_ty));
-        });
+
+        let fn_input = if !args.is_empty() {
+            c.block(args!("export interface {ident}"), |c| {
+                ctx.write_object_tys(c, ',', args.iter().zip(input_ty));
+            });
+            args!("args: {ident}, ")
+        } else {
+            args!("")
+        };
 
         c.block(
-            args!("export function {ident}(args: {ident}, ctx: $.Context = {{}})"),
+            args!("export function {ident}({fn_input}ctx: $.Context = {{}})"),
             |c| match output_ty {
                 FnOutputTy::Return(return_ty) => {
                     c.line(args!("let [i, o] = $.rpc({index}, ctx, function () {{"));

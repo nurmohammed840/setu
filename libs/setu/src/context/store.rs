@@ -5,6 +5,14 @@ pub struct Store {
     map: SortedMap<u16, Box<dyn Any>>,
 }
 
+impl std::fmt::Debug for Store {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Store")
+            .field("keys", &self.map.keys())
+            .finish()
+    }
+}
+
 impl Store {
     pub const fn new() -> Self {
         Self {
@@ -25,5 +33,9 @@ impl Store {
             .get_or_insert_with(&key, || Box::from(f()))
             .downcast_mut()
             .unwrap()
+    }
+
+    pub fn take<T: 'static>(&mut self, key: u16) -> Box<T> {
+        self.map.take(&key).unwrap().downcast().unwrap()
     }
 }

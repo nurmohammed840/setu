@@ -86,3 +86,39 @@ export function print(args: print, ctx: $.Context = {}) {
 	});
 	return o;
 }
+
+export interface store {
+	msg: string,
+}
+export function store(args: store, ctx: $.Context = {}) {
+	let [i, o] = $.rpc(5, ctx, function () {
+	});
+	i.sendAndClose(function (this: $.lipi.Encode) {
+		$.lipi.StructEncoder(this, [
+			[0, args.msg, this.Str],
+		]);
+	});
+	return o;
+}
+
+export function load(ctx: $.Context = {}) {
+	let [i, o] = $.rpc(6, ctx, function () {
+		return $.lipi.OutputDecoder(this, this.Str, true);
+	});
+	i.sendAndClose(function (this: $.lipi.Encode) {
+		$.lipi.StructEncoder(this, [
+		]);
+	});
+	return o;
+}
+
+export function what_is_my_ip(ctx: $.Context = {}) {
+	let [i, o] = $.rpc(7, ctx, function () {
+		return $.lipi.OutputDecoder(this, this.Str, true);
+	});
+	i.sendAndClose(function (this: $.lipi.Encode) {
+		$.lipi.StructEncoder(this, [
+		]);
+	});
+	return o;
+}

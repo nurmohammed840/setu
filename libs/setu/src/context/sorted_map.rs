@@ -1,4 +1,3 @@
-
 pub struct SortedMap<K, V> {
     keys: Vec<K>,
     vals: Vec<V>,
@@ -15,6 +14,10 @@ where
         }
     }
 
+    pub fn keys(&self) -> &[K] {
+        &self.keys
+    }
+
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
         let index = self.keys.binary_search(key).ok()?;
         Some(unsafe { self.vals.get_unchecked_mut(index) })
@@ -25,7 +28,7 @@ where
         K: Clone,
         F: FnOnce() -> V,
     {
-        match self.keys.binary_search(&key) {
+        match self.keys.binary_search(key) {
             Ok(index) => unsafe { self.vals.get_unchecked_mut(index) },
             Err(index) => {
                 self.keys.insert(index, key.clone());
@@ -33,5 +36,14 @@ where
             }
         }
     }
-}
 
+    pub fn take(&mut self, key: &K) -> Option<V> {
+        match self.keys.binary_search(key) {
+            Ok(index) => {
+                self.keys.remove(index);
+                Some(self.vals.remove(index))
+            }
+            Err(_) => None,
+        }
+    }
+}
