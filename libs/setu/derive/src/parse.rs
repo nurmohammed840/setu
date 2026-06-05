@@ -21,16 +21,16 @@ impl Parse for AppName {
     }
 }
 
-pub struct RpcList {
+pub struct FnList {
     pub name: Option<AppName>,
-    pub rpcs: Punctuated<Rpc, Token![;]>,
+    pub fns: Punctuated<Rpc, Token![;]>,
 }
 
-impl Parse for RpcList {
+impl Parse for FnList {
     fn parse(input: ParseStream) -> Result<Self> {
         Ok(Self {
             name: input.peek(Token![as]).then(|| input.parse()).transpose()?,
-            rpcs: Punctuated::parse_terminated(input)?,
+            fns: Punctuated::parse_terminated(input)?,
         })
     }
 }

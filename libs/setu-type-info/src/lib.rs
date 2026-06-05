@@ -96,3 +96,40 @@ where
         FnOutputTy::Return(<Fut::Output as TypeId>::ty(c))
     }
 }
+
+pub const fn fn_args_count<F, Args>(_: &F) -> usize
+where
+    F: std_lib::FnOnce<Args>,
+    Args: TupleArgs,
+{
+    Args::LEN
+}
+
+pub trait TupleArgs {
+    const LEN: usize;
+}
+
+macro_rules! tuple_args {
+    [Len: $len:tt $($name:tt)*] => {
+        impl<$($name,)*> TupleArgs for ($($name,)*) {
+            const LEN: usize = $len;
+        }
+    }
+}
+
+tuple_args! { Len: 0 }
+tuple_args! { Len: 1 T0 }
+tuple_args! { Len: 2 T0 T1 }
+tuple_args! { Len: 3 T0 T1 T2 }
+tuple_args! { Len: 4 T0 T1 T2 T3 }
+tuple_args! { Len: 5 T0 T1 T2 T3 T4 }
+tuple_args! { Len: 6 T0 T1 T2 T3 T4 T5 }
+tuple_args! { Len: 7 T0 T1 T2 T3 T4 T5 T6 }
+tuple_args! { Len: 8 T0 T1 T2 T3 T4 T5 T6 T7 }
+tuple_args! { Len: 9 T0 T1 T2 T3 T4 T5 T6 T7 T8 }
+tuple_args! { Len:10 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 }
+tuple_args! { Len:11 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 }
+tuple_args! { Len:12 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 }
+tuple_args! { Len:13 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 }
+tuple_args! { Len:14 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 }
+tuple_args! { Len:15 T0 T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 }

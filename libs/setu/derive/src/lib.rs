@@ -2,14 +2,14 @@ mod parse;
 mod utils;
 
 use proc_macro2::{Span, TokenStream};
-use quote2::{Quote, quote};
+use quote2::{Quote, quote, quote_spanned};
 
 pub use parse::*;
 use syn::Ident;
 
-pub fn expend_export(crate_path: &TokenStream, list: &RpcList, t: &mut TokenStream) {
+pub fn expend_export(crate_path: &TokenStream, list: &FnList, t: &mut TokenStream) {
     let rpcs = quote(|t| {
-        for Rpc { name, index, .. } in &list.rpcs {
+        for Rpc { name, index, .. } in &list.fns {
             quote!(t, {
                 #index => #crate_path::Output::process(#name, req, res),
             });
@@ -37,11 +37,11 @@ pub fn expend_export(crate_path: &TokenStream, list: &RpcList, t: &mut TokenStre
     });
 }
 
-pub fn expend_type_definition(crate_path: &TokenStream, list: &RpcList, t: &mut TokenStream) {
+pub fn expend_type_definition(crate_path: &TokenStream, list: &FnList, t: &mut TokenStream) {
     let body = quote(|t| {
         for Rpc {
             name, index, args, ..
-        } in &list.rpcs
+        } in &list.fns
         {
             let raw = name.to_string();
             let args = quote(|t| {
@@ -71,7 +71,29 @@ pub fn expend_type_definition(crate_path: &TokenStream, list: &RpcList, t: &mut 
     });
 }
 
-fn interface_name(list: &RpcList) -> Ident {
+pub fn check_fn_args_count(crate_path: &TokenStream, list: &FnList, t: &mut TokenStream) {
+    let body = quote(|t| {
+        for rpc in &list.fns {
+            let ident = &rpc.name;
+            let args_len = rpc.args.len();
+            let panic_args = format!("`{ident}` expected {args_len} arguments");
+            let span = rpc.name.span();
+            quote_spanned!(span, t, {
+                if __crate::fn_args_count(&#ident) != #args_len {
+                    panic!(#panic_args);
+                }
+            });
+        }
+    });
+    quote!(t, {
+        const _: () = {
+            use #crate_path::__private::setu_type_info as __crate;
+            #body
+        };
+    });
+}
+
+fn interface_name(list: &FnList) -> Ident {
     match list.name {
         Some(ref name) => name.name.clone(),
         None => Ident::new("App", Span::call_site()),

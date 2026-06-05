@@ -2,7 +2,7 @@ mod utils;
 
 use proc_macro::TokenStream;
 use quote2::*;
-use setu_derive::{expend_export, expend_type_definition};
+use setu_derive::{expend_export, expend_type_definition, check_fn_args_count};
 use syn::parse_macro_input;
 
 #[proc_macro]
@@ -13,6 +13,7 @@ pub fn export(input: TokenStream) -> TokenStream {
     let mut t = proc_macro2::TokenStream::new();
     expend_export(&crate_path, &list, &mut t);
     expend_type_definition(&crate_path, &list, &mut t);
+    check_fn_args_count(&crate_path, &list, &mut t);
     t.into()
 }
 
