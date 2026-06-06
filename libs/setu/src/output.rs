@@ -47,7 +47,7 @@ where
 
             let mut fut = pin!(func.call_once(args));
 
-            let mut ctx = Some(context);
+            let mut ctx = Some(Rc::new(context));
             let output = poll_fn(
                 |cx| match poll_timeout_or_reset(cx, timer.as_mut(), &mut res) {
                     CallStatus::Timeout => Poll::Ready(CallStatus::Timeout),
@@ -86,7 +86,7 @@ impl HttpContext {
         let context = Context {
             state,
             timeout,
-            http_headers: Some(Rc::new(meta.headers)),
+            http_headers: meta.headers,
         };
         let timer = timeout.map(Timeout::duration).map(nio::sleep);
         Ok((context, timer, body, res))

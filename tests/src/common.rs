@@ -9,8 +9,9 @@ pub async fn find_in_string(str: String, pat: String) -> Option<u32> {
 }
 
 pub async fn print(msg: String) {
-    let headers = Context::http_headers().unwrap();
-    let addr = Context::addr();
+    let ctx = Context::get();
+    let headers = ctx.http_headers();
+    let addr = ctx.addr();
 
     println!("headers: {headers:#?}");
     println!("addr: {addr}");

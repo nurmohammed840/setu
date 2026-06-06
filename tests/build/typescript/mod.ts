@@ -103,7 +103,7 @@ export function store(args: store, ctx: $.Context = {}) {
 
 export function load(ctx: $.Context = {}) {
 	let [i, o] = $.rpc(6, ctx, function () {
-		return $.lipi.OutputDecoder(this, this.Str, true);
+		return $.lipi.OutputDecoder(this, this.Str, false);
 	});
 	i.sendAndClose(function (this: $.lipi.Encode) {
 		$.lipi.StructEncoder(this, [
