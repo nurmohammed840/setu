@@ -16,11 +16,18 @@ thread_local! {
 pub struct Context {
     pub timeout: Option<Timeout>,
     pub state: Rc<State>,
+    pub http_headers: Option<Rc<http::HeaderMap<http::HeaderValue>>>,
 }
 
 impl Context {
     pub fn as_mut(&self) -> std::cell::RefMut<'_, Store> {
         self.state.state.borrow_mut()
+    }
+    pub fn http_headers() -> Option<Rc<http::HeaderMap<http::HeaderValue>>> {
+        Context::get(|c| c.http_headers.as_ref().map(Rc::clone))
+    }
+    pub fn addr() -> SocketAddr {
+        Context::get(|c| c.state.addr.clone())
     }
 }
 

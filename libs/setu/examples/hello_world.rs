@@ -6,7 +6,7 @@ use setu::{
 #[nio::main]
 async fn main() {
     HttpServer::new()
-        .run(|ctx: HttpContext| {
+        .run(|mut ctx: HttpContext| {
             if let Some(id) = ctx.req.get_rpc_key() {
                 Example::execute(id, ctx);
             } else {

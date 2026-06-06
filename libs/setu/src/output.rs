@@ -8,6 +8,7 @@ use lipi::{DecodeOwned, encoder::OptionalField};
 use std::{
     future::poll_fn,
     pin::pin,
+    rc::Rc,
     str::FromStr,
     task::{self, Poll},
 };
@@ -35,21 +36,11 @@ where
         Args: DecodeOwned,
     {
         nio::spawn_local(async move {
-            let HttpContext {
-                state,
-                mut req,
-                mut res,
-            } = ctx;
-
-            let timeout = match req.get_timeout() {
-                Err(err) => return res.send_error(http::StatusCode::BAD_REQUEST, err),
-                Ok(timeout) => timeout,
+            let Ok((context, mut timer, mut body, mut res)) = ctx.parts() else {
+                return;
             };
 
-            let context = Context { state, timeout };
-            let mut timer = context.timer();
-
-            let args = match decode_args::<Args>(&mut req.body).await {
+            let args = match decode_args::<Args>(&mut body).await {
                 Err(err) => return res.send_error(http::StatusCode::BAD_REQUEST, err),
                 Ok(args) => args,
             };
@@ -77,9 +68,28 @@ where
     }
 }
 
-impl Context {
-    fn timer(&self) -> Option<nio::Sleep> {
-        self.timeout.map(Timeout::duration).map(nio::sleep)
+impl HttpContext {
+    fn parts(self) -> Result<(Context, Option<nio::Sleep>, HttpBody, HttpResponse), ()> {
+        let HttpContext {
+            state,
+            mut req,
+            res,
+        } = self;
+        let timeout = match req.get_timeout() {
+            Err(err) => {
+                res.send_error(http::StatusCode::BAD_REQUEST, err);
+                return Err(());
+            }
+            Ok(timeout) => timeout,
+        };
+        let HttpRequest { meta, body } = req;
+        let context = Context {
+            state,
+            timeout,
+            http_headers: Some(Rc::new(meta.headers)),
+        };
+        let timer = timeout.map(Timeout::duration).map(nio::sleep);
+        Ok((context, timer, body, res))
     }
 }
 
@@ -120,14 +130,13 @@ fn send_output(mut res: HttpResponse, output: CallStatus<std::io::Result<Vec<u8>
 }
 
 impl HttpRequest {
-    fn get_timeout(&self) -> Result<Option<Timeout>, &'static str> {
-        let Some(val) = self.meta.headers.get("rpc-timeout") else {
+    fn get_timeout(&mut self) -> Result<Option<Timeout>, &'static str> {
+        let Some(val) = self.meta.headers.remove("rpc-timeout") else {
             return Ok(None);
         };
         let input = val.to_str().map_err(|_| "invalid ascii header")?;
         let timeout = Timeout::from_str(input)?;
         Ok(Some(timeout))
-        // Ok(Some(nio::sleep(timeout.duration())))
     }
 }
 
