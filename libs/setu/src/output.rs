@@ -127,13 +127,9 @@ where
     }
 }
 
-async fn send_stream(
-    mut output: FrameEncoder,
-    resume: Option<(io::Result<Vec<u8>>, GeneratorState<(), ()>)>,
-) -> Option<FrameEncoder> {
-    let Some((result, state)) = resume else {
-        return None; // timeout or cancellation
-    };
+type MaybeResumed = Option<(io::Result<Vec<u8>>, GeneratorState<(), ()>)>;
+async fn send_stream(mut output: FrameEncoder, resume: MaybeResumed) -> Option<FrameEncoder> {
+    let (result, state) = resume?;
 
     let data = match result {
         Ok(data) => data,

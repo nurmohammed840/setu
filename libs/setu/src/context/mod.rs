@@ -36,13 +36,13 @@ impl Context {
 }
 
 impl Context {
-    pub(crate) fn boxed(self) -> Option<Rc<Context>>{
+    pub(crate) fn boxed(self) -> Option<Rc<Context>> {
         Some(Rc::new(self))
     }
 
     pub(crate) fn swap(this: &mut Option<Rc<Self>>) {
         CTX.with(|cell| unsafe {
-            std::mem::swap(&mut (*cell.get()), this);
+            std::ptr::swap(cell.get(), this);
         });
     }
 
