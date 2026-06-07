@@ -1,35 +1,57 @@
-use crate::transport::http::HttpResponse;
+use bytes::Bytes;
+
+use crate::Status;
+use crate::transport::http::{HttpResponse, HttpWriter};
 use crate::{
     Trailer,
     frame::{FrameHeader, LenBE},
 };
 
 impl HttpResponse {
-    pub(crate) fn send_final_message(mut self, msg: Vec<u8>) {
+    pub fn create_setu_stream(mut self) -> Result<FrameEncoder, h2::Error> {
         self.add_setu_content_type_header();
-        let _ = self.write_unbound(encode_as_frame(msg));
+        Ok(FrameEncoder {
+            stream: self.create_stream()?,
+        })
     }
 }
 
-fn encode_as_frame(msg: Vec<u8>) -> Vec<u8> {
+pub struct FrameEncoder {
+    pub stream: HttpWriter,
+}
+
+impl FrameEncoder {
+    pub fn send_error(mut self, status: Status, reason: String) -> Result<(), h2::Error> {
+        let msg = reason.into_bytes();
+        self.stream
+            .write_unbound(encode_header(Some(status), &msg))?;
+
+        self.stream.end_write_unbound(msg)
+    }
+
+    pub async fn send(&mut self, msg: Vec<u8>) -> Result<(), h2::Error> {
+        self.stream.write_unbound(encode_header(None, &msg))?;
+        self.stream.write(msg).await
+    }
+
+    pub fn send_with_trailer(mut self, msg: Vec<u8>) -> Result<(), h2::Error> {
+        self.stream.write_unbound(encode_header(None, &msg))?;
+        self.stream.write_unbound(msg)?;
+        self.end()
+    }
+
+    pub fn end(self) -> Result<(), h2::Error> {
+        self.stream
+            .end_write_unbound(const { Bytes::from_static(&Trailer::OK_ENCODED) })
+    }
+}
+
+pub fn encode_header(status: Option<Status>, msg: &[u8]) -> Bytes {
     let len = LenBE::new(msg.len());
-    let mut frame =
-        Vec::with_capacity(1 + len.size as usize + msg.len() + Trailer::OK_ENCODED.len());
 
-    frame.push(FrameHeader::new(None, len.size).encode());
+    let mut frame = Vec::with_capacity(1 + len.size as usize);
+    frame.push(FrameHeader::new(status, len.size).encode());
     frame.extend_from_slice(&len);
-    frame.extend_from_slice(&msg);
-    frame.extend_from_slice(&Trailer::OK_ENCODED);
-    frame
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_encode_frame() {
-        let raw = encode_as_frame(b"67".to_vec());
-        assert_eq!(raw, [0, 2, 54, 55, 2, 0]);
-    }
+    Bytes::from(frame.into_boxed_slice())
 }

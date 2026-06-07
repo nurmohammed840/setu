@@ -1,75 +1,162 @@
 use crate::{
-    Context, Result, Status, Timeout,
-    frame::{self, FrameDecoder},
-    transport::http::{HttpBody, HttpContext, HttpRequest, HttpResponse},
+    Context, Result, SSE, Status, Timeout,
+    frame::{FrameDecoder, FrameEncoder, RawBytes},
+    transport::http::{HttpBody, HttpContext, HttpRequest, HttpResponse, HttpWriter},
 };
+use async_gen::{AsyncGenerator, GeneratorState};
 use futures::FutureExt;
 use lipi::{DecodeOwned, encoder::OptionalField};
+use nio::Sleep;
 use std::{
     future::poll_fn,
+    io,
     pin::pin,
-    rc::Rc,
     str::FromStr,
     task::{self, Poll},
 };
 use type_id::TypeId;
 
 pub trait Output {
-    fn process<Args>(func: impl std_lib::FnOnce<Args, Output = Self> + 'static, ctx: HttpContext)
-    where
-        Args: DecodeOwned;
-}
-
-enum CallStatus<T> {
-    Canceled,
-    Timeout,
-    Output(T),
-}
-
-impl<F> Output for F
-where
-    F: Future,
-    F::Output: OptionalField + TypeId,
-{
-    fn process<Args>(func: impl std_lib::FnOnce<Args, Output = Self> + 'static, ctx: HttpContext)
+    fn process<Args, F>(func: F, ctx: HttpContext)
     where
         Args: DecodeOwned,
+        F: std_lib::FnOnce<Args, Output = Self> + 'static;
+}
+
+impl<T> Output for T
+where
+    T: Future,
+    T::Output: OptionalField + TypeId,
+{
+    fn process<Args, F>(func: F, ctx: HttpContext)
+    where
+        Args: DecodeOwned,
+        F: std_lib::FnOnce<Args, Output = Self> + 'static,
     {
         nio::spawn_local(async move {
-            let Ok((context, mut timer, mut body, mut res)) = ctx.parts() else {
+            let Ok((context, mut timer, input, output)) = ctx.parts() else {
                 return;
             };
 
-            let args = match decode_args::<Args>(&mut body).await {
-                Err(err) => return res.send_error(http::StatusCode::BAD_REQUEST, err),
+            let args = match decode_args(input).await {
+                Err(err) => return output.send_error(http::StatusCode::BAD_REQUEST, err),
                 Ok(args) => args,
             };
 
+            let Ok(mut output) = output.create_setu_stream() else {
+                return;
+            };
+
             let mut fut = pin!(func.call_once(args));
+            let mut ctx = context.boxed();
 
-            let mut ctx = Some(Rc::new(context));
-            let output = poll_fn(
-                |cx| match poll_timeout_or_reset(cx, timer.as_mut(), &mut res) {
-                    CallStatus::Timeout => Poll::Ready(CallStatus::Timeout),
-                    CallStatus::Canceled => Poll::Ready(CallStatus::Canceled),
-                    CallStatus::Output(()) => {
-                        Context::swap(&mut ctx);
-                        let poll = fut.as_mut().poll(cx);
-                        Context::swap(&mut ctx);
+            let result = poll_fn(|cx| {
+                if timeout_or_cancellation(cx, timer.as_mut(), &mut output.stream).is_ready() {
+                    return Poll::Ready(None);
+                }
 
-                        poll.map(encode_data).map(CallStatus::Output)
-                    }
-                },
-            )
+                Context::swap(&mut ctx);
+                let poll = fut.as_mut().poll(cx);
+                Context::swap(&mut ctx);
+
+                poll.map(encode_data).map(Some)
+            })
             .await;
 
-            send_output(res, output);
+            send_output(output, result)
         });
     }
 }
 
+impl<S> Output for SSE<S>
+where
+    S: AsyncGenerator,
+    S::Yield: OptionalField + TypeId,
+    S::Return: OptionalField + TypeId,
+{
+    fn process<Args, F>(func: F, ctx: HttpContext)
+    where
+        Args: DecodeOwned,
+        F: std_lib::FnOnce<Args, Output = Self> + 'static,
+    {
+        nio::spawn_local(async {
+            let Ok((context, mut timer, input, output)) = ctx.parts() else {
+                return;
+            };
+
+            let args = match decode_args(input).await {
+                Err(err) => return output.send_error(http::StatusCode::BAD_REQUEST, err),
+                Ok(args) => args,
+            };
+
+            let Ok(mut output) = output.create_setu_stream() else {
+                return;
+            };
+
+            let mut stream = pin!(func.call_once(args).0);
+            let mut ctx = context.boxed();
+            loop {
+                let resume = poll_fn(|cx| {
+                    if timeout_or_cancellation(cx, timer.as_mut(), &mut output.stream).is_ready() {
+                        return Poll::Ready(None);
+                    }
+
+                    Context::swap(&mut ctx);
+                    let poll = stream.as_mut().poll_resume(cx);
+                    Context::swap(&mut ctx);
+
+                    poll.map(|state| match state {
+                        GeneratorState::Yielded(data) => {
+                            (encode_data(data), GeneratorState::Yielded(()))
+                        }
+                        GeneratorState::Complete(data) => {
+                            (encode_data(data), GeneratorState::Complete(()))
+                        }
+                    })
+                    .map(Some)
+                })
+                .await;
+
+                let Some(o) = send_stream(output, resume).await else {
+                    break;
+                };
+
+                output = o
+            }
+        });
+    }
+}
+
+async fn send_stream(
+    mut output: FrameEncoder,
+    resume: Option<(io::Result<Vec<u8>>, GeneratorState<(), ()>)>,
+) -> Option<FrameEncoder> {
+    let Some((result, state)) = resume else {
+        return None; // timeout or cancellation
+    };
+
+    let data = match result {
+        Ok(data) => data,
+        Err(err) => {
+            let _ = output.send_error(Status::Internal, err.to_string());
+            return None;
+        }
+    };
+
+    match state {
+        GeneratorState::Yielded(()) => match output.send(data).await {
+            Ok(()) => Some(output), // continue
+            Err(_) => None,
+        },
+        GeneratorState::Complete(()) => {
+            let _ = output.send_with_trailer(data);
+            None
+        }
+    }
+}
+
 impl HttpContext {
-    fn parts(self) -> Result<(Context, Option<nio::Sleep>, HttpBody, HttpResponse), ()> {
+    fn parts(self) -> Result<(Context, Option<Sleep>, HttpBody, HttpResponse), ()> {
         let HttpContext {
             state,
             mut req,
@@ -93,42 +180,6 @@ impl HttpContext {
     }
 }
 
-fn encode_data(field: impl OptionalField) -> std::io::Result<Vec<u8>> {
-    let mut buf: Vec<u8> = Vec::new();
-    field.encode(&mut buf, 0)?;
-    buf.push(lipi::DataType::StructEnd.code());
-    Ok(buf)
-}
-
-fn poll_timeout_or_reset(
-    cx: &mut task::Context<'_>,
-    timer: Option<&mut nio::Sleep>,
-    res: &mut HttpResponse,
-) -> CallStatus<()> {
-    if let Some(timer) = timer
-        && timer.poll_unpin(cx).is_ready()
-    {
-        return CallStatus::Timeout;
-    }
-
-    if res.poll_reset(cx).is_ready() {
-        return CallStatus::Canceled;
-    }
-
-    CallStatus::Output(())
-}
-
-fn send_output(mut res: HttpResponse, output: CallStatus<std::io::Result<Vec<u8>>>) {
-    match output {
-        CallStatus::Canceled => {}
-        CallStatus::Timeout => res.send_reset(h2::Reason::CANCEL),
-        CallStatus::Output(data) => match data {
-            Err(err) => res.send_error(http::StatusCode::INTERNAL_SERVER_ERROR, err),
-            Ok(buf) => res.send_final_message(buf),
-        },
-    }
-}
-
 impl HttpRequest {
     fn get_timeout(&mut self) -> Result<Option<Timeout>, &'static str> {
         let Some(val) = self.meta.headers.remove("rpc-timeout") else {
@@ -137,6 +188,45 @@ impl HttpRequest {
         let input = val.to_str().map_err(|_| "invalid ascii header")?;
         let timeout = Timeout::from_str(input)?;
         Ok(Some(timeout))
+    }
+}
+
+fn timeout_or_cancellation(
+    cx: &mut task::Context,
+    timer: Option<&mut Sleep>,
+    output: &mut HttpWriter,
+) -> Poll<()> {
+    if let Some(timer) = timer
+        && timer.poll_unpin(cx).is_ready()
+    {
+        output.send_reset(h2::Reason::CANCEL);
+        return Poll::Ready(());
+    }
+    if output.poll_reset(cx).is_ready() {
+        return Poll::Ready(());
+    }
+
+    Poll::Pending
+}
+
+fn encode_data(data: impl OptionalField) -> io::Result<Vec<u8>> {
+    let mut buf: Vec<u8> = Vec::new();
+    data.encode(&mut buf, 0)?;
+    buf.push(lipi::DataType::StructEnd.code());
+    Ok(buf)
+}
+
+fn send_output(output: FrameEncoder, result: Option<io::Result<Vec<u8>>>) {
+    let Some(result) = result else {
+        return;
+    };
+    match result {
+        Err(err) => {
+            let _ = output.send_error(Status::Internal, err.to_string());
+        }
+        Ok(buf) => {
+            let _ = output.send_with_trailer(buf);
+        }
     }
 }
 
@@ -151,12 +241,12 @@ impl HttpResponse {
     }
 }
 
-async fn decode_args<Args: DecodeOwned>(stream: &mut HttpBody) -> Result<Args> {
-    let bytes = decode_last_msg(stream).await?;
+async fn decode_args<Args: DecodeOwned>(mut input: HttpBody) -> Result<Args> {
+    let bytes = decode_last_msg(&mut input).await?;
     Args::decode(&mut &*bytes)
 }
 
-async fn decode_last_msg(stream: &mut HttpBody) -> Result<frame::RawBytes> {
+async fn decode_last_msg(stream: &mut HttpBody) -> Result<RawBytes> {
     let mut de = FrameDecoder::default();
     let bytes = de
         .parse_frame(stream)

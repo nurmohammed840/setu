@@ -25,3 +25,5 @@ pub use output::Output;
 pub trait Application {
     fn execute(id: u32, ctx: transport::http::HttpContext);
 }
+
+pub struct SSE<S>(pub S);

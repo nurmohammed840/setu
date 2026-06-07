@@ -3,6 +3,7 @@ mod writer;
 use crate::{Result, Status};
 use bytes::{Buf, Bytes};
 use futures::{Stream, StreamExt};
+pub use writer::FrameEncoder;
 
 type StreamData = Result<Bytes, h2::Error>;
 
@@ -223,16 +224,16 @@ pub struct FrameHeader {
     // 2 bit
     pub len_size: u8,
     // 4 bit
-    pub code: u8,
+    pub code: u8, // Must be `0` if `!is_trailer`
 }
 
 impl FrameHeader {
-    pub const fn new(trailer: Option<Status>, len_size: u8) -> FrameHeader {
+    pub const fn new(trailer_status: Option<Status>, len_size: u8) -> FrameHeader {
         FrameHeader {
             is_compressed: false,
-            is_trailer: trailer.is_some(),
+            is_trailer: trailer_status.is_some(),
             len_size: len_size - 1,
-            code: match trailer {
+            code: match trailer_status {
                 Some(status) => status.code(),
                 None => 0,
             },

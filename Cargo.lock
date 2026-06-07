@@ -33,6 +33,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "940b3a0ca603d1eade50a4846a2afffd5ef57a9feac2c0e2ec2e14f9ead76000"
 
 [[package]]
+name = "async-gen"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f872d9d498f6cc7a18aff10f2658f17fc5d729928625d68169aaa29febdf813"
+dependencies = [
+ "async-gen-macros",
+ "futures-core",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "async-gen-macros"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "017a711dbce72e9467fea4f6e55afc8cf8e4306a53c80593bad684e8eccef122"
+
+[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -860,6 +877,7 @@ dependencies = [
 name = "setu"
 version = "0.1.0"
 dependencies = [
+ "async-gen",
  "bytes",
  "futures",
  "h2",
