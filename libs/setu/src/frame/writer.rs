@@ -37,12 +37,9 @@ impl FrameEncoder {
     pub fn send_with_trailer(mut self, msg: Vec<u8>) -> Result<(), h2::Error> {
         self.stream.write_unbound(encode_header(None, &msg))?;
         self.stream.write_unbound(msg)?;
-        self.end()
-    }
 
-    pub fn end(self) -> Result<(), h2::Error> {
-        self.stream
-            .end_write_unbound(const { Bytes::from_static(&Trailer::OK_ENCODED) })
+        const TRAILER: Bytes = Bytes::from_static(&Trailer::OK_ENCODED);
+        self.stream.end_write_unbound(TRAILER)
     }
 }
 

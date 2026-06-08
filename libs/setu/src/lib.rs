@@ -27,3 +27,10 @@ pub trait Application {
 }
 
 pub struct SSE<S>(pub S);
+
+#[macro_export]
+macro_rules! sse {
+    ($($tt:tt)*) => {
+        $crate::SSE($crate::__private::async_gen::__private::gen_inner!([$crate::__private::async_gen] $($tt)*))
+    }
+}

@@ -1,10 +1,12 @@
 mod common;
 mod greeting;
+mod outgoing;
 mod stateful;
 
-use common::*;
-use greeting::*;
-use stateful::*;
+pub use common::*;
+pub use greeting::*;
+pub use outgoing::*;
+pub use stateful::*;
 
 setu::export! {
     as TestSuite;
@@ -18,4 +20,7 @@ setu::export! {
     fn store(msg) = 5;
     fn load() = 6;
     fn what_is_my_ip() = 7;
+
+    // outgoing
+    // fn events(s) = 8;
 }
