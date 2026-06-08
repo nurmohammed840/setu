@@ -7,6 +7,7 @@ use async_gen::{AsyncGenerator, GeneratorState};
 use futures::FutureExt;
 use lipi::{DecodeOwned, encoder::OptionalField};
 use nio::Sleep;
+use setu_type_info::FnOutputType;
 use std::{
     future::poll_fn,
     io,
@@ -16,7 +17,7 @@ use std::{
 };
 use type_id::TypeId;
 
-pub trait Output {
+pub trait Output: FnOutputType {
     fn process<Args, F>(func: F, ctx: HttpContext)
     where
         Args: DecodeOwned,

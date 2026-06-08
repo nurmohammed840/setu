@@ -4,6 +4,7 @@ mod context;
 mod status_code;
 mod timeout;
 mod trailer;
+mod types;
 mod utils;
 
 #[doc(hidden)]

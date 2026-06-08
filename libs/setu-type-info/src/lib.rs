@@ -28,7 +28,7 @@ impl<T> Func<T> {
     where
         F: std_lib::FnOnce<Args>,
         Args: TypeId,
-        F::Output: AsyncFnOutputType,
+        F::Output: FnOutputType,
     {
         let Type::Tuple(input_ty) = Args::ty(r) else {
             unreachable!()
@@ -36,7 +36,7 @@ impl<T> Func<T> {
         Func {
             meta,
             input_ty,
-            output_ty: <F::Output as AsyncFnOutputType>::async_fn_output_ty(r),
+            output_ty: <F::Output as FnOutputType>::fn_output_ty(r),
         }
     }
 }
@@ -53,7 +53,7 @@ impl Func<FnMetaData> {
     where
         F: std_lib::FnOnce<Args>,
         Args: TypeId,
-        F::Output: AsyncFnOutputType,
+        F::Output: FnOutputType,
     {
         let meta = FnMetaData {
             docs: docs.to_string(),
@@ -83,16 +83,16 @@ pub trait TypeDefinition {
     fn type_definition(r: &mut TypeRegistry) -> Vec<Func<FnMetaData>>;
 }
 
-pub trait AsyncFnOutputType {
-    fn async_fn_output_ty(_: &mut TypeRegistry) -> FnOutputTy;
+pub trait FnOutputType {
+    fn fn_output_ty(_: &mut TypeRegistry) -> FnOutputTy;
 }
 
-impl<Fut> AsyncFnOutputType for Fut
+impl<Fut> FnOutputType for Fut
 where
     Fut: Future,
     Fut::Output: TypeId,
 {
-    fn async_fn_output_ty(c: &mut TypeRegistry) -> FnOutputTy {
+    fn fn_output_ty(c: &mut TypeRegistry) -> FnOutputTy {
         FnOutputTy::Return(<Fut::Output as TypeId>::ty(c))
     }
 }
