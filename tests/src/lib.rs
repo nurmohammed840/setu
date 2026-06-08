@@ -22,5 +22,5 @@ setu::export! {
     fn what_is_my_ip() = 7;
 
     // outgoing
-    // fn events(s) = 8;
+    // fn fetch_user_ids(count) = 8;
 }

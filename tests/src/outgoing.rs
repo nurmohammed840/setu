@@ -1,21 +1,11 @@
 use setu::{Output, sse};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-#[derive(Output)]
-pub struct Event {
-    pub elapsed: u64,
-}
-
-pub fn events(count: u8) -> impl Output {
+pub fn fetch_user_ids(count: u8) -> impl Output {
     sse! {
-        if count > 10 {
-            return Err(format!("count: {count} should be <= 10"));
-        }
-        let time = Instant::now();
-        for _ in 0..count {
+        for id in 1..=count {
             nio::sleep(Duration::from_secs(1)).await;
-            yield Event { elapsed: time.elapsed().as_secs() }
+            yield id;
         }
-        Ok(())
     }
 }
