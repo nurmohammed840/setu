@@ -18,8 +18,8 @@ pub use trailer::Trailer;
 mod output;
 pub use setu_macros::*;
 
+pub type Result<T, E = Error> = std::result::Result<T, E>;
 pub(crate) type Error = Box<dyn std::error::Error + Send + Sync + 'static>;
-pub(crate) type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub use output::Output;
 

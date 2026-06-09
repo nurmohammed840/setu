@@ -34,14 +34,12 @@ export function Output<T>(input: Input, futRes: Promise<ReadableStream<Uint8Arra
 
             stream = new Stream(res.getReader());
             let reader = new FrameDecoder(stream);
-            let dataFrame = await reader.parseFrame();
-            let trailer = await reader.parseFrame();
+            let { data } = await reader.parseFrame();
 
-            assert(dataFrame.data.type == "message");
-            assert(trailer.data.type == "trailer", Error, `expected trailer`);
-            assert(trailer.data.status == Status.Ok, Error, `trailer status: ${trailer.data.status}`);
+            assert(data.type == "trailer", Error, `expected trailer`);
+            assert(data.status == Status.Ok, Error, `trailer status: ${data.status}`);
 
-            let de = new Decode(new Bytes(dataFrame.data.bytes));
+            let de = new Decode(new Bytes(data.bytes));
             fut.resolve(f.call(de));
         } catch (error) {
             fut.reject(error)

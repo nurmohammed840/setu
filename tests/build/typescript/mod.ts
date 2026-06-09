@@ -122,3 +122,9 @@ export function what_is_my_ip(ctx: $.Context = {}) {
 	});
 	return o;
 }
+
+export interface fetch_user_ids {
+	count: number,
+}
+export function fetch_user_ids(args: fetch_user_ids, ctx: $.Context = {}) {
+}
