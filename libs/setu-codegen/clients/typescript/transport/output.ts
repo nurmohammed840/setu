@@ -10,14 +10,18 @@ export interface Output<T> extends Promise<T> {
     cancle(reason?: any): void;
 }
 
-export function Output<T>(input: Input, futRes: Promise<ReadableStream<Uint8Array>>, f: Decoder<T>) {
+export function Output<T>(
+    controller: AbortController,
+    readableStream: Promise<ReadableStream<Uint8Array>>,
+    decoder: Decoder<T>
+) {
     let fut = Promise.withResolvers<T>();
     let stream: Stream | undefined;
     let canceled: { reason?: any } | undefined;
 
     let output: Output<T> = Object.assign(fut.promise, {
         cancle(reason?: any) {
-            input.reset(reason);
+            controller.abort(reason);
             stream?.reader.cancel(reason);
             canceled = { reason };
         }
@@ -25,7 +29,7 @@ export function Output<T>(input: Input, futRes: Promise<ReadableStream<Uint8Arra
 
     (async () => {
         try {
-            let res = await futRes;
+            let res = await readableStream;
 
             if (canceled) {
                 res.cancel(canceled.reason);
@@ -40,7 +44,7 @@ export function Output<T>(input: Input, futRes: Promise<ReadableStream<Uint8Arra
             assert(data.status == Status.Ok, Error, `trailer status: ${data.status}`);
 
             let de = new Decode(new Bytes(data.bytes));
-            fut.resolve(f.call(de));
+            fut.resolve(decoder.call(de));
         } catch (error) {
             fut.reject(error)
             // output.cancle()

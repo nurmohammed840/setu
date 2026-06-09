@@ -31,31 +31,35 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
             args!("export function {ident}({fn_input}ctx: $.Context = {{}})"),
             |c| match output_ty {
                 FnOutputTy::Return(return_ty) => {
-                    c.line(args!("let [i, o] = $.rpc({index}, ctx, function () {{"));
+                    c.line("return $.rpc(");
                     c.scope(|c| {
+                        c.line(args!("{index}, ctx,"));
+                        c.line("function() {");
+                        c.scope(|c| {
+                            let fields = args
+                                .iter()
+                                .zip(input_ty)
+                                .enumerate()
+                                .map(|(key, (name, ty))| (name.as_ref(), ty, key as u32));
+
+                            ctx.struct_encoder(c, fields);
+                        });
+                        c.line("},");
+
                         if matches!(return_ty, Type::Tuple(tys) if tys.is_empty()) {
-                            return;
+                            return c.line("function() {}");
                         }
-                        let required = return_ty.optional().is_none();
-                        let decoder = ctx.serde_ty(return_ty, "decoder");
-                        c.line(args!(
-                            "return $.lipi.OutputDecoder(this, {decoder}, {required});"
-                        ));
+                        c.line("function() {");
+                        c.scope(|c| {
+                            let required = return_ty.optional().is_none();
+                            let decoder = ctx.serde_ty(return_ty, "decoder");
+                            c.line(args!(
+                                "return $.lipi.OutputDecoder(this, {decoder}, {required});"
+                            ));
+                        });
+                        c.line("}");
                     });
-                    c.line("});");
-
-                    c.line("i.sendAndClose(function (this: $.lipi.Encode) {");
-                    c.scope(|c| {
-                        let fields = args
-                            .iter()
-                            .zip(input_ty)
-                            .enumerate()
-                            .map(|(key, (name, ty))| (name.as_ref(), ty, key as u32));
-
-                        ctx.struct_encoder(c, fields);
-                    });
-                    c.line("});");
-                    c.line("return o;");
+                    c.line(");");
                 }
                 FnOutputTy::Generator { .. } => {}
             },

@@ -4,12 +4,20 @@ import { Output } from "./output.ts";
 import { Timeout } from "../timeout.ts";
 import { assert } from "../utils/common.ts";
 import { Decoder } from "../lipi/decoder.ts";
+import { Encode } from "../lipi/encoder.ts";
+import { encodeTrailer } from "../setu/frame.writer.ts";
 
 export class RPC {
     static URL = new URL("/", "https://localhost:443");
     static TIMEOUT = Timeout.minute(2);
 
-    static async call(id: number, input: Input, timeout: Timeout | null = RPC.TIMEOUT, url: URL = RPC.URL) {
+    static async call(
+        id: number,
+        body: BodyInit,
+        controller: AbortController,
+        timeout: Timeout | null = RPC.TIMEOUT,
+        url: URL = RPC.URL
+    ) {
         let headers: HeadersInit = {
             "content-type": "application/setu",
             "rpc-id": id.toString(),
@@ -17,11 +25,11 @@ export class RPC {
 
         let timer;
         if (timeout) {
-            timer = setTimeout(() => input.controller.abort(), timeout.duration());
+            timer = setTimeout(() => controller.abort(), timeout.duration());
             headers["rpc-timeout"] = timeout.toString();
         }
 
-        let res = await fetch(url, { method: "POST", headers, body: input.channel.stream, signal: input.controller.signal });
+        let res = await fetch(url, { method: "POST", headers, body, signal: controller.signal });
 
         clearTimeout(timer);
 
@@ -43,8 +51,17 @@ export interface Context {
     timeout?: Timeout | null
 }
 
-export function rpc<T>(id: number, { timeout, url }: Context, f: Decoder<T>) {
-    let input = new Input();
-    let output = Output<T>(input, RPC.call(id, input, timeout, url), f);
-    return [input, output] as const;
+export function rpc<T>(
+    id: number,
+    { timeout, url }: Context,
+    encoder: (this: Encode) => void,
+    decoder: Decoder<T>
+): Output<T> {
+    let controller = new AbortController();
+
+    let e = new Encode();
+    encoder.call(e);
+    let body = encodeTrailer(e.data());
+
+    return Output(controller, RPC.call(id, body, controller, timeout, url), decoder);
 }

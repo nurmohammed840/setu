@@ -180,7 +180,11 @@ impl Context {
     fn struct_encoder<'a, I>(&'a self, c: &mut CodeWriter, fields: I)
     where
         I: Iterator<Item = (&'a str, &'a Type, u32)>,
+        I: ExactSizeIterator,
     {
+        if fields.len() == 0 {
+            return c.line("$.lipi.StructEncoder(this, []);");
+        }
         c.line("$.lipi.StructEncoder(this, [");
         c.scope(|c| {
             for (name, ty, key) in fields {

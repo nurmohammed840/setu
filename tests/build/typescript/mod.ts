@@ -28,15 +28,17 @@ export interface say_hello {
 	input: HelloRequest,
 }
 export function say_hello(args: say_hello, ctx: $.Context = {}) {
-	let [i, o] = $.rpc(1, ctx, function () {
-		return $.lipi.OutputDecoder(this, HelloReply.decoder, true);
-	});
-	i.sendAndClose(function (this: $.lipi.Encode) {
-		$.lipi.StructEncoder(this, [
-			[0, args.input, HelloRequest.encoder],
-		]);
-	});
-	return o;
+	return $.rpc(
+		1, ctx,
+		function() {
+			$.lipi.StructEncoder(this, [
+				[0, args.input, HelloRequest.encoder],
+			]);
+		},
+		function() {
+			return $.lipi.OutputDecoder(this, HelloReply.decoder, true);
+		}
+	);
 }
 
 export interface add {
@@ -44,16 +46,18 @@ export interface add {
 	b: number,
 }
 export function add(args: add, ctx: $.Context = {}) {
-	let [i, o] = $.rpc(2, ctx, function () {
-		return $.lipi.OutputDecoder(this, this.I32, true);
-	});
-	i.sendAndClose(function (this: $.lipi.Encode) {
-		$.lipi.StructEncoder(this, [
-			[0, args.a, this.I32],
-			[1, args.b, this.I32],
-		]);
-	});
-	return o;
+	return $.rpc(
+		2, ctx,
+		function() {
+			$.lipi.StructEncoder(this, [
+				[0, args.a, this.I32],
+				[1, args.b, this.I32],
+			]);
+		},
+		function() {
+			return $.lipi.OutputDecoder(this, this.I32, true);
+		}
+	);
 }
 
 export interface find_in_string {
@@ -61,66 +65,72 @@ export interface find_in_string {
 	pat: string,
 }
 export function find_in_string(args: find_in_string, ctx: $.Context = {}) {
-	let [i, o] = $.rpc(3, ctx, function () {
-		return $.lipi.OutputDecoder(this, this.U32, false);
-	});
-	i.sendAndClose(function (this: $.lipi.Encode) {
-		$.lipi.StructEncoder(this, [
-			[0, args.input, this.Str],
-			[1, args.pat, this.Str],
-		]);
-	});
-	return o;
+	return $.rpc(
+		3, ctx,
+		function() {
+			$.lipi.StructEncoder(this, [
+				[0, args.input, this.Str],
+				[1, args.pat, this.Str],
+			]);
+		},
+		function() {
+			return $.lipi.OutputDecoder(this, this.U32, false);
+		}
+	);
 }
 
 export interface print {
 	msg: string,
 }
 export function print(args: print, ctx: $.Context = {}) {
-	let [i, o] = $.rpc(4, ctx, function () {
-	});
-	i.sendAndClose(function (this: $.lipi.Encode) {
-		$.lipi.StructEncoder(this, [
-			[0, args.msg, this.Str],
-		]);
-	});
-	return o;
+	return $.rpc(
+		4, ctx,
+		function() {
+			$.lipi.StructEncoder(this, [
+				[0, args.msg, this.Str],
+			]);
+		},
+		function() {}
+	);
 }
 
 export interface store {
 	msg: string,
 }
 export function store(args: store, ctx: $.Context = {}) {
-	let [i, o] = $.rpc(5, ctx, function () {
-	});
-	i.sendAndClose(function (this: $.lipi.Encode) {
-		$.lipi.StructEncoder(this, [
-			[0, args.msg, this.Str],
-		]);
-	});
-	return o;
+	return $.rpc(
+		5, ctx,
+		function() {
+			$.lipi.StructEncoder(this, [
+				[0, args.msg, this.Str],
+			]);
+		},
+		function() {}
+	);
 }
 
 export function load(ctx: $.Context = {}) {
-	let [i, o] = $.rpc(6, ctx, function () {
-		return $.lipi.OutputDecoder(this, this.Str, false);
-	});
-	i.sendAndClose(function (this: $.lipi.Encode) {
-		$.lipi.StructEncoder(this, [
-		]);
-	});
-	return o;
+	return $.rpc(
+		6, ctx,
+		function() {
+			$.lipi.StructEncoder(this, []);
+		},
+		function() {
+			return $.lipi.OutputDecoder(this, this.Str, false);
+		}
+	);
 }
 
 export function what_is_my_ip(ctx: $.Context = {}) {
-	let [i, o] = $.rpc(7, ctx, function () {
-		return $.lipi.OutputDecoder(this, this.Str, true);
-	});
-	i.sendAndClose(function (this: $.lipi.Encode) {
-		$.lipi.StructEncoder(this, [
-		]);
-	});
-	return o;
+	return $.rpc(
+		7, ctx,
+		function() {
+			$.lipi.StructEncoder(this, []);
+		},
+		function() {
+			return $.lipi.OutputDecoder(this, this.Str, true);
+		}
+	);
 }
 
 export interface fetch_user_ids {
