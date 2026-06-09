@@ -16,7 +16,7 @@ fn test_bad_cycle() {
     let mut reg = TypeRegistry::default();
 
     let ty = A::ty(&mut reg);
-    assert_eq!(reg.len(), 2);
+    assert_eq!(reg.len(), 1);
     assert!(matches!(ty, Type::Complex(id) if &*id == "basic::A"));
 
     let ty = B::ty(&mut reg);

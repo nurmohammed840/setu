@@ -1,5 +1,3 @@
-use crate::Status;
-use crate::frame::FrameHeader;
 use lipi::{Decode, Encode};
 
 #[derive(Encode, Decode, Default, Debug)]
@@ -8,9 +6,13 @@ pub struct Trailer {
     pub error: Option<String>,
 }
 
-impl Trailer {
-    pub(crate) const OK_ENCODED: [u8; 2] = [FrameHeader::new(Some(Status::Ok), 1).encode(), 0];
+impl From<String> for Trailer {
+    fn from(error: String) -> Self {
+        Self { error: Some(error) }
+    }
+}
 
+impl Trailer {
     pub fn new() -> Self {
         Self { error: None }
     }

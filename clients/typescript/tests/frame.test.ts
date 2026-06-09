@@ -6,7 +6,7 @@ import { Stream } from "../src/utils/stream.ts";
 
 
 Deno.test("Setu Frame Header", () => {
-    let raw = FrameHeader.new({ lenSize: 4, trailer: Status.Cancelled }).encode();
+    let raw = FrameHeader.new({ lenSize: 4, status: Status.Cancelled }).encode();
     assertEquals(raw, 0b1_11_1_0);
 
     let h = FrameHeader.parse(raw);
@@ -24,15 +24,12 @@ Deno.test("LenBE basic", () => {
 
 Deno.test("last frame", async () => {
     let frame = encodeAsLastFrame(new TextEncoder().encode("67"));
-    assertEquals([...frame], [0, 2, 54, 55, 2, 0]);
+    assertEquals([...frame], [2, 2, 54, 55]);
 
     let reader = new FrameDecoder(new Stream(ReadableStream.from([frame]).getReader()));
     let { data } = await reader.parseFrame();
-    let trailer = await reader.parseFrame();
 
-    assert(data.type == "message");
+    assert(data.type == "trailer");
+    assert(data.status == Status.Ok);
     assertEquals([...data.bytes], [54, 55]);
-
-    assert(trailer.data.type == "trailer");
-    assert(trailer.data.status == Status.Ok);
 });

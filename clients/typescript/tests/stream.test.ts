@@ -36,8 +36,3 @@ Deno.test("stream eof", async () => {
     let de = createStream([1], [2]);
     await assertRejects(async () => await de.readBytes(3));
 });
-
-Deno.test("encode as frame", () => {
-    let raw = encodeAsLastFrame(new TextEncoder().encode("67"));
-    assertEquals!([...raw], [0, 2, 54, 55, 2, 0]);
-});

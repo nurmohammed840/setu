@@ -1,11 +1,9 @@
 use bytes::Bytes;
+use lipi::Encode;
 
-use crate::Status;
+use crate::frame::{FrameHeader, LenBE};
 use crate::transport::http::{HttpResponse, HttpWriter};
-use crate::{
-    Trailer,
-    frame::{FrameHeader, LenBE},
-};
+use crate::{Status, Trailer};
 
 impl HttpResponse {
     pub fn create_setu_stream(mut self) -> Result<FrameEncoder, h2::Error> {
@@ -22,7 +20,12 @@ pub struct FrameEncoder {
 
 impl FrameEncoder {
     pub fn send_error(mut self, status: Status, reason: String) -> Result<(), h2::Error> {
-        let msg = reason.into_bytes();
+        debug_assert!(status != Status::Ok);
+
+        let Ok(msg) = Trailer::from(reason).to_bytes() else {
+            return Ok(());
+        };
+
         self.stream
             .write_unbound(encode_header(Some(status), &msg))?;
 
@@ -34,12 +37,11 @@ impl FrameEncoder {
         self.stream.write(msg).await
     }
 
-    pub fn send_with_trailer(mut self, msg: Vec<u8>) -> Result<(), h2::Error> {
-        self.stream.write_unbound(encode_header(None, &msg))?;
-        self.stream.write_unbound(msg)?;
+    pub fn end(mut self, msg: Vec<u8>) -> Result<(), h2::Error> {
+        self.stream
+            .write_unbound(encode_header(Some(Status::Ok), &msg))?;
 
-        const TRAILER: Bytes = Bytes::from_static(&Trailer::OK_ENCODED);
-        self.stream.end_write_unbound(TRAILER)
+        self.stream.end_write_unbound(msg)
     }
 }
 

@@ -146,7 +146,7 @@ async fn send_stream(mut output: FrameEncoder, resume: MaybeResumed) -> Option<F
             Err(_) => None,
         },
         GeneratorState::Complete(()) => {
-            let _ = output.send_with_trailer(data);
+            let _ = output.end(data);
             None
         }
     }
@@ -222,7 +222,7 @@ fn send_output(output: FrameEncoder, result: Option<io::Result<Vec<u8>>>) {
             let _ = output.send_error(Status::Internal, err.to_string());
         }
         Ok(buf) => {
-            let _ = output.send_with_trailer(buf);
+            let _ = output.end(buf);
         }
     }
 }
@@ -245,14 +245,8 @@ async fn decode_args<Args: DecodeOwned>(mut input: HttpBody) -> Result<Args> {
 
 async fn decode_last_msg(stream: &mut HttpBody) -> Result<RawBytes> {
     let mut de = FrameDecoder::default();
-    let bytes = de
-        .parse_frame(stream)
-        .await?
-        .data
-        .message()
-        .ok_or("expected message frame")?;
 
-    let (status, _) = de
+    let (status, bytes) = de
         .parse_frame(stream)
         .await?
         .data
@@ -260,7 +254,7 @@ async fn decode_last_msg(stream: &mut HttpBody) -> Result<RawBytes> {
         .ok_or("expected trailer frame")?;
 
     if status != Status::Ok {
-        return Err("unexpected status code".into());
+        return Err(format!("unexpected status: {status:?}").into());
     }
     Ok(bytes)
 }

@@ -21,6 +21,7 @@ pub enum Frame {
 }
 
 impl Frame {
+    #[allow(dead_code)]
     pub fn message(self) -> Option<RawBytes> {
         match self {
             Frame::Message(data) => Some(data),
@@ -228,12 +229,12 @@ pub struct FrameHeader {
 }
 
 impl FrameHeader {
-    pub const fn new(trailer_status: Option<Status>, len_size: u8) -> FrameHeader {
+    pub const fn new(status: Option<Status>, len_size: u8) -> FrameHeader {
         FrameHeader {
             is_compressed: false,
-            is_trailer: trailer_status.is_some(),
+            is_trailer: status.is_some(),
             len_size: len_size - 1,
-            code: match trailer_status {
+            code: match status {
                 Some(status) => status.code(),
                 None => 0,
             },

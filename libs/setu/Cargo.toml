@@ -13,7 +13,7 @@ description = "Remote Procedure Call (RPC) framework"
 # Async
 nio = { version = "0.1.4", features = ["tokio-io"] }
 futures = "0.3"
-async-gen = "0.2"
+async-gen = "0.3"
 
 # Encoder
 lipi = { path = "../lipi", version = "0.1" }

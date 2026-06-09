@@ -26,7 +26,7 @@ export interface TrailerFrame {
 interface FrameHeaderArgs {
     lenSize: number,
     isCompressed?: boolean,
-    trailer?: Status
+    status?: Status
 }
 
 export class FrameHeader {
@@ -37,11 +37,11 @@ export class FrameHeader {
         public code: number,
     ) { }
 
-    static new = ({ lenSize, trailer, isCompressed }: FrameHeaderArgs) => new FrameHeader(
+    static new = ({ lenSize, status, isCompressed }: FrameHeaderArgs) => new FrameHeader(
         !!isCompressed,
-        trailer != undefined,
+        status != undefined,
         lenSize - 1,
-        trailer ?? 0,
+        status ?? 0,
     );
 
     static parse = (byte: number) => new FrameHeader(
