@@ -1,11 +1,11 @@
 mod common;
 mod greeting;
-mod outgoing;
+mod stream;
 mod stateful;
 
 pub use common::*;
 pub use greeting::*;
-pub use outgoing::*;
+pub use stream::*;
 pub use stateful::*;
 
 setu::export! {
@@ -21,6 +21,6 @@ setu::export! {
     fn load() = 6;
     fn what_is_my_ip() = 7;
 
-    // outgoing
+    // stream
     fn fetch_user_ids(count) = 8;
 }

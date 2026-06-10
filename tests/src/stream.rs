@@ -7,5 +7,6 @@ pub fn fetch_user_ids(count: u8) -> impl Output {
             nio::sleep(Duration::from_secs(1)).await;
             yield id;
         }
+        return "Bye!";
     }
 }

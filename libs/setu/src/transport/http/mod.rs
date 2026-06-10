@@ -100,8 +100,8 @@ impl HttpServer {
             let h = h.clone();
 
             nio::spawn_pinned(|| async move {
-                if let Err(err) = HttpServer::serve(tls, tcp, h).await {
-                    println!("http-error: {err:?}");
+                if let Err(_err) = HttpServer::serve(tls, tcp, h).await {
+                    // println!("http-error: {_err:?}");
                 }
             });
         }

@@ -147,6 +147,8 @@ export function fetch_user_ids(args: fetch_user_ids, ctx: $.Context = {}) {
 		function() {
 			return $.lipi.OutputDecoder(this, this.U8, true);
 		},
-		function() {}
+		function() {
+			return $.lipi.OutputDecoder(this, this.Str, true);
+		},
 	);
 }
