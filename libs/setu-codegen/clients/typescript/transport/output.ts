@@ -4,7 +4,6 @@ import { Status } from "../status.ts";
 import { Bytes } from "../utils/bytes.ts";
 import { assert } from "../utils/common.ts";
 import { Stream } from "../utils/stream.ts";
-import { Input } from "./input.ts";
 
 export interface Output<T> extends Promise<T> {
     cancle(reason?: any): void;
@@ -12,7 +11,7 @@ export interface Output<T> extends Promise<T> {
 
 export function Output<T>(
     controller: AbortController,
-    readableStream: Promise<ReadableStream<Uint8Array>>,
+    body: Promise<ReadableStream<Uint8Array>>,
     decoder: Decoder<T>
 ) {
     let fut = Promise.withResolvers<T>();
@@ -29,7 +28,7 @@ export function Output<T>(
 
     (async () => {
         try {
-            let res = await readableStream;
+            let res = await body;
 
             if (canceled) {
                 res.cancel(canceled.reason);
@@ -38,8 +37,8 @@ export function Output<T>(
 
             stream = new Stream(res.getReader());
             let reader = new FrameDecoder(stream);
-            let { data } = await reader.parseFrame();
 
+            let { data } = await reader.parseFrame();
             assert(data.type == "trailer", Error, `expected trailer`);
             assert(data.status == Status.Ok, Error, `trailer status: ${data.status}`);
 
@@ -52,4 +51,60 @@ export function Output<T>(
     })();
 
     return output;
+}
+
+export interface SSE<T, R> extends AsyncGenerator<T> {
+    cancle(reason?: any): void;
+    output(): Promise<R | undefined>;
+}
+
+export function SSE<T, R>(
+    controller: AbortController,
+    body: Promise<ReadableStream<Uint8Array>>,
+    yielder: Decoder<T>,
+    output: Decoder<R>,
+): SSE<T, R> {
+    let canceled: { reason?: any } | undefined;
+    let stream: Stream | undefined;
+    let fut = Promise.withResolvers<R | undefined>();
+
+    let asyncIter = (async function* () {
+        try {
+            let res = await body;
+            if (canceled) {
+                res.cancel(canceled.reason);
+                controller.abort(canceled.reason);
+                return
+            }
+
+            stream = new Stream(res.getReader());
+            let reader = new FrameDecoder(stream);
+
+            while (true) {
+                let { data } = await reader.parseFrame();
+                let de = new Decode(new Bytes(data.bytes));
+                if (data.type == "trailer") {
+                    assert(data.status == Status.Ok, Error, `trailer status: ${data.status}`);
+                    return fut.resolve(output.call(de));
+                }
+                yield yielder.call(de);
+            }
+        }
+        finally {
+            fut.resolve(undefined);
+        }
+    })();
+
+    return Object.assign(asyncIter, {
+        cancle(reason?: any) {
+            canceled = { reason };
+            asyncIter.return(undefined);
+
+            stream?.reader.cancel(reason);
+            controller.abort(reason);
+        },
+        output() {
+            return fut.promise
+        }
+    })
 }

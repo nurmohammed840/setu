@@ -29,11 +29,12 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
 
         c.block(
             args!("export function {ident}({fn_input}ctx: $.Context = {{}})"),
-            |c| match output_ty {
-                FnOutputTy::Return(return_ty) => {
-                    c.line("return $.rpc(");
+            |c| {
+                let mut fn_call_body = |t: &str, return_tys: &[&Type]| {
+                    c.line(args!("return $.{t}("));
                     c.scope(|c| {
                         c.line(args!("{index}, ctx,"));
+
                         c.line("function() {");
                         c.scope(|c| {
                             let fields = args
@@ -46,22 +47,35 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                         });
                         c.line("},");
 
-                        if matches!(return_ty, Type::Tuple(tys) if tys.is_empty()) {
-                            return c.line("function() {}");
+                        for ty in return_tys {
+                            if matches!(ty, Type::Tuple(tys) if tys.is_empty()) {
+                                c.line("function() {}");
+                                continue;
+                            }
+                            c.line("function() {");
+                            c.scope(|c| {
+                                let required = ty.optional().is_none();
+                                let decoder = ctx.serde_ty(ty, "decoder");
+                                c.line(args!(
+                                    "return $.lipi.OutputDecoder(this, {decoder}, {required});"
+                                ));
+                            });
+                            c.line("},");
                         }
-                        c.line("function() {");
-                        c.scope(|c| {
-                            let required = return_ty.optional().is_none();
-                            let decoder = ctx.serde_ty(return_ty, "decoder");
-                            c.line(args!(
-                                "return $.lipi.OutputDecoder(this, {decoder}, {required});"
-                            ));
-                        });
-                        c.line("}");
                     });
                     c.line(");");
+                };
+                match output_ty {
+                    FnOutputTy::Return(return_ty) => {
+                        fn_call_body("rpc", &[return_ty]);
+                    }
+                    FnOutputTy::Generator {
+                        return_ty,
+                        yield_ty,
+                    } => {
+                        fn_call_body("sse", &[yield_ty, return_ty]);
+                    }
                 }
-                FnOutputTy::Generator { .. } => {}
             },
         );
     }

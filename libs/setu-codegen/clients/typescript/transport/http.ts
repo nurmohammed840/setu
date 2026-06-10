@@ -1,6 +1,5 @@
 import { ProtocolError } from "../errors.ts";
-import { Input } from "./input.ts";
-import { Output } from "./output.ts";
+import { Output, SSE } from "./output.ts";
 import { Timeout } from "../timeout.ts";
 import { assert } from "../utils/common.ts";
 import { Decoder } from "../lipi/decoder.ts";
@@ -41,7 +40,6 @@ export class RPC {
 
         assert(contentType == "application/setu", ProtocolError, () => `unexpected content-type: ${contentType ?? "none"}`);
         assert(res.body, ProtocolError, "No response body");
-
         return res.body;
     }
 }
@@ -64,4 +62,20 @@ export function rpc<T>(
     let body = encodeTrailer(e.data());
 
     return Output(controller, RPC.call(id, body, controller, timeout, url), decoder);
+}
+
+export function sse<T, R>(
+    id: number,
+    { timeout, url }: Context,
+    encoder: (this: Encode) => void,
+    yielder: Decoder<T>,
+    output: Decoder<R>,
+): SSE<T, R> {
+    let controller = new AbortController();
+
+    let e = new Encode();
+    encoder.call(e);
+    let body = encodeTrailer(e.data());
+
+    return SSE(controller, RPC.call(id, body, controller, timeout, url), yielder, output);
 }

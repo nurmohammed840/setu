@@ -37,7 +37,7 @@ export function say_hello(args: say_hello, ctx: $.Context = {}) {
 		},
 		function() {
 			return $.lipi.OutputDecoder(this, HelloReply.decoder, true);
-		}
+		},
 	);
 }
 
@@ -56,7 +56,7 @@ export function add(args: add, ctx: $.Context = {}) {
 		},
 		function() {
 			return $.lipi.OutputDecoder(this, this.I32, true);
-		}
+		},
 	);
 }
 
@@ -75,7 +75,7 @@ export function find_in_string(args: find_in_string, ctx: $.Context = {}) {
 		},
 		function() {
 			return $.lipi.OutputDecoder(this, this.U32, false);
-		}
+		},
 	);
 }
 
@@ -117,7 +117,7 @@ export function load(ctx: $.Context = {}) {
 		},
 		function() {
 			return $.lipi.OutputDecoder(this, this.Str, false);
-		}
+		},
 	);
 }
 
@@ -129,7 +129,7 @@ export function what_is_my_ip(ctx: $.Context = {}) {
 		},
 		function() {
 			return $.lipi.OutputDecoder(this, this.Str, true);
-		}
+		},
 	);
 }
 
@@ -137,4 +137,16 @@ export interface fetch_user_ids {
 	count: number,
 }
 export function fetch_user_ids(args: fetch_user_ids, ctx: $.Context = {}) {
+	return $.sse(
+		8, ctx,
+		function() {
+			$.lipi.StructEncoder(this, [
+				[0, args.count, this.U8],
+			]);
+		},
+		function() {
+			return $.lipi.OutputDecoder(this, this.U8, true);
+		},
+		function() {}
+	);
 }
