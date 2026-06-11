@@ -1,12 +1,14 @@
 mod common;
 mod greeting;
 mod stream;
+mod data;
 mod stateful;
 
 pub use common::*;
 pub use greeting::*;
 pub use stream::*;
 pub use stateful::*;
+pub use data::*;
 
 setu::export! {
     as TestSuite;
@@ -23,4 +25,8 @@ setu::export! {
 
     // stream
     fn fetch_user_ids(count) = 8;
+
+    // ----------
+    fn load_data() = 10_1;
+    fn echo_data(input) = 10_2;
 }

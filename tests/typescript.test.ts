@@ -1,6 +1,7 @@
 #!/usr/bin/env -S deno run -A --unsafely-ignore-certificate-errors
 import { assertEquals } from "jsr:@std/assert";
 import * as api from "./build/typescript/mod.ts";
+import { Range } from "./build/typescript/utils.ts";
 
 // greeting
 assertEquals(await api.say_hello({ input: { name: "Nur" } }), { message: "Hello Nur!" });
@@ -18,6 +19,16 @@ await api.store({ msg: "Top Secret! Shhhh...!" });
 console.log(await api.load());
 console.log("My IP:", await api.what_is_my_ip());
 
+// ----------------------------------------------------------
+
+for (let _ of Range(0, 3)) {
+    let input = await api.load_number();
+    let output = await api.echo_number({ input });
+    assertEquals(input, output);
+}
+
+// -------------------------- SSE ---------------------------
+
 let ids = api.fetch_user_ids({ count: 3 });
 async function run() {
     for await (const id of ids) {
@@ -26,3 +37,4 @@ async function run() {
 }
 run();
 assertEquals(await ids.output(), "Bye!");
+

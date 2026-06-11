@@ -1,0 +1,17 @@
+[package]
+name = "randox"
+version = "0.1.0"
+edition = "2024"
+
+license = "MIT"
+keywords = ["rand", "rnd"]
+authors = ["Nur <nurmohammed840@gmail.com>"]
+repository = "https://github.com/nurmohammed840/setu"
+description = "Rand derive macros"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "2"
+quote2 = "0.9"

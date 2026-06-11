@@ -5,5 +5,8 @@ edition = "2024"
 
 [dependencies]
 nio = "*"
-setu = { path = "../libs/setu", version = "*" }
-setu-codegen = { path = "../libs/setu-codegen", version = "0.1" }
+rand = "*"
+randox = { path = "../crates/randox" }
+
+setu = { path = "../libs/setu" }
+setu-codegen = { path = "../libs/setu-codegen" }

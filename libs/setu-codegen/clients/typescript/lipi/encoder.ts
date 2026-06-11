@@ -63,15 +63,15 @@ export class Encode extends Writer {
         this.append(new Uint8Array(buf));
     }
 
-    U16 = function Uint(this: Encode, num: number) {
+    U16 = function UInt(this: Encode, num: number) {
         this.writeVarint(checkOverflowUint(num, 16))
     }
 
-    U32 = function Uint(this: Encode, num: number) {
+    U32 = function UInt(this: Encode, num: number) {
         this.writeVarint(checkOverflowUint(num, 32))
     }
 
-    U64 = function Uint(this: Encode, num: number | bigint) {
+    U64 = function UInt(this: Encode, num: number | bigint) {
         this.writeVarint(num)
     }
 
