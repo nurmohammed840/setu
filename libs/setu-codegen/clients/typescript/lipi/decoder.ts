@@ -4,6 +4,7 @@ import { decodeVarInt } from "./varint.ts";
 import { DataType } from "./type.ts";
 import { zigzagDecode } from "./zigzag.ts";
 import { bitvecToBools, boolPackedLen } from "../bitset.ts";
+import { skip_field } from "./skip.ts";
 
 const { expected } = DataType;
 const UTF8_DECODER = new TextDecoder();
@@ -39,6 +40,15 @@ export class Deserialize {
 
     read_len_and_ty() {
         return this.read_field_id_and_ty();
+    }
+
+    next_field_id_and_ty(): undefined | [number, DataType] {
+        let [id, ty] = this.read_field_id_and_ty();
+        if (ty == DataType.StructEnd) {
+            assert(id == 0, TypeError, () => `invalid struct end id: ${id}, expected \`0\``);
+            return undefined;
+        }
+        return [id, ty] as const
     }
 }
 
@@ -203,14 +213,7 @@ function ListType<T, N>(de: Decoder<N>, from: (_: { length: number }, map: () =>
 
 // ================================================================================
 
-function next_field_id_and_ty(de: Deserialize): undefined | [number, DataType] {
-    let [id, ty] = de.read_field_id_and_ty();
-    if (ty == DataType.StructEnd) {
-        assert(id == 0, TypeError, () => `invalid struct end id: ${id}, expected \`0\``);
-        return undefined;
-    }
-    return [id, ty] as const
-}
+
 
 type Schema = readonly [
     name: string,
@@ -240,19 +243,22 @@ export function StructDecoder<const T extends readonly Schema[]>(self: Decode, s
     let obj = {} as Transform<T>;
 
     let header: [number, DataType] | undefined;
-    while (header = next_field_id_and_ty(self)) {
+    while (header = self.next_field_id_and_ty()) {
         let [field_id, field_ty] = header;
-        // match 
-        for (let [name, id, decoder] of schemas) {
-            if (id == field_id) {
-                if (decoder.name == "Bool") {
-                    (obj as any)[name] = DataType.asBool(field_ty);
-                } else {
-                    expectedTy(decoder, field_ty);
-                    (obj as any)[name] = decoder.call(self);
-                }
-                break;
-            }
+
+        let field = schemas.find(([_, id]) => id === field_id);
+        if (!field) {
+            skip_field(self, field_id, field_ty);
+            continue;
+        }
+        
+        let [name, _, decoder] = field;
+     
+        if (decoder.name == "Bool") {
+            (obj as any)[name] = DataType.asBool(field_ty);
+        } else {
+            expectedTy(decoder, field_ty);
+            (obj as any)[name] = decoder.call(self);
         }
     }
 
@@ -269,7 +275,7 @@ export function StructDecoder<const T extends readonly Schema[]>(self: Decode, s
 export function OutputDecoder<T>(self: Decode, de: Decoder<T>, required: true): T;
 export function OutputDecoder<T>(self: Decode, de: Decoder<T>, required: false): T | undefined;
 export function OutputDecoder<T>(self: Decode, decoder: Decoder<T>, required: boolean) {
-    let header = next_field_id_and_ty(self);
+    let header = self.next_field_id_and_ty();
     let val: T | undefined;
     if (header) {
         let [field_id, field_ty] = header;
