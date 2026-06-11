@@ -1,4 +1,4 @@
-use crate::convert::DataType;
+use crate::DataType;
 use std::fmt;
 
 #[macro_export]

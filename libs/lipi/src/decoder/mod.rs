@@ -1,5 +1,7 @@
+mod skip;
+
 use crate::assert_or_err;
-use crate::{Result, bit_set, convert::DataType, errors, utils, varint, zig_zag};
+use crate::{DataType, Result, bit_set, errors, utils, varint, zig_zag};
 use bit_set::bitvec_to_bools;
 use std::{
     collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, LinkedList, VecDeque},
@@ -304,7 +306,7 @@ macro_rules! tuples {
                 while let Some((key, _ty)) = fd.next_field_id_and_ty()? {
                     match key {
                         $($idx => $name = fd.decode(_ty, concat!("tuple ", $idx))?,)*
-                        _ => {}
+                        _ => fd.skip_field(key, _ty)?,
                     }
                 }
 
