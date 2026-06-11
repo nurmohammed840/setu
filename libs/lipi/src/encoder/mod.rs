@@ -1,9 +1,15 @@
+mod field;
+mod optional_field;
+
 use super::DataType;
 use crate::bit_set;
 use crate::varint::{LEB128, Leb128Buf};
 use crate::{utils, zig_zag};
 use std::collections::{BTreeMap, HashMap};
 use std::io::{self, Result, Write};
+
+pub use field::Field;
+pub use optional_field::OptionalField;
 
 pub fn encode_field_id_and_ty(
     writer: &mut (impl Write + ?Sized),
@@ -81,53 +87,6 @@ pub trait Encode {
         let mut buf = Vec::new();
         self.encode(&mut buf)?;
         Ok(buf)
-    }
-}
-
-// ------------------------------------------------------------------------
-
-pub trait Field {
-    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u32) -> Result<()>;
-}
-
-impl Field for bool {
-    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u32) -> Result<()> {
-        encode_field_id_and_ty(writer, id, DataType::from(*self))
-    }
-}
-
-impl<T: Encode + ?Sized> Field for T {
-    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u32) -> Result<()> {
-        encode_field_id_and_ty(writer, id, T::TY)?;
-        T::encode(self, writer)
-    }
-}
-
-// ------------------------------------------------------------------------
-
-pub trait OptionalField {
-    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()>;
-}
-
-impl OptionalField for bool {
-    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
-        encode_field_id_and_ty(writer, id.into(), DataType::from(*self))
-    }
-}
-
-impl<T: OptionalField> OptionalField for Option<T> {
-    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
-        match self {
-            Some(val) => OptionalField::encode(val, writer, id),
-            None => Ok(()),
-        }
-    }
-}
-
-impl<T: Encode + ?Sized> OptionalField for T {
-    fn encode(&self, writer: &mut (impl Write + ?Sized), id: u16) -> Result<()> {
-        encode_field_id_and_ty(writer, id.into(), T::TY)?;
-        T::encode(self, writer)
     }
 }
 
@@ -343,27 +302,11 @@ where
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    fn is_encoder<E: Encode>() {}
-    fn encoder<E: Encode>(v: E) {
-        println!("Type: {:?}, {:#?}", E::TY, v.to_bytes());
-    }
-    #[test]
-    fn test_name() {
-        is_encoder::<(Option<u16>, Option<u16>)>();
-        is_encoder::<Box<dyn std::error::Error + Send + Sync>>();
-        is_encoder::<crate::Result<bool>>();
-        encoder::<crate::Result<Option<()>>>(Ok(Some(())));
-    }
-}
-
 // --------------------------------- Other ----------------------------------
 
 /// Tuples encoded as Struct.
 macro_rules! tuples {
-    [Len: $len:tt $($name:tt : $idx:tt)*] => {
+    [$($name:tt : $idx:tt)*] => {
         impl<$($name,)*> Encode for ($($name,)*)
         where
             $($name: OptionalField,)*
@@ -377,19 +320,19 @@ macro_rules! tuples {
     }
 }
 
-tuples! { Len: 0 }
-tuples! { Len: 1 T0:0 }
-tuples! { Len: 2 T0:0 T1:1 }
-tuples! { Len: 3 T0:0 T1:1 T2:2 }
-tuples! { Len: 4 T0:0 T1:1 T2:2 T3:3 }
-tuples! { Len: 5 T0:0 T1:1 T2:2 T3:3 T4:4 }
-tuples! { Len: 6 T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 }
-tuples! { Len: 7 T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 }
-tuples! { Len: 8 T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 }
-tuples! { Len: 9 T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 }
-tuples! { Len:10 T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 }
-tuples! { Len:11 T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 }
-tuples! { Len:12 T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 T11:11 }
-tuples! { Len:13 T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 T11:11 T12:12 }
-tuples! { Len:14 T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 T11:11 T12:12 T13:13 }
-tuples! { Len:15 T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 T11:11 T12:12 T13:13 T14:14 }
+tuples! { }
+tuples! { T0:0 }
+tuples! { T0:0 T1:1 }
+tuples! { T0:0 T1:1 T2:2 }
+tuples! { T0:0 T1:1 T2:2 T3:3 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 T11:11 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 T11:11 T12:12 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 T11:11 T12:12 T13:13 }
+tuples! { T0:0 T1:1 T2:2 T3:3 T4:4 T5:5 T6:6 T7:7 T8:8 T9:9 T10:10 T11:11 T12:12 T13:13 T14:14 }
