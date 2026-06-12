@@ -216,8 +216,8 @@ function ListType<T, N>(de: Decoder<N>, from: (_: { length: number }, map: () =>
 
 
 type Schema = readonly [
-    name: string,
     id: number,
+    name: string,
     decoder: Decoder<unknown>,
     required: boolean
 ];
@@ -228,15 +228,15 @@ type Schema = readonly [
 //
 // ## `E[3] extends true`
 // is required == true
-//   ? use name (E[0]) as key
+//   ? use name (E[1]) as key
 //   : ignore
 //
 // where value is ReturnType of decoder (E[2]) function.
 type Transform<T extends readonly Schema[]> =
     // required fields
-    { [E in T[number]as E[3] extends true ? E[0] : never]: ReturnType<E[2]>; }
+    { [E in T[number]as E[3] extends true ? E[1] : never]: ReturnType<E[2]>; }
     // optional fields
-    & { [E in T[number]as E[3] extends false ? E[0] : never]?: ReturnType<E[2]>; }
+    & { [E in T[number]as E[3] extends false ? E[1] : never]?: ReturnType<E[2]>; }
 
 
 export function StructDecoder<const T extends readonly Schema[]>(self: Decode, schemas: T) {
@@ -246,13 +246,13 @@ export function StructDecoder<const T extends readonly Schema[]>(self: Decode, s
     while (header = self.next_field_id_and_ty()) {
         let [field_id, field_ty] = header;
 
-        let field = schemas.find(([_, id]) => id === field_id);
+        let field = schemas.find(([id]) => id === field_id);
         if (!field) {
             skip_field(self, field_id, field_ty);
             continue;
         }
         
-        let [name, _, decoder] = field;
+        let [_, name, decoder] = field;
      
         if (decoder.name == "Bool") {
             (obj as any)[name] = DataType.asBool(field_ty);

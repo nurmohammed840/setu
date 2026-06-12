@@ -190,7 +190,7 @@ impl Context {
         c.scope(|c| {
             for (name, ty, key) in fields {
                 let decoder = self.serde_ty(ty, "encoder");
-                c.line(args!("[{key}, args.{name}, {decoder}],",));
+                c.line(args!("[{key}, z.{name}, {decoder}],",));
             }
         });
         c.line("]);");

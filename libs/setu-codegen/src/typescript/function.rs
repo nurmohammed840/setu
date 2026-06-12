@@ -22,7 +22,7 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
             c.block(args!("export interface {ident}"), |c| {
                 ctx.write_object_tys(c, ',', args.iter().zip(input_ty));
             });
-            args!("args: {ident}, ")
+            args!("z: {ident}, ")
         } else {
             args!("")
         };
