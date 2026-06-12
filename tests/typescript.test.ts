@@ -1,5 +1,5 @@
 #!/usr/bin/env -S deno run -A --unsafely-ignore-certificate-errors
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals, assert } from "jsr:@std/assert";
 import * as api from "./build/typescript/mod.ts";
 import { Range } from "./build/typescript/utils.ts";
 
@@ -22,9 +22,9 @@ console.log("My IP:", await api.what_is_my_ip());
 // ----------------------------------------------------------
 
 for (let _ of Range(0, 3)) {
-    let input = await api.load_number();
-    let output = await api.echo_number({ input });
-    assertEquals(input, output);
+    let left = await api.random_data();
+    let right = await api.echo_data({ input: left });
+    assert(await api.compare_data({ left, right }));
 }
 
 // -------------------------- SSE ---------------------------

@@ -1,5 +1,6 @@
 mod common;
 mod greeting;
+mod utils;
 mod stream;
 mod data;
 mod stateful;
@@ -27,6 +28,7 @@ setu::export! {
     fn fetch_user_ids(count) = 8;
 
     // ----------
-    fn load_data() = 10_1;
+    fn random_data() = 10_1;
     fn echo_data(input) = 10_2;
+    fn compare_data(left, right) = 10_3;
 }

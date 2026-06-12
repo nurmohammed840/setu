@@ -146,6 +146,7 @@ impl Context {
             Type::I32 => f.write_str("this.I32"),
             Type::I64 => f.write_str("this.I64"),
 
+            Type::Bool => f.write_str("this.Bool"),
             Type::String => f.write_str("this.Str"),
 
             Type::Array { ty, .. } | Type::List { ty, .. } => match ty.as_ref() {

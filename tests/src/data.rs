@@ -2,7 +2,9 @@ use rand::random;
 use randox::Randox;
 use setu::Message;
 
-#[derive(Debug, Message, Randox)]
+use crate::utils::rand_string;
+
+#[derive(Debug, Message, Randox, PartialEq)]
 pub struct Data {
     #[key = 1]
     pub u8: u8,
@@ -26,12 +28,23 @@ pub struct Data {
     pub f32: f32,
     #[key = 10]
     pub f64: f64,
+
+    #[key = 11]
+    pub bool: bool,
+
+    #[key = 12]
+    #[sample(rand_string(0..32))]
+    pub string: String,
 }
 
-pub async fn load_data() -> Data {
+pub async fn random_data() -> Data {
     random()
 }
 
 pub async fn echo_data(input: Data) -> Data {
     input
+}
+
+pub async fn compare_data(left: Data, right: Data) -> bool {
+    left == right
 }
