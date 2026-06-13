@@ -23,14 +23,14 @@ pub fn is_numeric(attrs: &[Attribute]) -> bool {
         .any(|attr| matches!(&attr.meta, Meta::Path(path) if path.is_ident("numeric")))
 }
 
-pub fn get_repr(attrs: &[Attribute]) -> Option<TokenStream> {
+pub fn get_repr(attrs: &[Attribute]) -> Option<&TokenStream> {
     attrs.iter().find_map(|attr| match &attr.meta {
-        Meta::List(list) => list.path.is_ident("repr").then(|| list.tokens.clone()),
+        Meta::List(list) => list.path.is_ident("repr").then_some(&list.tokens),
         _ => None,
     })
 }
 
-pub fn get_numeric_ty(attrs: &[Attribute]) -> Option<TokenStream> {
+pub fn get_numeric_ty(attrs: &[Attribute]) -> Option<&TokenStream> {
     is_numeric(attrs).then(|| get_repr(attrs))?
 }
 

@@ -64,7 +64,8 @@ pub fn expand(
                     });
                 }
             });
-            quote!(t, { as_enum(::std::vec![#fields]) });
+            let is_numeric = is_numeric(&input.attrs);
+            quote!(t, { as_enum(#is_numeric, ::std::vec![#fields]) });
         }
         Data::Union(_) => unimplemented!(),
     });
@@ -92,14 +93,16 @@ pub fn expand(
 }
 
 fn enum_repr(attrs: &[Attribute]) -> Option<&TokenStream> {
-    for attr in attrs {
-        if let Meta::List(MetaList { path, tokens, .. }) = &attr.meta
-            && path.is_ident("repr")
-        {
-            return Some(tokens);
-        }
-    }
-    None
+    attrs.iter().find_map(|attr| match &attr.meta {
+        Meta::List(list) => list.path.is_ident("repr").then_some(&list.tokens),
+        _ => None,
+    })
+}
+
+pub fn is_numeric(attrs: &[Attribute]) -> bool {
+    attrs
+        .iter()
+        .any(|attr| matches!(&attr.meta, Meta::Path(path) if path.is_ident("numeric")))
 }
 
 fn write_fields(t: &mut TokenStream, fields: &Fields, key_attr: &str) -> Option<()> {

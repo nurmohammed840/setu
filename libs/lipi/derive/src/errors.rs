@@ -4,11 +4,7 @@ use crate::utils::{self, add_compile_error, get_repr, is_numeric};
 use proc_macro2::TokenStream;
 use quote2::ToTokens;
 use std::format as fmt;
-use syn::{
-    spanned::Spanned,
-    token::{Brace, Paren},
-    *,
-};
+use syn::{spanned::Spanned, *};
 
 type VerifyResult = std::result::Result<(), TokenStream>;
 
@@ -67,23 +63,17 @@ pub fn verify(input: &DeriveInput, key_attr: &str) -> VerifyResult {
                     );
                 }
 
-                match &v.fields {
-                    Fields::Unit => {}
-                    Fields::Unnamed(FieldsUnnamed {
-                        paren_token: Paren { span },
-                        ..
-                    })
-                    | Fields::Named(FieldsNamed {
-                        brace_token: Brace { span },
-                        ..
-                    }) => {
-                        add_compile_error(
-                            &mut err,
-                            span.span(),
-                            "`#[numeric]` enum only supports unit variant",
-                        );
-                    }
-                }
+                let span = match &v.fields {
+                    Fields::Unit => continue,
+                    Fields::Named(f) => f.brace_token.span,
+                    Fields::Unnamed(f) => f.paren_token.span,
+                };
+
+                add_compile_error(
+                    &mut err,
+                    span.span(),
+                    "`#[numeric]` enum only supports unit variant",
+                );
             }
         }
         Data::Enum(DataEnum { variants, .. }) => {

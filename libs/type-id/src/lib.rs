@@ -144,11 +144,15 @@ discriminant! {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Attributes {
     pub docs: String,
+    // pub numaric_enum: bool,
 }
 
 impl Attributes {
     pub fn docs<T: Into<String>>(docs: T) -> Attributes {
-        Attributes { docs: docs.into() }
+        Attributes {
+            docs: docs.into(),
+            // numaric_enum: false,
+        }
     }
 }
 
@@ -159,13 +163,13 @@ impl Attributes {
 pub struct ComplexData {
     pub attrs: Attributes,
     pub ty: ComplexDataType,
-    // pub generics: Generics,
 }
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum ComplexDataType {
     Enum {
+        is_numeric: bool,
         fields: Vec<(Attributes, EnumField)>,
     },
     Struct {
@@ -185,8 +189,8 @@ impl ComplexDataType {
         Self::Tuple { fields }
     }
 
-    pub fn as_enum(fields: Vec<(Attributes, EnumField)>) -> Self {
-        Self::Enum { fields }
+    pub fn as_enum(is_numeric: bool, fields: Vec<(Attributes, EnumField)>) -> Self {
+        Self::Enum { is_numeric, fields }
     }
 }
 
