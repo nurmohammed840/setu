@@ -1,5 +1,5 @@
-use proc_macro2::TokenStream;
-use quote2::{ToTokens, quote};
+use proc_macro2::{Literal, TokenStream};
+use quote2::*;
 use syn::*;
 
 pub fn get_attr<'a>(attrs: &'a [Attribute], name: &str) -> Option<&'a Expr> {
@@ -27,4 +27,12 @@ pub fn data_ty(data: &Data) -> quote2::QuoteFn<impl Fn(&mut TokenStream)> {
         }
         Data::Union(_) => unimplemented!(),
     })
+}
+
+pub fn add_compile_error(t: &mut TokenStream, span: proc_macro2::Span, msg: &str) {
+    let mut msg: Literal = Literal::string(msg);
+    msg.set_span(span);
+    quote_spanned!(span, t, {
+        ::core::compile_error! { #msg }
+    });
 }

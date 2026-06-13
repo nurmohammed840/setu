@@ -1,5 +1,5 @@
-mod expend;
 mod attrs;
+mod expend;
 
 use proc_macro::TokenStream;
 use quote2::proc_macro2;

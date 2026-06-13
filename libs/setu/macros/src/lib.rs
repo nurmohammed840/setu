@@ -23,12 +23,17 @@ pub fn input(input: TokenStream) -> TokenStream {
         return TokenStream::new();
     };
 
+    let attr = "key";
+    if let Err(err) = lipi_derive::errors::verify(&input, attr) {
+        return err.into();
+    }
+
     let lipi_path = utils::crate_path!(::setu::__private::lipi);
     let type_id_path = utils::crate_path!(::setu::__private::type_id);
 
     let mut t = proc_macro2::TokenStream::new();
-    lipi_derive::decoder::expand(&lipi_path, &input, &mut t, "key", "default");
-    type_id_derive::expand(&type_id_path, &input, &mut t, "key");
+    lipi_derive::decoder::expand(&lipi_path, &input, &mut t, attr, "default");
+    type_id_derive::expand(&type_id_path, &input, &mut t, attr);
     t.into()
 }
 
@@ -38,12 +43,17 @@ pub fn output(input: TokenStream) -> TokenStream {
         return TokenStream::new();
     };
 
+    let attr = "key";
+    if let Err(err) = lipi_derive::errors::verify(&input, attr) {
+        return err.into();
+    }
+
     let lipi_path = utils::crate_path!(::setu::__private::lipi);
     let type_id_path = utils::crate_path!(::setu::__private::type_id);
 
     let mut t = proc_macro2::TokenStream::new();
-    lipi_derive::encoder::expand(&lipi_path, &input, &mut t, "key");
-    type_id_derive::expand(&type_id_path, &input, &mut t, "key");
+    lipi_derive::encoder::expand(&lipi_path, &input, &mut t, attr);
+    type_id_derive::expand(&type_id_path, &input, &mut t, attr);
     t.into()
 }
 
@@ -53,12 +63,17 @@ pub fn message(input: TokenStream) -> TokenStream {
         return TokenStream::new();
     };
 
+    let attr = "key";
+    if let Err(err) = lipi_derive::errors::verify(&input, attr) {
+        return err.into();
+    }
+
     let lipi_path = utils::crate_path!(::setu::__private::lipi);
     let type_id_path = utils::crate_path!(::setu::__private::type_id);
 
     let mut t = proc_macro2::TokenStream::new();
-    lipi_derive::encoder::expand(&lipi_path, &input, &mut t, "key");
-    lipi_derive::decoder::expand(&lipi_path, &input, &mut t, "key", "default");
-    type_id_derive::expand(&type_id_path, &input, &mut t, "key");
+    lipi_derive::encoder::expand(&lipi_path, &input, &mut t, attr);
+    lipi_derive::decoder::expand(&lipi_path, &input, &mut t, attr, "default");
+    type_id_derive::expand(&type_id_path, &input, &mut t, attr);
     t.into()
 }

@@ -1,10 +1,7 @@
+use crate::utils::{data_ty, get_attr, get_attr_or_expr};
 use proc_macro2::{Span, TokenStream};
-use quote2::{Quote, quote};
-use syn::{spanned::Spanned, *};
-
-use crate::utils::data_ty;
-use crate::{errors, utils};
-use errors::to_compile_error;
+use quote2::*;
+use syn::{punctuated::Punctuated, spanned::Spanned, *};
 
 pub fn expand(
     crate_path: &TokenStream,
@@ -21,8 +18,9 @@ pub fn expand(
     } = input;
 
     let body = quote(|t| match data {
+        Data::Union(_) => unimplemented!(),
         Data::Struct(DataStruct { fields, .. }) => {
-            let struct_fields = fields
+            let struct_fields: Vec<_> = fields
                 .iter()
                 .enumerate()
                 .map(|(idx, field)| {
@@ -38,26 +36,27 @@ pub fn expand(
                     };
                     (
                         alias,
-                        utils::get_attr(&field.attrs, key_attr).map(|key| {
+                        get_attr(&field.attrs, key_attr).map(|key| {
                             let name_str = match &field.ident {
                                 Some(name) => name.to_string(),
                                 None => idx.to_string(),
                             };
                             (key, name_str)
                         }),
-                        utils::get_attr_or_expr(&field.attrs, default_attr),
+                        get_attr_or_expr(&field.attrs, default_attr),
                         name,
                     )
                 })
-                .collect::<Vec<_>>();
+                .collect();
 
             let field_decoder = quote(|t| {
                 for (alias, key, _, _) in &struct_fields {
-                    if let Some((key, name_str)) = key {
-                        quote!(t, {
-                            #key => #alias = __obj__.decode(__ty__, #name_str)?,
-                        });
-                    }
+                    let Some((key, name_str)) = key else {
+                        continue;
+                    };
+                    quote!(t, {
+                        #key => #alias = __obj__.decode(__ty__, #name_str)?,
+                    });
                 }
             });
 
@@ -83,11 +82,12 @@ pub fn expand(
             });
 
             for (alias, key, _, _) in &struct_fields {
-                if key.is_some() {
-                    quote!(t, {
-                        let mut #alias = ::std::option::Option::None;
-                    });
+                if key.is_none() {
+                    continue;
                 }
+                quote!(t, {
+                    let mut #alias = ::std::option::Option::None;
+                });
             }
 
             quote!(t, {
@@ -106,63 +106,30 @@ pub fn expand(
         Data::Enum(DataEnum { variants, .. }) => {
             let decode_enum_field = quote(|t| {
                 for v in variants {
-                    match &v.discriminant {
-                        Some((_, key)) => {
-                            let name = &v.ident;
-                            match &v.fields {
-                                Fields::Unit => {
-                                    quote!(t, {
-                                        #key => { __obj__.skip_field_value(__ty__)?; Self::#name }
-                                    });
-                                }
-                                Fields::Unnamed(FieldsUnnamed { unnamed, .. }) => {
-                                    match unnamed.len() {
-                                        0 => {
-                                            quote!(t, {
-                                                #key => { __obj__.skip_field_value(__ty__)?; Self::#name() }
-                                            });
-                                        }
-                                        1 => {
-                                            let name_str = format!("{ident}::{name}");
-                                            quote!(t, {
-                                                #key => Self::#name(__obj__.decode_field(__ty__, #name_str)?),
-                                            });
-                                        }
-                                        count => {
-                                            let err = errors::exrta_fields(count, unnamed);
-                                            quote!(t, {
-                                                _ => { #err ::std::todo!() }
-                                            });
-                                        }
-                                    }
-                                }
-                                Fields::Named(fields) => {
-                                    let err = errors::invalid_enum_named_field(name, fields);
-                                    quote!(t, {
-                                        _ => { #err ::std::todo!() }
-                                    });
-                                }
-                            }
-                        }
-                        None => {
-                            let err_span = v.span();
-                            let err = to_compile_error(
-                                err_span,
-                                format!("missing key at line: {:?}", err_span.start().line),
-                            );
+                    let name = &v.ident;
+                    let (_, key) = v.discriminant.as_ref().unwrap();
+                    match &v.fields {
+                        Fields::Named(_) => unimplemented!(),
+                        Fields::Unit => {
                             quote!(t, {
-                                _ => { #err ::std::todo!() }
+                                #key => { __obj__.skip_field_value(__ty__)?; Self::#name }
+                            });
+                        }
+                        Fields::Unnamed(_) => {
+                            let name_str = format!("{ident}::{name}");
+                            quote!(t, {
+                                #key => Self::#name(__obj__.decode_field(__ty__, #name_str)?),
                             });
                         }
                     }
                 }
             });
 
-            let has_default = variants
-                .iter()
-                .any(|v| utils::get_attr_or_expr(&v.attrs, default_attr).is_some());
-
             let fallback = quote(|t| {
+                let has_default = variants
+                    .iter()
+                    .any(|v| get_attr_or_expr(&v.attrs, default_attr).is_some());
+
                 if has_default {
                     quote!(t, { <Self as ::std::default::Default>::default() });
                 } else {
@@ -171,7 +138,6 @@ pub fn expand(
                     });
                 }
             });
-
             quote!(t, {
                 let (__id__, __ty__) = __crate::decoder::decode_field_id_and_ty(__r__)?;
                 let mut __obj__ = __crate::decoder::FieldInfoDecoder::new(__r__)?;
@@ -182,26 +148,13 @@ pub fn expand(
                 })
             });
         }
-        Data::Union(_) => todo!(),
     });
 
     let (_, ty_generics, where_clause) = generics.split_for_impl();
-
-    // Add a bound `T: Decode<'de>` to every type parameter of `T`.
-    let bound: TypeParamBound = parse_quote!(__crate::Decode<'decode>);
     let mut params = generics.params.clone();
-    let mut lifetime = LifetimeParam::new(Lifetime::new("'decode", Span::call_site()));
-
-    for param in params.iter_mut() {
-        match param {
-            GenericParam::Type(ty) => ty.bounds.push(bound.clone()),
-            GenericParam::Lifetime(lt) => lifetime.bounds.push(lt.lifetime.clone()),
-            _ => {}
-        }
-    }
+    let lifetime = add_decoder_trait_bounds(&mut params);
 
     let ty = data_ty(data);
-
     quote!(t, {
         const _: () = {
             use #crate_path as __crate;
@@ -213,4 +166,19 @@ pub fn expand(
             }
         };
     });
+}
+
+fn add_decoder_trait_bounds(params: &mut Punctuated<GenericParam, Token![,]>) -> LifetimeParam {
+    let bound: TypeParamBound = parse_quote!(__crate::Decode<'decode>);
+    let mut lifetime = LifetimeParam::new(Lifetime::new("'decode", Span::call_site()));
+
+    for param in params {
+        match param {
+            GenericParam::Type(ty) => ty.bounds.push(bound.clone()),
+            GenericParam::Lifetime(lt) => lifetime.bounds.push(lt.lifetime.clone()),
+            _ => {}
+        }
+    }
+
+    lifetime
 }

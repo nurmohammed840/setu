@@ -4,5 +4,5 @@ pub use syn;
 pub mod decoder;
 pub mod encoder;
 
-mod errors;
+pub mod errors;
 mod utils;

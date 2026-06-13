@@ -10,8 +10,13 @@ pub fn encoder(input: TokenStream) -> TokenStream {
         return TokenStream::new();
     };
 
+    let attr = "key";
+    if let Err(err) = lipi_derive::errors::verify(&input, attr) {
+        return err.into();
+    }
+
     let mut t = proc_macro2::TokenStream::new();
-    lipi_derive::encoder::expand(&utils::crate_path!(::lipi), &input, &mut t, "key");
+    lipi_derive::encoder::expand(&utils::crate_path!(::lipi), &input, &mut t, attr);
     t.into()
 }
 
@@ -21,13 +26,12 @@ pub fn decoder(input: TokenStream) -> TokenStream {
         return TokenStream::new();
     };
 
+    let attr = "key";
+    if let Err(err) = lipi_derive::errors::verify(&input, attr) {
+        return err.into();
+    }
+
     let mut t = proc_macro2::TokenStream::new();
-    lipi_derive::decoder::expand(
-        &utils::crate_path!(::lipi),
-        &input,
-        &mut t,
-        "key",
-        "default",
-    );
+    lipi_derive::decoder::expand(&utils::crate_path!(::lipi), &input, &mut t, attr, "default");
     t.into()
 }

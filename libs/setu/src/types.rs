@@ -1,6 +1,6 @@
 use async_gen::AsyncGenerator;
 use lipi::encoder::OptionalField;
-use setu_type_info::{FnOutputType, FnOutputTy};
+use setu_type_info::{FnOutputTy, FnOutputType};
 use type_id::{TypeId, TypeRegistry};
 
 use crate::SSE;

@@ -1,35 +1,97 @@
+use std::collections::HashSet;
+
+use crate::utils::{self, add_compile_error};
 use proc_macro2::TokenStream;
 use quote2::ToTokens;
-use syn::{punctuated::Punctuated, spanned::Spanned, token::Comma, *};
+use std::format as fmt;
+use syn::{spanned::Spanned, *};
 
-pub fn to_compile_error(span: proc_macro2::Span, message: impl std::fmt::Display) -> TokenStream {
-    syn::Error::new(span, message).to_compile_error()
-}
+type VerifyResult = std::result::Result<(), TokenStream>;
 
-pub fn invalid_enum_named_field(ident: &Ident, fields: &FieldsNamed) -> TokenStream {
-    let first_ty = match fields.named.first() {
-        Some(field) => field.ty.to_token_stream().to_string(),
-        None => "T".to_string(),
-    };
-    to_compile_error(
-        fields.span(),
-        format!("unsupported {{ .. }}; use `{ident}({first_ty})` instead"),
-    )
-}
+pub fn verify(input: &DeriveInput, key_attr: &str) -> VerifyResult {
+    let DeriveInput { ident, data, .. } = input;
+    let mut err = TokenStream::new();
 
-pub fn exrta_fields(count: usize, unnamed: &Punctuated<Field, Comma>) -> TokenStream {
-    let err_span = if count == 2 {
-        unnamed.last().span()
-    } else {
-        let mut err_spans = unnamed.iter();
-        err_spans.next(); // skip
-        let start = err_spans.next().span();
-        let end = err_spans.next_back().span();
-        start.join(end).unwrap_or_else(|| unnamed.last().span())
-    };
+    match data {
+        Data::Union(_) => unimplemented!(),
+        Data::Struct(DataStruct { fields, .. }) => {
+            let mut seen = HashSet::new();
 
-    to_compile_error(
-        err_span,
-        format!("remove extra fields; only one field is allowed (found {count})"),
-    )
+            for field in fields {
+                let Some(key) = utils::get_attr(&field.attrs, key_attr) else {
+                    continue;
+                };
+
+                let Some(key_0) = seen.get(key) else {
+                    seen.insert(key);
+                    continue;
+                };
+
+                let loc = key.span().start();
+
+                add_compile_error(
+                    &mut err,
+                    key_0.span(),
+                    &fmt!("duplicate key at line {}", loc.line),
+                );
+
+                add_compile_error(
+                    &mut err,
+                    key.span(),
+                    &fmt!(
+                        "duplicate key `{}` later defined here",
+                        key_0.to_token_stream()
+                    ),
+                );
+            }
+        }
+        Data::Enum(DataEnum { variants, .. }) => {
+            for v in variants {
+                if v.discriminant.is_none() {
+                    let span = v.span();
+                    add_compile_error(
+                        &mut err,
+                        span,
+                        &fmt!("missing key at line: {:?}", span.start().line),
+                    );
+                }
+
+                match &v.fields {
+                    Fields::Named(fields) => {
+                        let first_ty = match fields.named.first() {
+                            Some(field) => field.ty.to_token_stream().to_string(),
+                            None => "T".into(),
+                        };
+
+                        add_compile_error(
+                            &mut err,
+                            fields.span(),
+                            &fmt!("unsupported {{ .. }}; use `{ident}({first_ty})` instead"),
+                        );
+                    }
+                    Fields::Unnamed(FieldsUnnamed { unnamed, .. }) if unnamed.len() != 1 => {
+                        let count = unnamed.len();
+                        let span = if count == 2 {
+                            unnamed.last().span()
+                        } else {
+                            let mut spans = unnamed.iter();
+                            spans.next(); // skip
+                            let start = spans.next().span();
+                            let end = spans.next_back().span();
+                            start.join(end).unwrap_or_else(|| unnamed.last().span())
+                        };
+
+                        add_compile_error(
+                            &mut err,
+                            span,
+                            &fmt!("remove extra fields; only one field is allowed (found {count})"),
+                        )
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    if err.is_empty() { Ok(()) } else { Err(err) }
 }
