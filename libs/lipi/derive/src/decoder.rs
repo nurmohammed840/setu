@@ -1,4 +1,4 @@
-use crate::utils::{data_ty, get_attr, get_attr_or_expr};
+use crate::utils::{data_ty, get_attr, get_attr_or_expr, get_numeric_ty};
 use proc_macro2::{Span, TokenStream};
 use quote2::*;
 use syn::{punctuated::Punctuated, spanned::Spanned, *};
@@ -103,8 +103,33 @@ pub fn expand(
                 Ok(Self { #field_bind })
             });
         }
+        Data::Enum(DataEnum { variants, .. }) if let Some(ty) = get_numeric_ty(&input.attrs) => {
+            let map_variants = quote(|t| {
+                for v in variants {
+                    let name = &v.ident;
+                    let (_, key) = v.discriminant.as_ref().unwrap();
+                    if let Fields::Unit = v.fields {
+                        quote!(t, { #key => Self::#name, });
+                    }
+                }
+            });
+
+            let fallback = fallback(default_attr, variants, |t| {
+                quote!(t, {
+                    return Err(__crate::errors::__unknown_enum_tag(tag, <Self as __crate::Decode>::TY)),
+                });
+            });
+
+            quote!(t, {
+                let tag = <#ty as __crate::Decode>::decode(__r__)?;
+                Ok(match tag {
+                    #map_variants
+                    _ => #fallback
+                })
+            });
+        }
         Data::Enum(DataEnum { variants, .. }) => {
-            let decode_enum_field = quote(|t| {
+            let map_variants = quote(|t| {
                 for v in variants {
                     let name = &v.ident;
                     let (_, key) = v.discriminant.as_ref().unwrap();
@@ -125,25 +150,18 @@ pub fn expand(
                 }
             });
 
-            let fallback = quote(|t| {
-                let has_default = variants
-                    .iter()
-                    .any(|v| get_attr_or_expr(&v.attrs, default_attr).is_some());
-
-                if has_default {
-                    quote!(t, { <Self as ::std::default::Default>::default() });
-                } else {
-                    quote!(t, {
-                        return Err(__crate::errors::__unknown_field(__id__, __ty__)),
-                    });
-                }
+            let fallback = fallback(default_attr, variants, |t| {
+                quote!(t, {
+                    return Err(__crate::errors::__unknown_field(__id__, __ty__)),
+                });
             });
+
             quote!(t, {
                 let (__id__, __ty__) = __crate::decoder::decode_field_id_and_ty(__r__)?;
                 let mut __obj__ = __crate::decoder::FieldInfoDecoder::new(__r__)?;
 
                 Ok(match __id__ {
-                    #decode_enum_field
+                    #map_variants
                     _ => #fallback
                 })
             });
@@ -154,18 +172,36 @@ pub fn expand(
     let mut params = generics.params.clone();
     let lifetime = add_decoder_trait_bounds(&mut params);
 
-    let ty = data_ty(data);
+    let ty = data_ty(input);
     quote!(t, {
         const _: () = {
             use #crate_path as __crate;
             impl <#lifetime, #params> __crate::Decode<'decode> for #ident #ty_generics #where_clause {
-                const TY: __crate::DataType = __crate::#ty;
+                const TY: __crate::DataType = #ty;
                 fn decode(__r__: &mut &#lifetime [u8]) -> __crate::Result<Self> {
                     #body
                 }
             }
         };
     });
+}
+
+fn fallback(
+    default_attr: &str,
+    variants: &Punctuated<Variant, token::Comma>,
+    err: impl Fn(&mut TokenStream) + 'static,
+) -> QuoteFn<impl Fn(&mut TokenStream)> {
+    quote(move |t| {
+        let has_default = variants
+            .iter()
+            .any(|v| get_attr_or_expr(&v.attrs, default_attr).is_some());
+
+        if has_default {
+            quote!(t, { <Self as ::std::default::Default>::default() });
+        } else {
+            err(t);
+        }
+    })
 }
 
 fn add_decoder_trait_bounds(params: &mut Punctuated<GenericParam, Token![,]>) -> LifetimeParam {

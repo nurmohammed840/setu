@@ -118,7 +118,32 @@ error! {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct UnknownTag<T> {
+    pub tag: T,
+    pub ty: DataType,
+}
+
+impl<T: fmt::Display + fmt::Debug> std::error::Error for UnknownTag<T> {}
+impl<T: fmt::Display> fmt::Display for UnknownTag<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_fmt(core::format_args!(
+            "unknown field with id {} and type {:?}",
+            self.tag,
+            self.ty
+        ))
+    }
+}
+
 #[doc(hidden)]
 pub fn __unknown_field(id: u64, ty: DataType) -> crate::Error {
     Box::new(UnknownField { id, ty })
+}
+
+#[doc(hidden)]
+pub fn __unknown_enum_tag<T>(tag: T, ty: DataType) -> crate::Error
+where
+    T: fmt::Display + fmt::Debug + Send + Sync + 'static,
+{
+    Box::new(UnknownTag { tag, ty })
 }

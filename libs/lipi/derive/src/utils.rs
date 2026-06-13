@@ -17,13 +17,34 @@ pub fn get_attr_or_expr(attrs: &[Attribute], name: &str) -> Option<TokenStream> 
     })
 }
 
-pub fn data_ty(data: &Data) -> quote2::QuoteFn<impl Fn(&mut TokenStream)> {
-    quote(move |t| match data {
+pub fn is_numeric(attrs: &[Attribute]) -> bool {
+    attrs
+        .iter()
+        .any(|attr| matches!(&attr.meta, Meta::Path(path) if path.is_ident("numeric")))
+}
+
+pub fn get_repr(attrs: &[Attribute]) -> Option<TokenStream> {
+    attrs.iter().find_map(|attr| match &attr.meta {
+        Meta::List(list) => list.path.is_ident("repr").then(|| list.tokens.clone()),
+        _ => None,
+    })
+}
+
+pub fn get_numeric_ty(attrs: &[Attribute]) -> Option<TokenStream> {
+    is_numeric(attrs).then(|| get_repr(attrs))?
+}
+
+pub fn data_ty(input: &DeriveInput) -> QuoteFn<impl Fn(&mut TokenStream)> {
+    quote(move |t| match input.data {
         Data::Struct(_) => {
-            quote!(t, { DataType::Struct });
+            quote!(t, { __crate::DataType::Struct });
         }
         Data::Enum(_) => {
-            quote!(t, { DataType::Union });
+            if let Some(ty) = get_numeric_ty(&input.attrs) {
+                quote!(t, { <#ty as __crate::Encode>::TY });
+            } else {
+                quote!(t, { __crate::DataType::Union });
+            }
         }
         Data::Union(_) => unimplemented!(),
     })

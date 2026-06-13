@@ -1,10 +1,14 @@
 use std::collections::HashSet;
 
-use crate::utils::{self, add_compile_error};
+use crate::utils::{self, add_compile_error, get_repr, is_numeric};
 use proc_macro2::TokenStream;
 use quote2::ToTokens;
 use std::format as fmt;
-use syn::{spanned::Spanned, *};
+use syn::{
+    spanned::Spanned,
+    token::{Brace, Paren},
+    *,
+};
 
 type VerifyResult = std::result::Result<(), TokenStream>;
 
@@ -45,10 +49,47 @@ pub fn verify(input: &DeriveInput, key_attr: &str) -> VerifyResult {
                 );
             }
         }
+        Data::Enum(DataEnum { variants, .. }) if is_numeric(&input.attrs) => {
+            if get_repr(&input.attrs).is_none() {
+                add_compile_error(
+                    &mut err,
+                    ident.span(),
+                    "`#[numeric]` attribute requires `#[repr(int)]`",
+                );
+            }
+            for v in variants {
+                if v.discriminant.is_none() {
+                    let span = v.fields.span();
+                    add_compile_error(
+                        &mut err,
+                        span,
+                        &fmt!("missing tag at line: {:?}", span.start().line),
+                    );
+                }
+
+                match &v.fields {
+                    Fields::Unit => {}
+                    Fields::Unnamed(FieldsUnnamed {
+                        paren_token: Paren { span },
+                        ..
+                    })
+                    | Fields::Named(FieldsNamed {
+                        brace_token: Brace { span },
+                        ..
+                    }) => {
+                        add_compile_error(
+                            &mut err,
+                            span.span(),
+                            "`#[numeric]` enum only supports unit variant",
+                        );
+                    }
+                }
+            }
+        }
         Data::Enum(DataEnum { variants, .. }) => {
             for v in variants {
                 if v.discriminant.is_none() {
-                    let span = v.span();
+                    let span = v.fields.span();
                     add_compile_error(
                         &mut err,
                         span,
@@ -69,6 +110,15 @@ pub fn verify(input: &DeriveInput, key_attr: &str) -> VerifyResult {
                             &fmt!("unsupported {{ .. }}; use `{ident}({first_ty})` instead"),
                         );
                     }
+                    Fields::Unnamed(FieldsUnnamed {
+                        unnamed,
+                        paren_token,
+                        ..
+                    }) if unnamed.is_empty() => {
+                        let span = paren_token.span.span();
+                        add_compile_error(&mut err, span, "remove `()`")
+                    }
+
                     Fields::Unnamed(FieldsUnnamed { unnamed, .. }) if unnamed.len() != 1 => {
                         let count = unnamed.len();
                         let span = if count == 2 {

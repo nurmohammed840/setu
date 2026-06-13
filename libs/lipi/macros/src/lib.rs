@@ -4,7 +4,7 @@ use lipi_derive::{quote2, syn};
 use proc_macro::TokenStream;
 use quote2::*;
 
-#[proc_macro_derive(Encode, attributes(key))]
+#[proc_macro_derive(Encode, attributes(numeric, key))]
 pub fn encoder(input: TokenStream) -> TokenStream {
     let Ok(input) = syn::parse(input) else {
         return TokenStream::new();
@@ -20,7 +20,7 @@ pub fn encoder(input: TokenStream) -> TokenStream {
     t.into()
 }
 
-#[proc_macro_derive(Decode, attributes(key, default))]
+#[proc_macro_derive(Decode, attributes(numeric, key, default))]
 pub fn decoder(input: TokenStream) -> TokenStream {
     let Ok(input) = syn::parse(input) else {
         return TokenStream::new();
