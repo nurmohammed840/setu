@@ -7,23 +7,24 @@ use crate::{CodeWriter, Context};
 
 pub fn generate(c: &mut CodeWriter, ctx: &Context) {
     for (path, ComplexData { ty, .. }) in ctx.info.registry.iter() {
-        let class_name = ctx.symbol.interface_name(path);
-
+        let interface_name = ctx.symbol.interface_name(path);
+        
+        c.newline();
+        
         match ty {
             ComplexDataType::Struct { fields } => {
-                c.newline();
-                c.block(args!("export interface {class_name}"), |c| {
+                c.block(args!("export interface {interface_name}"), |c| {
                     ctx.write_object_tys(c, ';', fields.iter().map(|(_, s)| (&s.name, &s.ty)));
                 });
-                c.block(args!("namespace {class_name}"), |c| {
+                c.block(args!("namespace {interface_name}"), |c| {
                     if ctx.is_encoder_needed(path) {
-                        c.block(args!("export const encoder = function Struct(this: $.lipi.Encode, z: {class_name})"), |c| {
+                        c.block(args!("export const encoder = function Struct(this: $.lipi.Encode, z: {interface_name})"), |c| {
                             ctx.struct_encoder(c, fields.iter().map(|(_, s)| (s.name.as_ref(), &s.ty, s.key)));
                         });
                     }
                     if ctx.is_decoder_needed(path) {
                         c.block(
-                            args!("export const decoder = function Struct(this: $.lipi.Decode): {class_name}"),
+                            args!("export const decoder = function Struct(this: $.lipi.Decode): {interface_name}"),
                             |c| {
                                 c.line(args!(
                                     "return $.lipi.StructDecoder(this, ["
@@ -38,6 +39,13 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                                 c.line("]);");
                             },
                         );
+                    }
+                });
+            }
+            ComplexDataType::Enum { is_numeric, fields } if *is_numeric => {
+                c.block(args!("export enum {interface_name}"), |c| {
+                    for (_, field) in fields {
+                        c.line(args!("{} = {},", field.name, field.discriminant));
                     }
                 });
             }

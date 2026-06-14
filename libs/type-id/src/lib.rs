@@ -2,7 +2,7 @@ mod registry;
 mod types;
 mod utils;
 
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 
 pub use registry::TypeRegistry;
 pub use type_id_macros::TypeId;
@@ -138,6 +138,22 @@ discriminant! {
     I16: i16
     I32: i32
     I64: i64
+}
+
+impl fmt::Display for Discriminant {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Discriminant::U8(v) => v.fmt(f),
+            Discriminant::U16(v) => v.fmt(f),
+            Discriminant::U32(v) => v.fmt(f),
+            Discriminant::U64(v) => v.fmt(f),
+            Discriminant::I8(v) => v.fmt(f),
+            Discriminant::I16(v) => v.fmt(f),
+            Discriminant::I32(v) => v.fmt(f),
+            Discriminant::I64(v) => v.fmt(f),
+            Discriminant::None => Ok(()),
+        }
+    }
 }
 
 #[derive(Default, Debug, Clone)]
