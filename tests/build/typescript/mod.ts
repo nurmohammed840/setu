@@ -43,6 +43,15 @@ const $D = {
 			[13, "numeric", $D.Numerical, true],
 		]);
 	},
+	Numerical: function UInt(this: $.lipi.Decode): Numerical {
+		let tag = this.U8();
+		switch (tag) {
+			case 1: Numerical.A;
+			case 2: Numerical.B;
+			case 3: Numerical.C;
+			default: throw new Error(`unknown tag: ${tag}`);
+		}
+	},
 	HelloReply: function Struct(this: $.lipi.Decode): HelloReply {
 		return $.lipi.StructDecoder(this, [
 			[1, "message", this.Str, true],

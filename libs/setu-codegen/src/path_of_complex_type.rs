@@ -1,11 +1,10 @@
-use std::{collections, slice::Iter};
-
 use setu_type_info::{FnMetaData, FnOutputTy, Func, TypeInfo};
-use type_id::{PathIdent, Type};
+use std::{collections::HashSet as Set, slice::Iter};
+use type_id::{Attributes, ComplexDataType, EnumFieldType, PathIdent, StructField, Type};
 
 #[derive(Debug)]
 pub struct PathsOfComplexType {
-    paths: collections::HashSet<PathIdent>,
+    paths: Set<PathIdent>,
 }
 
 impl PathsOfComplexType {
@@ -13,10 +12,16 @@ impl PathsOfComplexType {
     where
         I: Iterator<Item = &'a Type>,
     {
-        let mut paths = collections::HashSet::new();
+        let mut paths = Set::new();
 
         for ty in f(info.fns.iter()) {
             visit_complex_type(ty, &mut |path| {
+                paths.insert(path.clone());
+            });
+        }
+
+        for complex_data in info.registry.values() {
+            visit_user_defined(&complex_data.ty, &mut |path| {
                 paths.insert(path.clone());
             });
         }
@@ -85,5 +90,33 @@ fn visit_complex_type<'a>(ty: &'a Type, f: &mut impl FnMut(&'a PathIdent)) {
         }
         Type::Complex(ty) => f(ty),
         _ => {}
+    }
+}
+
+fn visit_struct<'a>(fields: &'a [(Attributes, StructField)], f: &mut impl FnMut(&'a PathIdent)) {
+    for (_, field) in fields {
+        visit_complex_type(&field.ty, f)
+    }
+}
+
+fn visit_tuple<'a>(fields: &'a [(Attributes, Type)], f: &mut impl FnMut(&'a PathIdent)) {
+    for (_, ty) in fields {
+        visit_complex_type(ty, f)
+    }
+}
+
+fn visit_user_defined<'a>(ty: &'a ComplexDataType, f: &mut impl FnMut(&'a PathIdent)) {
+    match ty {
+        ComplexDataType::Struct { fields } => visit_struct(fields, f),
+        ComplexDataType::Tuple { fields } => visit_tuple(fields, f),
+        ComplexDataType::Enum { fields, .. } => {
+            for (_, field) in fields {
+                match &field.ty {
+                    EnumFieldType::Struct(fields) => visit_struct(fields, f),
+                    EnumFieldType::Tuple(fields) => visit_tuple(fields, f),
+                    EnumFieldType::Unit => {}
+                }
+            }
+        }
     }
 }

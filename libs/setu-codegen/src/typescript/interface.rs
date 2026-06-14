@@ -1,6 +1,6 @@
 use std::format_args as args;
 
-use type_id::StructField;
+use type_id::{EnumField, StructField};
 use type_id::{ComplexData, ComplexDataType};
 
 use crate::{CodeWriter, Context};
@@ -25,7 +25,6 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
             }
         }
     });
-
     c.block("const $D =", |c| {
         for (path, ComplexData { ty, .. }) in ctx.info.registry.iter() {
             if !ctx.is_decoder_needed(path) {
@@ -48,7 +47,22 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                     });
                     c.line("},");
                 }
-                ComplexDataType::Enum { .. } => {},
+                ComplexDataType::Enum { is_numeric, fields } if *is_numeric => {
+                    c.line(args!("{interface_name}: function UInt(this: $.lipi.Decode): {interface_name} {{"));
+                    c.scope(|c| {
+                        c.line(args!("let tag = this.U8();"));
+                        c.block("switch (tag)", |c| {
+                            for (_, EnumField {name, discriminant, ..}) in fields {
+                                c.line(args!("case {discriminant}: {interface_name}.{name};"));
+                            }
+                            c.line("default: throw new Error(`unknown tag: ${tag}`);");
+                        });
+                    });
+                    c.line("},");
+                },
+                ComplexDataType::Enum { .. } => {
+
+                },
                 ComplexDataType::Tuple { .. } => {},
             }
         }
