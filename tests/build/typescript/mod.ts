@@ -19,6 +19,9 @@ const $E = {
 			[13, z.numeric, $E.Numerical],
 		]);
 	},
+	Numerical: function U8(this: $.lipi.Encode, z: Numerical) {
+		this.U8(z)
+	},
 	HelloRequest: function Struct(this: $.lipi.Encode, z: HelloRequest) {
 		$.lipi.StructEncoder(this, [
 			[1, z.name, this.Str],

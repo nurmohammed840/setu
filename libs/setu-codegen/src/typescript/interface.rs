@@ -20,6 +20,16 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                     });
                     c.line("},");
                 }
+                ComplexDataType::Enum { is_numeric , fields } if *is_numeric => {
+                    let Some((ty, repr)) = enum_numeric_repr(fields) else {
+                        continue;
+                    };
+                    c.line(args!("{interface_name}: function {repr}(this: $.lipi.Encode, z: {interface_name}) {{"));
+                    c.scope(|c| {
+                        c.line(args!("this.{ty}(z)"));
+                    });
+                    c.line("},");
+                },
                 ComplexDataType::Enum { .. } => {},
                 ComplexDataType::Tuple { .. } => {},
             }
