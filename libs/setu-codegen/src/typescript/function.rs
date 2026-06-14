@@ -55,7 +55,7 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                             c.line("function() {");
                             c.scope(|c| {
                                 let required = ty.optional().is_none();
-                                let decoder = ctx.serde_ty(ty, "decoder");
+                                let decoder = ctx.serde_ty(ty, "$D");
                                 c.line(args!(
                                     "return $.lipi.OutputDecoder(this, {decoder}, {required});"
                                 ));

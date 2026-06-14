@@ -35,7 +35,7 @@ pub fn expand(input: &DeriveInput, t: &mut TokenStream, attr_key: &str) {
                             span: v.span(),
                         })
                     };
-                    
+
                     let items = quote(|t| {
                         map_fields(t, &v.ident, attr_key, &v.fields);
                     });

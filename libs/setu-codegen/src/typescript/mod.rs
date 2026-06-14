@@ -1,5 +1,5 @@
-pub mod interface;
 pub mod function;
+pub mod interface;
 
 use std::format_args as args;
 use std::{fs, io, path::PathBuf};
@@ -167,7 +167,9 @@ impl Context {
                 Type::Bool => f.write_str("this.ListBool"),
                 ty => f.write_fmt(args!("this.List({})", self.serde_ty(ty, codex))),
             },
-            Type::Complex(path) => f.write_fmt(args!("{}.{codex}", self.symbol.interface_name(path))),
+            Type::Complex(path) => {
+                f.write_fmt(args!("{codex}.{}", self.symbol.interface_name(path)))
+            }
             Type::Option(ty) => f.write_fmt(args!("{}", self.serde_ty(ty, codex))),
             Type::Map { ty, .. } => f.write_fmt(args!(
                 "this.Table({}, {})",
@@ -189,7 +191,7 @@ impl Context {
         c.line("$.lipi.StructEncoder(this, [");
         c.scope(|c| {
             for (name, ty, key) in fields {
-                let decoder = self.serde_ty(ty, "encoder");
+                let decoder = self.serde_ty(ty, "$E");
                 c.line(args!("[{key}, z.{name}, {decoder}],",));
             }
         });
