@@ -1,7 +1,8 @@
 use std::format_args as args;
-
-use type_id::{Attributes, ComplexData, ComplexDataType, Discriminant};
-use type_id::{EnumField, StructField};
+use type_id::{
+    Attributes, ComplexData, ComplexDataType, Discriminant, EnumField, EnumFieldType, StructField,
+    Type,
+};
 
 use crate::{CodeWriter, Context};
 
@@ -72,11 +73,9 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                         });
                     });
                     c.line("},");
-                },
-                ComplexDataType::Enum { .. } => {
-
-                },
-                ComplexDataType::Tuple { .. } => {},
+                }
+                ComplexDataType::Enum { .. } => {}
+                ComplexDataType::Tuple { .. } => {}
             }
         }
     });
@@ -96,7 +95,22 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                     }
                 });
             }
-            ComplexDataType::Enum { .. } => {}
+            ComplexDataType::Enum { fields, .. } => {
+                c.line(args!("export type {interface_name} ="));
+                c.scope(|c| {
+                    for (_, EnumField { name, ty, .. }) in fields {
+                        let Some(kind) = enum_field_kind(ty) else {
+                            continue;
+                        };
+                        let value = match kind {
+                            EnumKind::Unit => args!(" "),
+                            EnumKind::Field(ty) => args!("; value: {} ", ctx.data_ty(ty)),
+                        };
+                        c.line(args!("| {{ type: {name:?}{value}}}"));
+                    }
+                });
+                c.newline();
+            }
             ComplexDataType::Tuple { .. } => {}
         }
     }
@@ -118,4 +132,20 @@ fn enum_numeric_repr(fields: &[(Attributes, EnumField)]) -> Option<(&str, &str)>
             Discriminant::I64(_) => Some(("I64", "Int")),
             Discriminant::None => None,
         })
+}
+
+enum EnumKind<'a> {
+    Unit,
+    Field(&'a Type),
+}
+
+fn enum_field_kind(ty: &EnumFieldType) -> Option<EnumKind<'_>> {
+    match ty {
+        EnumFieldType::Tuple(items) if items.len() == 1 => {
+            let (_, ty) = &items[0];
+            Some(EnumKind::Field(ty))
+        }
+        EnumFieldType::Unit => Some(EnumKind::Unit),
+        _ => None,
+    }
 }

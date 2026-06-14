@@ -76,6 +76,14 @@ export interface Data {
 	string: string;
 	numeric: Numerical;
 }
+export type JsValue =
+	| { type: "Null" }
+	| { type: "Bool"; value: boolean }
+	| { type: "Number"; value: number }
+	| { type: "String"; value: string }
+	| { type: "Array"; value: Array<JsValue> }
+	| { type: "Object"; value: Map<string, JsValue> }
+
 export enum Numerical {
 	A = 1,
 	B = 2,
