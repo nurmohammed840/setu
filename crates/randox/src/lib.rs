@@ -4,8 +4,8 @@ mod expend;
 use proc_macro::TokenStream;
 use quote2::proc_macro2;
 
-#[proc_macro_derive(Randox, attributes(sample))]
-pub fn randox(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(Rand, attributes(sample))]
+pub fn rand(input: TokenStream) -> TokenStream {
     let Ok(input) = syn::parse(input) else {
         return TokenStream::new();
     };

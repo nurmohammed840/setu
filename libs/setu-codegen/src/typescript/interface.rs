@@ -7,7 +7,7 @@ use crate::{CodeWriter, Context};
 
 pub fn generate(c: &mut CodeWriter, ctx: &Context) {
     for (path, ComplexData { ty, .. }) in ctx.info.registry.iter() {
-        let class_name = ctx.symbol.class_name(path);
+        let class_name = ctx.symbol.interface_name(path);
 
         match ty {
             ComplexDataType::Struct { fields } => {
@@ -41,7 +41,8 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                     }
                 });
             }
-            _ => unimplemented!(),
+            ComplexDataType::Enum { .. } => {}
+            ComplexDataType::Tuple { .. } => {}
         }
     }
 }

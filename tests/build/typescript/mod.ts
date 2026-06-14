@@ -15,6 +15,7 @@ export interface Data {
 	f64: number;
 	bool: boolean;
 	string: string;
+	numeric: Numerical;
 }
 namespace Data {
 	export const encoder = function Struct(this: $.lipi.Encode, z: Data) {
@@ -31,6 +32,7 @@ namespace Data {
 			[10, z.f64, this.F64],
 			[11, z.bool, this.Bool],
 			[12, z.string, this.Str],
+			[13, z.numeric, Numerical.encoder],
 		]);
 	}
 	export const decoder = function Struct(this: $.lipi.Decode): Data {
@@ -47,6 +49,7 @@ namespace Data {
 			[10, "f64", this.F64, true],
 			[11, "bool", this.Bool, true],
 			[12, "string", this.Str, true],
+			[13, "numeric", Numerical.decoder, true],
 		]);
 	}
 }
@@ -242,6 +245,54 @@ export function compare_data(z: compare_data, ctx: $.Context = {}) {
 			$.lipi.StructEncoder(this, [
 				[0, z.left, Data.encoder],
 				[1, z.right, Data.encoder],
+			]);
+		},
+		function() {
+			return $.lipi.OutputDecoder(this, this.Bool, true);
+		},
+	);
+}
+
+export function random_js_value(ctx: $.Context = {}) {
+	return $.rpc(
+		104, ctx,
+		function() {
+			$.lipi.StructEncoder(this, []);
+		},
+		function() {
+			return $.lipi.OutputDecoder(this, JsValue.decoder, true);
+		},
+	);
+}
+
+export interface echo_js_value {
+	input: JsValue,
+}
+export function echo_js_value(z: echo_js_value, ctx: $.Context = {}) {
+	return $.rpc(
+		105, ctx,
+		function() {
+			$.lipi.StructEncoder(this, [
+				[0, z.input, JsValue.encoder],
+			]);
+		},
+		function() {
+			return $.lipi.OutputDecoder(this, JsValue.decoder, true);
+		},
+	);
+}
+
+export interface compare_js_value {
+	left: JsValue,
+	right: JsValue,
+}
+export function compare_js_value(z: compare_js_value, ctx: $.Context = {}) {
+	return $.rpc(
+		106, ctx,
+		function() {
+			$.lipi.StructEncoder(this, [
+				[0, z.left, JsValue.encoder],
+				[1, z.right, JsValue.encoder],
 			]);
 		},
 		function() {

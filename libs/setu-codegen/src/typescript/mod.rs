@@ -1,4 +1,4 @@
-pub mod class;
+pub mod interface;
 pub mod function;
 
 use std::format_args as args;
@@ -57,7 +57,7 @@ impl Context {
     pub fn generate_typescript_code(&self) -> String {
         let mut c = CodeWriter::new();
         c.buffer.push_str(TS_PRELUDE);
-        class::generate(&mut c, self);
+        interface::generate(&mut c, self);
         function::generate(&mut c, self);
         c.buffer
     }
@@ -78,7 +78,7 @@ impl Context {
             Type::Bool => f.write_str("boolean"),
             Type::String => f.write_str("string"),
 
-            Type::Complex(path) => f.write_str(&self.symbol.class_name(path)),
+            Type::Complex(path) => f.write_str(&self.symbol.interface_name(path)),
 
             Type::List { ty, .. } | Type::Array { ty, .. } => match ty.as_ref() {
                 Type::U8 => f.write_str("Uint8Array"),
@@ -167,7 +167,7 @@ impl Context {
                 Type::Bool => f.write_str("this.ListBool"),
                 ty => f.write_fmt(args!("this.List({})", self.serde_ty(ty, codex))),
             },
-            Type::Complex(path) => f.write_fmt(args!("{}.{codex}", self.symbol.class_name(path))),
+            Type::Complex(path) => f.write_fmt(args!("{}.{codex}", self.symbol.interface_name(path))),
             Type::Option(ty) => f.write_fmt(args!("{}", self.serde_ty(ty, codex))),
             Type::Map { ty, .. } => f.write_fmt(args!(
                 "this.Table({}, {})",
@@ -212,7 +212,7 @@ mod cached {
 }
 
 impl SymbolTrie {
-    fn class_name(&self, path: &PathIdent) -> std::rc::Rc<str> {
+    fn interface_name(&self, path: &PathIdent) -> std::rc::Rc<str> {
         cached::get_symbol(path, || {
             self.shortest_symbol(path)
                 .flat_map(|part| {

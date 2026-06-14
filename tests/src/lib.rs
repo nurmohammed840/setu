@@ -31,4 +31,8 @@ setu::export! {
     fn random_data() = 101;
     fn echo_data(input) = 102;
     fn compare_data(left, right) = 103;
+
+    fn random_js_value() = 104;
+    fn echo_js_value(input) = 105;
+    fn compare_js_value(left, right) = 106;
 }

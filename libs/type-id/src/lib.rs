@@ -144,15 +144,11 @@ discriminant! {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Attributes {
     pub docs: String,
-    // pub numaric_enum: bool,
 }
 
 impl Attributes {
     pub fn docs<T: Into<String>>(docs: T) -> Attributes {
-        Attributes {
-            docs: docs.into(),
-            // numaric_enum: false,
-        }
+        Attributes { docs: docs.into() }
     }
 }
 

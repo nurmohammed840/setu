@@ -50,7 +50,7 @@ pub fn verify(input: &DeriveInput, key_attr: &str) -> VerifyResult {
                 add_compile_error(
                     &mut err,
                     ident.span(),
-                    "`#[numeric]` attribute requires `#[repr(int)]`",
+                    "`#[numeric]` attribute requires `#[repr(inttype)]`",
                 );
             }
             for v in variants {
@@ -79,7 +79,7 @@ pub fn verify(input: &DeriveInput, key_attr: &str) -> VerifyResult {
         Data::Enum(DataEnum { variants, .. }) => {
             for v in variants {
                 if v.discriminant.is_none() {
-                    let span = v.fields.span();
+                    let span = v.span();
                     add_compile_error(
                         &mut err,
                         span,
