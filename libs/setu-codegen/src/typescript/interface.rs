@@ -1,7 +1,7 @@
 use std::format_args as args;
 
+use type_id::{Attributes, ComplexData, ComplexDataType, Discriminant};
 use type_id::{EnumField, StructField};
-use type_id::{ComplexData, ComplexDataType};
 
 use crate::{CodeWriter, Context};
 
@@ -48,9 +48,12 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                     c.line("},");
                 }
                 ComplexDataType::Enum { is_numeric, fields } if *is_numeric => {
-                    c.line(args!("{interface_name}: function UInt(this: $.lipi.Decode): {interface_name} {{"));
+                    let Some((ty, repr)) = enum_numeric_repr(fields) else {
+                        continue;
+                    };
+                    c.line(args!("{interface_name}: function {repr}(this: $.lipi.Decode): {interface_name} {{"));
                     c.scope(|c| {
-                        c.line(args!("let tag = this.U8();"));
+                        c.line(args!("let tag = this.{ty}();"));
                         c.block("switch (tag)", |c| {
                             for (_, EnumField {name, discriminant, ..}) in fields {
                                 c.line(args!("case {discriminant}: {interface_name}.{name};"));
@@ -87,4 +90,22 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
             ComplexDataType::Tuple { .. } => {}
         }
     }
+}
+
+fn enum_numeric_repr(fields: &[(Attributes, EnumField)]) -> Option<(&str, &str)> {
+    fields
+        .iter()
+        .find_map(|(_, field)| match field.discriminant {
+            Discriminant::U8(_) => Some(("U8", "U8")),
+            Discriminant::I8(_) => Some(("I8", "I8")),
+
+            Discriminant::U16(_) => Some(("U16", "UInt")),
+            Discriminant::U32(_) => Some(("U32", "UInt")),
+            Discriminant::U64(_) => Some(("U64", "UInt")),
+
+            Discriminant::I16(_) => Some(("I16", "Int")),
+            Discriminant::I32(_) => Some(("I32", "Int")),
+            Discriminant::I64(_) => Some(("I64", "Int")),
+            Discriminant::None => None,
+        })
 }

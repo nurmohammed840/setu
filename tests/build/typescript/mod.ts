@@ -43,7 +43,7 @@ const $D = {
 			[13, "numeric", $D.Numerical, true],
 		]);
 	},
-	Numerical: function UInt(this: $.lipi.Decode): Numerical {
+	Numerical: function U8(this: $.lipi.Decode): Numerical {
 		let tag = this.U8();
 		switch (tag) {
 			case 1: Numerical.A;
