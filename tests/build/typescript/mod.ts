@@ -60,7 +60,7 @@ const $D = {
 			[13, "numeric", $D.Numerical, 1],
 		]);
 	},
-	JsValue: function Union(this: $.lipi.Decode): JsValue {
+	JsValue: function Struct(this: $.lipi.Decode): JsValue {
 		let _ = this;
 		return $.lipi.EnumDecoder(_, [
 			[0, "Null", _.Bool, 0],
@@ -125,12 +125,8 @@ export interface HelloRequest {
 export function say_hello(input: HelloRequest, ctx: $.Context = {}) {
 	return $.rpc(
 		1, ctx,
-		function(_) {
-			$.lipi.StructEncoder(_, [[0, input, $E.HelloRequest]]);
-		},
-		function(_) {
-			return $.lipi.OutputDecoder(_, $D.HelloReply, true);
-		},
+		_ => $.lipi.StructEncoder(_, [[0, input, $E.HelloRequest]]),
+		_ => $.lipi.OutputDecoder(_, $D.HelloReply, true),
 	);
 }
 
@@ -141,15 +137,13 @@ export interface add {
 export function add(z: add, ctx: $.Context = {}) {
 	return $.rpc(
 		2, ctx,
-		function(_) {
+		_ => {
 			$.lipi.StructEncoder(_, [
 				[0, z.a, _.I32],
 				[1, z.b, _.I32],
 			]);
 		},
-		function(_) {
-			return $.lipi.OutputDecoder(_, _.I32, true);
-		},
+		_ => $.lipi.OutputDecoder(_, _.I32, true),
 	);
 }
 
@@ -160,98 +154,76 @@ export interface find_in_string {
 export function find_in_string(z: find_in_string, ctx: $.Context = {}) {
 	return $.rpc(
 		3, ctx,
-		function(_) {
+		_ => {
 			$.lipi.StructEncoder(_, [
 				[0, z.input, _.Str],
 				[1, z.pat, _.Str],
 			]);
 		},
-		function(_) {
-			return $.lipi.OutputDecoder(_, _.U32, false);
-		},
+		_ => $.lipi.OutputDecoder(_, _.U32, false),
 	);
 }
 
 export function print(msg: string, ctx: $.Context = {}) {
 	return $.rpc(
 		4, ctx,
-		function(_) {
-			$.lipi.StructEncoder(_, [[0, msg, _.Str]]);
-		},
-		function(_) {}
+		_ => $.lipi.StructEncoder(_, [[0, msg, _.Str]]),
+		_ => { }
 	);
 }
 
 export function store(msg: string, ctx: $.Context = {}) {
 	return $.rpc(
 		5, ctx,
-		function(_) {
-			$.lipi.StructEncoder(_, [[0, msg, _.Str]]);
-		},
-		function(_) {}
+		_ => $.lipi.StructEncoder(_, [[0, msg, _.Str]]),
+		_ => { }
 	);
 }
 
 export function load(ctx: $.Context = {}) {
 	return $.rpc(
 		6, ctx,
-		function(_) {
+		_ => {
 			$.lipi.StructEncoder(_, []);
 		},
-		function(_) {
-			return $.lipi.OutputDecoder(_, _.Str, false);
-		},
+		_ => $.lipi.OutputDecoder(_, _.Str, false),
 	);
 }
 
 export function what_is_my_ip(ctx: $.Context = {}) {
 	return $.rpc(
 		7, ctx,
-		function(_) {
+		_ => {
 			$.lipi.StructEncoder(_, []);
 		},
-		function(_) {
-			return $.lipi.OutputDecoder(_, _.Str, true);
-		},
+		_ => $.lipi.OutputDecoder(_, _.Str, true),
 	);
 }
 
 export function fetch_user_ids(count: number, ctx: $.Context = {}) {
 	return $.sse(
 		8, ctx,
-		function(_) {
-			$.lipi.StructEncoder(_, [[0, count, _.U8]]);
-		},
-		function(_) {
-			return $.lipi.OutputDecoder(_, _.U8, true);
-		},
-		function(_) {
-			return $.lipi.OutputDecoder(_, _.Str, true);
-		},
+		_ => $.lipi.StructEncoder(_, [[0, count, _.U8]]),
+		_ => $.lipi.OutputDecoder(_, _.U8, true),
+		_ => $.lipi.OutputDecoder(_, _.Str, true),
 	);
 }
 
 export function random_data(ctx: $.Context = {}) {
 	return $.rpc(
 		101, ctx,
-		function(_) {
+		_ => {
 			$.lipi.StructEncoder(_, []);
 		},
-		function(_) {
-			return $.lipi.OutputDecoder(_, $D.Data, true);
-		},
+		_ => $.lipi.OutputDecoder(_, $D.Data, true),
 	);
 }
 
 export function echo_data(input: Data, ctx: $.Context = {}) {
 	return $.rpc(
 		102, ctx,
-		function(_) {
-			$.lipi.StructEncoder(_, [[0, input, $E.Data]]);
-		},
-		function(_) {
-			return $.lipi.OutputDecoder(_, $D.Data, true);
-		},
+		_ => $.lipi.StructEncoder(_, [[0, input, $E.Data]]),
+		_ => $.lipi.OutputDecoder(_, $D.Data, true),
 	);
 }
 
@@ -262,39 +234,29 @@ export interface compare_data {
 export function compare_data(z: compare_data, ctx: $.Context = {}) {
 	return $.rpc(
 		103, ctx,
-		function(_) {
-			$.lipi.StructEncoder(_, [
-				[0, z.left, $E.Data],
-				[1, z.right, $E.Data],
-			]);
-		},
-		function(_) {
-			return $.lipi.OutputDecoder(_, _.Bool, true);
-		},
+		_ => $.lipi.StructEncoder(_, [
+			[0, z.left, $E.Data],
+			[1, z.right, $E.Data],
+		]),
+		_ => $.lipi.OutputDecoder(_, _.Bool, true),
 	);
 }
 
 export function random_js_value(ctx: $.Context = {}) {
 	return $.rpc(
 		104, ctx,
-		function(_) {
+		_ => {
 			$.lipi.StructEncoder(_, []);
 		},
-		function(_) {
-			return $.lipi.OutputDecoder(_, $D.JsValue, true);
-		},
+		_ => $.lipi.OutputDecoder(_, $D.JsValue, true),
 	);
 }
 
 export function echo_js_value(input: JsValue, ctx: $.Context = {}) {
 	return $.rpc(
 		105, ctx,
-		function(_) {
-			$.lipi.StructEncoder(_, [[0, input, $E.JsValue]]);
-		},
-		function(_) {
-			return $.lipi.OutputDecoder(_, $D.JsValue, true);
-		},
+		_ => $.lipi.StructEncoder(_, [[0, input, $E.JsValue]]),
+		_ => $.lipi.OutputDecoder(_, $D.JsValue, true),
 	);
 }
 
@@ -305,14 +267,12 @@ export interface compare_js_value {
 export function compare_js_value(z: compare_js_value, ctx: $.Context = {}) {
 	return $.rpc(
 		106, ctx,
-		function(_) {
+		_ => {
 			$.lipi.StructEncoder(_, [
 				[0, z.left, $E.JsValue],
 				[1, z.right, $E.JsValue],
 			]);
 		},
-		function(_) {
-			return $.lipi.OutputDecoder(_, _.Bool, true);
-		},
+		_ => $.lipi.OutputDecoder(_, _.Bool, true),
 	);
 }

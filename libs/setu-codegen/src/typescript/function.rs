@@ -43,39 +43,19 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                     c.scope(|c| {
                         c.line(args!("{index}, ctx,"));
 
-                        c.line("function(_) {");
-                        c.scope(|c| {
-                            let mut fields = args.iter().zip(input_ty);
-                            if fields.len() == 1 {
-                                let (arg_name, ty) = fields.next().unwrap();
-                                let decoder = ctx.serde_ty(ty, "$E");
-                                return c.line(args!(
-                                    "$.lipi.StructEncoder(_, [[0, {arg_name}, {decoder}]]);"
-                                ));
-                            }
-
-                            let fields = fields
-                                .enumerate()
-                                .map(|(key, (name, ty))| (name.as_ref(), ty, key as u32));
-
-                            ctx.struct_encoder(c, fields);
-                        });
-                        c.line("},");
+                        input_encoder(ctx, c, input_ty, args);
 
                         for ty in return_tys {
                             if matches!(ty, Type::Tuple(tys) if tys.is_empty()) {
-                                c.line("function(_) {}");
+                                c.line("_ => {}");
                                 continue;
                             }
-                            c.line("function(_) {");
-                            c.scope(|c| {
-                                let required = ty.optional().is_none();
-                                let decoder = ctx.serde_ty(ty, "$D");
-                                c.line(args!(
-                                    "return $.lipi.OutputDecoder(_, {decoder}, {required});"
-                                ));
-                            });
-                            c.line("},");
+                            let required = ty.optional().is_none();
+                            let decoder = ctx.serde_ty(ty, "$D");
+
+                            c.line(args!(
+                                "_ => $.lipi.OutputDecoder(_, {decoder}, {required}),"
+                            ));
                         }
                     });
                     c.line(");");
@@ -94,4 +74,27 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
             },
         );
     }
+}
+
+fn input_encoder(ctx: &Context, c: &mut CodeWriter, input_ty: &[Type], args: &[Box<str>]) {
+    let mut fields = args.iter().zip(input_ty);
+
+    if fields.len() == 1 {
+        let (arg_name, ty) = fields.next().unwrap();
+        let decoder = ctx.serde_ty(ty, "$E");
+        c.line(args!(
+            "_ => $.lipi.StructEncoder(_, [[0, {arg_name}, {decoder}]]),"
+        ));
+        return;
+    }
+
+    c.line("_ => {");
+    c.scope(|c| {
+        let fields = fields
+            .enumerate()
+            .map(|(key, (name, ty))| (name.as_ref(), ty, key as u32));
+
+        ctx.struct_encoder(c, fields);
+    });
+    c.line("},");
 }

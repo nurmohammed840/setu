@@ -197,6 +197,35 @@ impl Context {
         });
         c.line("]);");
     }
+
+    fn encoder_fn(
+        &self,
+        c: &mut CodeWriter,
+        path: &PathIdent,
+        kind: &str,
+        f: impl FnOnce(&mut CodeWriter),
+    ) {
+        let interface_name = self.symbol.interface_name(path);
+        c.line(args!(
+            "{interface_name}: function {kind}(this: $.lipi.Encode, z: {interface_name}) {{"
+        ));
+        c.scope(f);
+        c.line("},");
+    }
+
+    fn decoder_fn(
+        &self,
+        c: &mut CodeWriter,
+        interface: &str,
+        kind: &str,
+        f: impl FnOnce(&mut CodeWriter),
+    ) {
+        c.line(args!(
+            "{interface}: function {kind}(this: $.lipi.Decode): {interface} {{"
+        ));
+        c.scope(f);
+        c.line("},");
+    }
 }
 
 mod cached {

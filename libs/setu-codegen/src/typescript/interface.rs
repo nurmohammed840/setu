@@ -59,38 +59,26 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
 }
 
 fn generate_encoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &ComplexData) {
-    let interface_name = ctx.symbol.interface_name(path);
     match &data.ty {
         ComplexDataType::Struct { fields } => {
-            c.line(args!(
-                "{interface_name}: function Struct(this: $.lipi.Encode, z: {interface_name}) {{"
-            ));
-            c.scope(|c| {
+            ctx.encoder_fn(c, path, "Struct", |c| {
                 c.line("let _ = this;");
                 ctx.struct_encoder(
                     c,
                     fields.iter().map(|(_, s)| (s.name.as_ref(), &s.ty, s.key)),
                 );
             });
-            c.line("},");
         }
         ComplexDataType::Enum { is_numeric, fields } if *is_numeric => {
             let Some((ty, repr)) = enum_numeric_repr(fields) else {
                 return;
             };
-            c.line(args!(
-                "{interface_name}: function {repr}(this: $.lipi.Encode, z: {interface_name}) {{"
-            ));
-            c.scope(|c| {
+            ctx.encoder_fn(c, path, repr, |c| {
                 c.line(args!("this.{ty}(z)"));
             });
-            c.line("},");
         }
         ComplexDataType::Enum { fields, .. } => {
-            c.line(args!(
-                "{interface_name}: function Union(this: $.lipi.Encode, z: {interface_name}) {{"
-            ));
-            c.scope(|c| {
+            ctx.encoder_fn(c, path, "Union", |c| {
                 c.line("let _ = this;");
                 c.block("switch (z.type)", |c| {
                     for (_, field) in fields {
@@ -98,7 +86,6 @@ fn generate_encoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
                     }
                 });
             });
-            c.line("},");
         }
         ComplexDataType::Tuple { .. } => {}
     }
@@ -134,10 +121,7 @@ fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
     let interface = ctx.symbol.interface_name(path);
     match &data.ty {
         ComplexDataType::Struct { fields } => {
-            c.line(args!(
-                "{interface}: function Struct(this: $.lipi.Decode): {interface} {{"
-            ));
-            c.scope(|c| {
+            ctx.decoder_fn(c, &interface, "Struct", |c| {
                 c.line("let _ = this;");
                 c.line(args!("return $.lipi.StructDecoder(_, ["));
                 c.scope(|c| {
@@ -149,16 +133,12 @@ fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
                 });
                 c.line("]);");
             });
-            c.line("},");
         }
         ComplexDataType::Enum { is_numeric, fields } if *is_numeric => {
             let Some((ty, repr)) = enum_numeric_repr(fields) else {
                 return;
             };
-            c.line(args!(
-                "{interface}: function {repr}(this: $.lipi.Decode): {interface} {{"
-            ));
-            c.scope(|c| {
+            ctx.decoder_fn(c, &interface, repr, |c| {
                 c.line(args!("let tag = this.{ty}();"));
                 c.block("switch (tag)", |c| {
                     for (_, field) in fields {
@@ -169,13 +149,9 @@ fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
                     c.line("default: throw new Error(`unknown tag: ${tag}`);");
                 });
             });
-            c.line("},");
         }
         ComplexDataType::Enum { fields, .. } => {
-            c.line(args!(
-                "{interface}: function Union(this: $.lipi.Decode): {interface} {{"
-            ));
-            c.scope(|c| {
+            ctx.decoder_fn(c, &interface, "Struct", |c| {
                 c.line("let _ = this;");
                 c.line("return $.lipi.EnumDecoder(_, [");
                 c.scope(|c| {
@@ -199,7 +175,6 @@ fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
                 });
                 c.line("]);");
             });
-            c.line("},");
         }
         ComplexDataType::Tuple { .. } => {}
     }
