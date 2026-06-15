@@ -78,23 +78,24 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
 
 fn input_encoder(ctx: &Context, c: &mut CodeWriter, input_ty: &[Type], args: &[Box<str>]) {
     let mut fields = args.iter().zip(input_ty);
-
-    if fields.len() == 1 {
+    
+    let len = fields.len();
+    if len == 0 {
+        return c.line("_ => $.lipi.StructEncoder(_, []),");
+    }
+    if len == 1 {
         let (arg_name, ty) = fields.next().unwrap();
         let decoder = ctx.serde_ty(ty, "$E");
-        c.line(args!(
+        return c.line(args!(
             "_ => $.lipi.StructEncoder(_, [[0, {arg_name}, {decoder}]]),"
         ));
-        return;
     }
 
-    c.line("_ => {");
-    c.scope(|c| {
-        let fields = fields
-            .enumerate()
-            .map(|(key, (name, ty))| (name.as_ref(), ty, key as u32));
+    let fields = fields
+        .enumerate()
+        .map(|(key, (name, ty))| (name.as_ref(), ty, key as u32));
 
-        ctx.struct_encoder(c, fields);
-    });
-    c.line("},");
+    c.line("_ => $.lipi.StructEncoder(_, [");
+    ctx.struct_encoder(c, fields);
+    c.line("]),");
 }

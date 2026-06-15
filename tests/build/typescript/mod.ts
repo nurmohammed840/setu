@@ -137,12 +137,10 @@ export interface add {
 export function add(z: add, ctx: $.Context = {}) {
 	return $.rpc(
 		2, ctx,
-		_ => {
-			$.lipi.StructEncoder(_, [
-				[0, z.a, _.I32],
-				[1, z.b, _.I32],
-			]);
-		},
+		_ => $.lipi.StructEncoder(_, [
+			[0, z.a, _.I32],
+			[1, z.b, _.I32],
+		]),
 		_ => $.lipi.OutputDecoder(_, _.I32, true),
 	);
 }
@@ -154,12 +152,10 @@ export interface find_in_string {
 export function find_in_string(z: find_in_string, ctx: $.Context = {}) {
 	return $.rpc(
 		3, ctx,
-		_ => {
-			$.lipi.StructEncoder(_, [
-				[0, z.input, _.Str],
-				[1, z.pat, _.Str],
-			]);
-		},
+		_ => $.lipi.StructEncoder(_, [
+			[0, z.input, _.Str],
+			[1, z.pat, _.Str],
+		]),
 		_ => $.lipi.OutputDecoder(_, _.U32, false),
 	);
 }
@@ -168,7 +164,7 @@ export function print(msg: string, ctx: $.Context = {}) {
 	return $.rpc(
 		4, ctx,
 		_ => $.lipi.StructEncoder(_, [[0, msg, _.Str]]),
-		_ => { }
+		_ => {}
 	);
 }
 
@@ -176,16 +172,14 @@ export function store(msg: string, ctx: $.Context = {}) {
 	return $.rpc(
 		5, ctx,
 		_ => $.lipi.StructEncoder(_, [[0, msg, _.Str]]),
-		_ => { }
+		_ => {}
 	);
 }
 
 export function load(ctx: $.Context = {}) {
 	return $.rpc(
 		6, ctx,
-		_ => {
-			$.lipi.StructEncoder(_, []);
-		},
+		_ => $.lipi.StructEncoder(_, []),
 		_ => $.lipi.OutputDecoder(_, _.Str, false),
 	);
 }
@@ -193,9 +187,7 @@ export function load(ctx: $.Context = {}) {
 export function what_is_my_ip(ctx: $.Context = {}) {
 	return $.rpc(
 		7, ctx,
-		_ => {
-			$.lipi.StructEncoder(_, []);
-		},
+		_ => $.lipi.StructEncoder(_, []),
 		_ => $.lipi.OutputDecoder(_, _.Str, true),
 	);
 }
@@ -212,9 +204,7 @@ export function fetch_user_ids(count: number, ctx: $.Context = {}) {
 export function random_data(ctx: $.Context = {}) {
 	return $.rpc(
 		101, ctx,
-		_ => {
-			$.lipi.StructEncoder(_, []);
-		},
+		_ => $.lipi.StructEncoder(_, []),
 		_ => $.lipi.OutputDecoder(_, $D.Data, true),
 	);
 }
@@ -245,9 +235,7 @@ export function compare_data(z: compare_data, ctx: $.Context = {}) {
 export function random_js_value(ctx: $.Context = {}) {
 	return $.rpc(
 		104, ctx,
-		_ => {
-			$.lipi.StructEncoder(_, []);
-		},
+		_ => $.lipi.StructEncoder(_, []),
 		_ => $.lipi.OutputDecoder(_, $D.JsValue, true),
 	);
 }
@@ -267,12 +255,10 @@ export interface compare_js_value {
 export function compare_js_value(z: compare_js_value, ctx: $.Context = {}) {
 	return $.rpc(
 		106, ctx,
-		_ => {
-			$.lipi.StructEncoder(_, [
-				[0, z.left, $E.JsValue],
-				[1, z.right, $E.JsValue],
-			]);
-		},
+		_ => $.lipi.StructEncoder(_, [
+			[0, z.left, $E.JsValue],
+			[1, z.right, $E.JsValue],
+		]),
 		_ => $.lipi.OutputDecoder(_, _.Bool, true),
 	);
 }

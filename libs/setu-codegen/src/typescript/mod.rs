@@ -185,17 +185,12 @@ impl Context {
         I: Iterator<Item = (&'a str, &'a Type, u32)>,
         I: ExactSizeIterator,
     {
-        if fields.len() == 0 {
-            return c.line("$.lipi.StructEncoder(_, []);");
-        }
-        c.line("$.lipi.StructEncoder(_, [");
         c.scope(|c| {
             for (name, ty, key) in fields {
                 let decoder = self.serde_ty(ty, "$E");
                 c.line(args!("[{key}, z.{name}, {decoder}],"));
             }
         });
-        c.line("]);");
     }
 
     fn encoder_fn(

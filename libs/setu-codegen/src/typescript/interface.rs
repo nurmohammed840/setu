@@ -63,10 +63,12 @@ fn generate_encoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
         ComplexDataType::Struct { fields } => {
             ctx.encoder_fn(c, path, "Struct", |c| {
                 c.line("let _ = this;");
+                c.line("$.lipi.StructEncoder(_, [");
                 ctx.struct_encoder(
                     c,
                     fields.iter().map(|(_, s)| (s.name.as_ref(), &s.ty, s.key)),
                 );
+                c.line("]);");
             });
         }
         ComplexDataType::Enum { is_numeric, fields } if *is_numeric => {
