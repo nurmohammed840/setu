@@ -116,16 +116,11 @@ export interface HelloRequest {
 	name: string;
 }
 
-export interface say_hello {
-	input: HelloRequest,
-}
-export function say_hello(z: say_hello, ctx: $.Context = {}) {
+export function say_hello(input: HelloRequest, ctx: $.Context = {}) {
 	return $.rpc(
 		1, ctx,
 		function() {
-			$.lipi.StructEncoder(this, [
-				[0, z.input, $E.HelloRequest],
-			]);
+			$.lipi.StructEncoder(this, [[0, input, $E.HelloRequest]]);
 		},
 		function() {
 			return $.lipi.OutputDecoder(this, $D.HelloReply, true);
@@ -171,31 +166,21 @@ export function find_in_string(z: find_in_string, ctx: $.Context = {}) {
 	);
 }
 
-export interface print {
-	msg: string,
-}
-export function print(z: print, ctx: $.Context = {}) {
+export function print(msg: string, ctx: $.Context = {}) {
 	return $.rpc(
 		4, ctx,
 		function() {
-			$.lipi.StructEncoder(this, [
-				[0, z.msg, this.Str],
-			]);
+			$.lipi.StructEncoder(this, [[0, msg, this.Str]]);
 		},
 		function() {}
 	);
 }
 
-export interface store {
-	msg: string,
-}
-export function store(z: store, ctx: $.Context = {}) {
+export function store(msg: string, ctx: $.Context = {}) {
 	return $.rpc(
 		5, ctx,
 		function() {
-			$.lipi.StructEncoder(this, [
-				[0, z.msg, this.Str],
-			]);
+			$.lipi.StructEncoder(this, [[0, msg, this.Str]]);
 		},
 		function() {}
 	);
@@ -225,16 +210,11 @@ export function what_is_my_ip(ctx: $.Context = {}) {
 	);
 }
 
-export interface fetch_user_ids {
-	count: number,
-}
-export function fetch_user_ids(z: fetch_user_ids, ctx: $.Context = {}) {
+export function fetch_user_ids(count: number, ctx: $.Context = {}) {
 	return $.sse(
 		8, ctx,
 		function() {
-			$.lipi.StructEncoder(this, [
-				[0, z.count, this.U8],
-			]);
+			$.lipi.StructEncoder(this, [[0, count, this.U8]]);
 		},
 		function() {
 			return $.lipi.OutputDecoder(this, this.U8, true);
@@ -257,16 +237,11 @@ export function random_data(ctx: $.Context = {}) {
 	);
 }
 
-export interface echo_data {
-	input: Data,
-}
-export function echo_data(z: echo_data, ctx: $.Context = {}) {
+export function echo_data(input: Data, ctx: $.Context = {}) {
 	return $.rpc(
 		102, ctx,
 		function() {
-			$.lipi.StructEncoder(this, [
-				[0, z.input, $E.Data],
-			]);
+			$.lipi.StructEncoder(this, [[0, input, $E.Data]]);
 		},
 		function() {
 			return $.lipi.OutputDecoder(this, $D.Data, true);
@@ -305,16 +280,11 @@ export function random_js_value(ctx: $.Context = {}) {
 	);
 }
 
-export interface echo_js_value {
-	input: JsValue,
-}
-export function echo_js_value(z: echo_js_value, ctx: $.Context = {}) {
+export function echo_js_value(input: JsValue, ctx: $.Context = {}) {
 	return $.rpc(
 		105, ctx,
 		function() {
-			$.lipi.StructEncoder(this, [
-				[0, z.input, $E.JsValue],
-			]);
+			$.lipi.StructEncoder(this, [[0, input, $E.JsValue]]);
 		},
 		function() {
 			return $.lipi.OutputDecoder(this, $D.JsValue, true);

@@ -18,13 +18,21 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
 
         c.newline();
 
-        let fn_input = if !args.is_empty() {
-            c.block(args!("export interface {ident}"), |c| {
-                ctx.write_object_tys(c, ',', args.iter().zip(input_ty));
-            });
-            args!("z: {ident}, ")
-        } else {
-            args!("")
+        let fn_input = match args.len() {
+            0 => args!(""),
+            1 if let Some(ty) = input_ty.get(0) => {
+                if let Some(ty) = ty.optional() {
+                    args!("{}?: {}, ", args[0], ctx.data_ty(ty))
+                } else {
+                    args!("{}: {}, ", args[0], ctx.data_ty(ty))
+                }
+            }
+            _ => {
+                c.block(args!("export interface {ident}"), |c| {
+                    ctx.write_object_tys(c, ',', args.iter().zip(input_ty));
+                });
+                args!("z: {ident}, ")
+            }
         };
 
         c.block(
@@ -37,9 +45,16 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
 
                         c.line("function() {");
                         c.scope(|c| {
-                            let fields = args
-                                .iter()
-                                .zip(input_ty)
+                            let mut fields = args.iter().zip(input_ty);
+                            if fields.len() == 1 {
+                                let (arg_name, ty) = fields.next().unwrap();
+                                let decoder = ctx.serde_ty(ty, "$E");
+                                return c.line(args!(
+                                    "$.lipi.StructEncoder(this, [[0, {arg_name}, {decoder}]]);"
+                                ));
+                            }
+
+                            let fields = fields
                                 .enumerate()
                                 .map(|(key, (name, ty))| (name.as_ref(), ty, key as u32));
 
