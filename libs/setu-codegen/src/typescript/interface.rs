@@ -23,22 +23,22 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
     });
 
     for (path, ComplexData { ty, .. }) in ctx.info.registry.iter() {
-        let interface_name = ctx.symbol.interface_name(path);
+        let interface = ctx.symbol.interface_name(path);
         match ty {
             ComplexDataType::Struct { fields } => {
-                c.block(args!("export interface {interface_name}"), |c| {
+                c.block(args!("export interface {interface}"), |c| {
                     ctx.write_object_tys(c, ';', fields.iter().map(|(_, s)| (&s.name, &s.ty)));
                 });
             }
             ComplexDataType::Enum { is_numeric, fields } if *is_numeric => {
-                c.block(args!("export enum {interface_name}"), |c| {
+                c.block(args!("export enum {interface}"), |c| {
                     for (_, field) in fields {
                         c.line(args!("{} = {},", field.name, field.discriminant));
                     }
                 });
             }
             ComplexDataType::Enum { fields, .. } => {
-                c.line(args!("export type {interface_name} ="));
+                c.line(args!("export type {interface} ="));
                 c.scope(|c| {
                     for (_, EnumField { name, ty, .. }) in fields {
                         let Some(kind) = enum_field_kind(ty) else {
@@ -129,17 +129,17 @@ fn field_encoder(ctx: &Context, c: &mut CodeWriter, field: &EnumField) {
 }
 
 fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &ComplexData) {
-    let interface_name = ctx.symbol.interface_name(path);
+    let interface = ctx.symbol.interface_name(path);
     match &data.ty {
         ComplexDataType::Struct { fields } => {
             c.line(args!(
-                "{interface_name}: function Struct(this: $.lipi.Decode): {interface_name} {{"
+                "{interface}: function Struct(this: $.lipi.Decode): {interface} {{"
             ));
             c.scope(|c| {
                 c.line(args!("return $.lipi.StructDecoder(this, ["));
                 c.scope(|c| {
                     for (_, StructField { name, ty, key }) in fields {
-                        let required = ty.optional().is_none();
+                        let required = ty.optional().is_none() as u8;
                         let decoder = ctx.serde_ty(ty, "$D");
                         c.line(args!("[{key}, \"{name}\", {decoder}, {required}],",));
                     }
@@ -153,26 +153,50 @@ fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
                 return;
             };
             c.line(args!(
-                "{interface_name}: function {repr}(this: $.lipi.Decode): {interface_name} {{"
+                "{interface}: function {repr}(this: $.lipi.Decode): {interface} {{"
             ));
             c.scope(|c| {
                 c.line(args!("let tag = this.{ty}();"));
                 c.block("switch (tag)", |c| {
-                    for (
-                        _,
-                        EnumField {
-                            name, discriminant, ..
-                        },
-                    ) in fields
-                    {
-                        c.line(args!("case {discriminant}: {interface_name}.{name};"));
+                    for (_, field) in fields {
+                        let key = &field.discriminant;
+                        let name = &field.name;
+                        c.line(args!("case {key}: {interface}.{name};"));
                     }
                     c.line("default: throw new Error(`unknown tag: ${tag}`);");
                 });
             });
             c.line("},");
         }
-        ComplexDataType::Enum { .. } => {}
+        ComplexDataType::Enum { fields, .. } => {
+            c.line(args!(
+                "{interface}: function Union(this: $.lipi.Decode): {interface} {{"
+            ));
+            c.scope(|c| {
+                c.line("return $.lipi.EnumDecoder(this, [");
+                c.scope(|c| {
+                    for (_, field) in fields {
+                        let EnumField {
+                            name,
+                            ty,
+                            discriminant: key,
+                        } = field;
+                        let Some(kind) = enum_field_kind(ty) else {
+                            continue;
+                        };
+                        match kind {
+                            EnumKind::Unit => c.line(args!("[{key}, {name:?}, this.Bool, 1],")),
+                            EnumKind::Field(ty) => {
+                                let de = ctx.serde_ty(ty, "$D");
+                                c.line(args!("[{key}, {name:?}, {de}, 0],"))
+                            }
+                        }
+                    }
+                });
+                c.line("]);");
+            });
+            c.line("},");
+        }
         ComplexDataType::Tuple { .. } => {}
     }
 }

@@ -215,11 +215,11 @@ function ListType<T, N>(de: Decoder<N>, from: (_: { length: number }, map: () =>
 
 
 
-type Schema = readonly [
+type StructField = readonly [
     id: number,
     name: string,
     decoder: Decoder<unknown>,
-    required: boolean
+    required: 1 | 0
 ];
 
 // `T[number]` is same as `Array<T1, T2, ..> => union T1 | T2 | ..`
@@ -232,45 +232,83 @@ type Schema = readonly [
 //   : ignore
 //
 // where value is ReturnType of decoder (E[2]) function.
-type Transform<T extends readonly Schema[]> =
+type Struct<Fields extends readonly StructField[]> =
     // required fields
-    { [E in T[number]as E[3] extends true ? E[1] : never]: ReturnType<E[2]>; }
+    { [Field in Fields[number]as Field[3] extends 1 ? Field[1] : never]: ReturnType<Field[2]> }
     // optional fields
-    & { [E in T[number]as E[3] extends false ? E[1] : never]?: ReturnType<E[2]>; }
+    & { [Field in Fields[number]as Field[3] extends 0 ? Field[1] : never]?: ReturnType<Field[2]> }
 
 
-export function StructDecoder<const T extends readonly Schema[]>(self: Decode, schemas: T) {
-    let obj = {} as Transform<T>;
+export function StructDecoder<const Fields extends readonly StructField[]>(self: Decode, fields: Fields) {
+    let struct = {} as Struct<Fields>;
 
     let header: [number, DataType] | undefined;
     while (header = self.next_field_id_and_ty()) {
-        let [field_id, field_ty] = header;
+        let [id, ty] = header;
 
-        let field = schemas.find(([id]) => id === field_id);
-        if (!field) {
-            skip_field(self, field_id, field_ty);
+        let field = fields.find(([field_id]) => field_id === id);
+        if (field === undefined) {
+            skip_field(self, id, ty);
             continue;
         }
-        
+
         let [_, name, decoder] = field;
-     
+
         if (decoder.name == "Bool") {
-            (obj as any)[name] = DataType.asBool(field_ty);
+            (struct as any)[name] = DataType.asBool(ty);
         } else {
-            expectedTy(decoder, field_ty);
-            (obj as any)[name] = decoder.call(self);
+            expectedTy(decoder, ty);
+            (struct as any)[name] = decoder.call(self);
         }
     }
 
     // check required fields
-    for (let [name, id, de, isRequired] of schemas) {
-        if (isRequired && !(name in obj)) {
+    for (let [name, id, de, isRequired] of fields) {
+        if (isRequired && !(name in struct)) {
             throw new Error(`missing required field: ${name} as ${id}; type: ${de.name}`);
         }
     }
 
-    return obj;
+    return struct;
 }
+
+// ================================================================================
+
+type EnumItem = readonly [
+    id: number,
+    type: string,
+    decoder: Decoder<unknown>,
+    is_unit: 1 | 0
+];
+
+type Enum<Items extends readonly EnumItem[]> = {
+    [Index in keyof Items]: Items[Index][3] extends 1
+    ? { type: Items[Index][1] }
+    : { type: Items[Index][1]; value: ReturnType<Items[Index][2]> }
+}[number];
+
+export function EnumDecoder<const Items extends readonly EnumItem[]>(self: Decode, items: Items): Enum<Items> {
+    let [id, ty] = self.read_field_id_and_ty();
+
+    let item = items.find(([item_id]) => item_id == id);
+    assert(item !== undefined);
+
+    let [_, type, decoder, is_unit] = item;
+
+    if (is_unit) {
+        skip_field(self, id, ty);
+        return { type } as Enum<Items>;
+    }
+
+    if (decoder.name == "Bool") {
+        return { type, value: DataType.asBool(ty) }  as Enum<Items>
+    } else {
+        expectedTy(decoder, ty);
+        return { type, value: decoder.call(self) }  as Enum<Items>
+    }
+}
+
+// ================================================================================
 
 export function OutputDecoder<T>(self: Decode, de: Decoder<T>, required: true): T;
 export function OutputDecoder<T>(self: Decode, de: Decoder<T>, required: false): T | undefined;

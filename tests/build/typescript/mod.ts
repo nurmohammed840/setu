@@ -41,19 +41,29 @@ const $E = {
 const $D = {
 	Data: function Struct(this: $.lipi.Decode): Data {
 		return $.lipi.StructDecoder(this, [
-			[1, "u8", this.U8, true],
-			[2, "u16", this.U16, true],
-			[3, "u32", this.U32, true],
-			[4, "u64", this.U64, true],
-			[5, "i8", this.I8, true],
-			[6, "i16", this.I16, true],
-			[7, "i32", this.I32, true],
-			[8, "i64", this.I64, true],
-			[9, "f32", this.F32, true],
-			[10, "f64", this.F64, true],
-			[11, "bool", this.Bool, true],
-			[12, "string", this.Str, true],
-			[13, "numeric", $D.Numerical, true],
+			[1, "u8", this.U8, 1],
+			[2, "u16", this.U16, 1],
+			[3, "u32", this.U32, 1],
+			[4, "u64", this.U64, 1],
+			[5, "i8", this.I8, 1],
+			[6, "i16", this.I16, 1],
+			[7, "i32", this.I32, 1],
+			[8, "i64", this.I64, 1],
+			[9, "f32", this.F32, 1],
+			[10, "f64", this.F64, 1],
+			[11, "bool", this.Bool, 1],
+			[12, "string", this.Str, 1],
+			[13, "numeric", $D.Numerical, 1],
+		]);
+	},
+	JsValue: function Union(this: $.lipi.Decode): JsValue {
+		return $.lipi.EnumDecoder(this, [
+			[0, "Null", this.Bool, 1],
+			[1, "Bool", this.Bool, 0],
+			[2, "Number", this.F64, 0],
+			[3, "String", this.Str, 0],
+			[4, "Array", this.List($D.JsValue), 0],
+			[5, "Object", this.Table(this.Str, $D.JsValue), 0],
 		]);
 	},
 	Numerical: function U8(this: $.lipi.Decode): Numerical {
@@ -67,7 +77,7 @@ const $D = {
 	},
 	HelloReply: function Struct(this: $.lipi.Decode): HelloReply {
 		return $.lipi.StructDecoder(this, [
-			[1, "message", this.Str, true],
+			[1, "message", this.Str, 1],
 		]);
 	},
 }
