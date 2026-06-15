@@ -34,7 +34,7 @@ pub struct Data {
     pub bool: bool,
 
     #[key = 12]
-    #[sample(rand_string(0..32))]
+    #[sample(sample_string(0..32))]
     pub string: String,
 
     #[key = 13]
@@ -68,13 +68,18 @@ pub enum JsValue {
     Null = 0,
     Bool(bool) = 1,
     Number(f64) = 2,
-    String(#[sample(rand_string(0..10))] String) = 3,
-    Array(#[sample(sample_list(2, 0..6))] Vec<JsValue>) = 4,
-    Object(#[sample(default_sample)] Map<String, JsValue>) = 5,
+    String(#[sample(sample_string(0..10))] String) = 3,
+    Array(#[sample(sample_list(6, 0..6))] Vec<JsValue>) = 4,
+    Object(#[sample(sample_map(6, 0..6))] Map<String, JsValue>) = 5,
 }
 
 pub async fn random_js_value() -> JsValue {
-    random()
+    loop {
+        let val: JsValue = random();
+        if matches!(val, JsValue::Object(_) | JsValue::Array(_)) {
+            break val;
+        }
+    }
 }
 
 pub async fn echo_js_value(input: JsValue) -> JsValue {

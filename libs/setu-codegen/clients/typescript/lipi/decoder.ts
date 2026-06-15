@@ -263,9 +263,9 @@ export function StructDecoder<const Fields extends readonly StructField[]>(self:
     }
 
     // check required fields
-    for (let [name, id, de, isRequired] of fields) {
+    for (let [id, name, de, isRequired] of fields) {
         if (isRequired && !(name in struct)) {
-            throw new Error(`missing required field: ${name} as ${id}; type: ${de.name}`);
+            throw new Error(`missing required field: '${name}' as ${id}; type: ${de.name}`);
         }
     }
 
@@ -283,8 +283,8 @@ type EnumItem = readonly [
 
 type Enum<Items extends readonly EnumItem[]> = {
     [Index in keyof Items]: Items[Index][3] extends 1
-        ? { type: Items[Index][1]; value: ReturnType<Items[Index][2]> }
-        : { type: Items[Index][1] }
+    ? { type: Items[Index][1]; value: ReturnType<Items[Index][2]> }
+    : { type: Items[Index][1] }
 }[number];
 
 export function EnumDecoder<const Items extends readonly EnumItem[]>(self: Decode, items: Items): Enum<Items> {

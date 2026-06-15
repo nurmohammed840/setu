@@ -69,9 +69,9 @@ const $D = {
 	Numerical: function U8(this: $.lipi.Decode): Numerical {
 		let tag = this.U8();
 		switch (tag) {
-			case 1: Numerical.A;
-			case 2: Numerical.B;
-			case 3: Numerical.C;
+			case 1: return Numerical.A;
+			case 2: return Numerical.B;
+			case 3: return Numerical.C;
 			default: throw new Error(`unknown tag: ${tag}`);
 		}
 	},

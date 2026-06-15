@@ -5,7 +5,7 @@ use rand::{
 use std::cell::Cell;
 
 /// Generate a random string of the given length range.
-pub fn rand_string<R>(len: impl SampleRange<usize>) -> impl FnOnce(&mut R) -> String
+pub fn sample_string<R>(len: impl SampleRange<usize>) -> impl FnOnce(&mut R) -> String
 where
     R: Rng + ?Sized,
 {
@@ -15,7 +15,7 @@ where
     }
 }
 
-pub fn default_sample<R, T>(_: &mut R) -> T
+pub fn _default_sample<R, T>(_: &mut R) -> T
 where
     R: Rng + ?Sized,
     T: Default,
@@ -49,23 +49,32 @@ where
     })
 }
 
-pub fn sample_list<R, T>(
-    max_depth: u8,
-    len: impl SampleRange<usize>,
-) -> impl FnOnce(&mut R) -> Vec<T>
+pub fn sample_list<R, C, T>(max_depth: u8, len: impl SampleRange<usize>) -> impl FnOnce(&mut R) -> C
 where
     R: Rng + ?Sized,
+    C: FromIterator<T> + Default,
     StandardUniform: Distribution<T>,
 {
     move |r| {
         with_depth(max_depth, || {
             let len = r.random_range(len);
+            (0..len).map(|_| r.random()).collect()
+        })
+    }
+}
 
-            let mut list = Vec::new();
-            for _ in 0..len {
-                list.push(r.random());
-            }
-            list
+pub fn sample_map<R, C, T>(max_depth: u8, len: impl SampleRange<usize>) -> impl FnOnce(&mut R) -> C
+where
+    R: Rng + ?Sized,
+    C: FromIterator<(String, T)> + Default,
+    StandardUniform: Distribution<T>,
+{
+    move |r| {
+        with_depth(max_depth, || {
+            let len = r.random_range(len);
+            (0..len)
+                .map(|_| (sample_string(0..5)(r), r.random()))
+                .collect()
         })
     }
 }

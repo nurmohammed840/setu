@@ -161,7 +161,7 @@ fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
                     for (_, field) in fields {
                         let key = &field.discriminant;
                         let name = &field.name;
-                        c.line(args!("case {key}: {interface}.{name};"));
+                        c.line(args!("case {key}: return {interface}.{name};"));
                     }
                     c.line("default: throw new Error(`unknown tag: ${tag}`);");
                 });

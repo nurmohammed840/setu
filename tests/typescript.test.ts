@@ -27,6 +27,12 @@ for (let _ of Range(0, 3)) {
     assert(await api.compare_data({ left, right }));
 }
 
+for (let _ of Range(0, 3)) {
+    let left = await api.random_js_value();
+    let right = await api.echo_js_value({ input: left });
+    assert(await api.compare_js_value({ left, right }));
+}
+
 // -------------------------- SSE ---------------------------
 
 let ids = api.fetch_user_ids({ count: 3 });
