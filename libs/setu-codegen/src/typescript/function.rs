@@ -20,7 +20,7 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
 
         let fn_input = match args.len() {
             0 => args!(""),
-            1 if let Some(ty) = input_ty.get(0) => {
+            1 if let Some(ty) = input_ty.first() => {
                 if let Some(ty) = ty.optional() {
                     args!("{}?: {}, ", args[0], ctx.data_ty(ty))
                 } else {
@@ -47,15 +47,13 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
 
                         for ty in return_tys {
                             if matches!(ty, Type::Tuple(tys) if tys.is_empty()) {
-                                c.line("_ => {}");
+                                c.line("_ => { }");
                                 continue;
                             }
                             let required = ty.optional().is_none();
                             let decoder = ctx.serde_ty(ty, "$D");
 
-                            c.line(args!(
-                                "_ => $OD(_, {decoder}, {required}),"
-                            ));
+                            c.line(args!("_ => $OD(_, {decoder}, {required}),"));
                         }
                     });
                     c.line(");");
@@ -78,7 +76,7 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
 
 fn input_encoder(ctx: &Context, c: &mut CodeWriter, input_ty: &[Type], args: &[Box<str>]) {
     let mut fields = args.iter().zip(input_ty);
-    
+
     let len = fields.len();
     if len == 0 {
         return c.line("_ => $SE(_, []),");
@@ -86,9 +84,7 @@ fn input_encoder(ctx: &Context, c: &mut CodeWriter, input_ty: &[Type], args: &[B
     if len == 1 {
         let (arg_name, ty) = fields.next().unwrap();
         let decoder = ctx.serde_ty(ty, "$E");
-        return c.line(args!(
-            "_ => $SE(_, [[0, {arg_name}, {decoder}]]),"
-        ));
+        return c.line(args!("_ => $SE(_, [[0, {arg_name}, {decoder}]]),"));
     }
 
     let fields = fields
