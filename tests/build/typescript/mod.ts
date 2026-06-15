@@ -67,7 +67,7 @@ const $D = {
 			[13, "numeric", $D.Numerical, 1],
 		]);
 	},
-	JsValue: function Struct(this: $.lipi.Decode): JsValue {
+	JsValue: function Union(this: $.lipi.Decode): JsValue {
 		let _ = this;
 		return $ED(_, [
 			[0, "Null", _.Bool, 0],

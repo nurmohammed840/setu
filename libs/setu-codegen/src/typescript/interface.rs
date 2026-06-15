@@ -153,7 +153,7 @@ fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
             });
         }
         ComplexDataType::Enum { fields, .. } => {
-            ctx.decoder_fn(c, &interface, "Struct", |c| {
+            ctx.decoder_fn(c, &interface, "Union", |c| {
                 c.line("let _ = this;");
                 c.line("return $ED(_, [");
                 c.scope(|c| {
