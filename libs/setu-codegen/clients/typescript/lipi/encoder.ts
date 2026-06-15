@@ -160,16 +160,19 @@ type Field<T> = readonly [
 type Fields<T extends readonly any[]> = [...{ [K in keyof T]: Field<T[K]> }];
 
 export function StructEncoder<const T extends readonly any[]>(self: Encode, fields: Fields<T>) {
-    for (let [id, val, encoder] of fields) {
-        if (val === undefined) continue;
-        if (encoder.name == "Bool") {
-            self.write_field_id_and_ty(id, DataType.fromBool(val));
-            continue;
-        }
-        self.write_field_id_and_ty(id, DataType.fromStr(encoder.name));
-        encoder.call(self, val);
+    for (let field of fields) {
+        FieldEncoder(self, field)
     }
     self.writeByte(DataType.StructEnd);
+}
+
+export function FieldEncoder<T>(self: Encode, [id, val, encoder]: Field<T>) {
+    if (val === undefined) return;
+    if (encoder.name == "Bool") {
+        return self.write_field_id_and_ty(id, DataType.fromBool(val as boolean));
+    }
+    self.write_field_id_and_ty(id, DataType.fromStr(encoder.name));
+    encoder.call(self, val);
 }
 
 // ================================================================================

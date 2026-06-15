@@ -19,6 +19,16 @@ const $E = {
 			[13, z.numeric, $E.Numerical],
 		]);
 	},
+	JsValue: function Union(this: $.lipi.Encode, z: JsValue) {
+		switch (z.type) {
+			case "Null": return $.lipi.FieldEncoder(this, [0, false, this.Bool]);
+			case "Bool": return $.lipi.FieldEncoder(this, [1, z.value, this.Bool]);
+			case "Number": return $.lipi.FieldEncoder(this, [2, z.value, this.F64]);
+			case "String": return $.lipi.FieldEncoder(this, [3, z.value, this.Str]);
+			case "Array": return $.lipi.FieldEncoder(this, [4, z.value, this.List($E.JsValue)]);
+			case "Object": return $.lipi.FieldEncoder(this, [5, z.value, this.Table(this.Str, $E.JsValue)]);
+		}
+	},
 	Numerical: function U8(this: $.lipi.Encode, z: Numerical) {
 		this.U8(z)
 	},
