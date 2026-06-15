@@ -51,6 +51,13 @@ impl Config {
 static TS_PRELUDE: &str = r#"// AUTO-GENERATED FILE. DO NOT EDIT.
 import * as $ from "./lib/mod.ts";
 export const $etu = { RPC: $.RPC };
+
+const $FE = $.lipi.FieldEncoder;
+const $SE = $.lipi.StructEncoder;
+const $SD = $.lipi.StructDecoder;
+const $OD = $.lipi.OutputDecoder;
+const $ED = $.lipi.EnumDecoder;
+
 "#;
 
 impl Context {

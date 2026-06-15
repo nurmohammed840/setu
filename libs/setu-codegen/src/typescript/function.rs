@@ -54,7 +54,7 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                             let decoder = ctx.serde_ty(ty, "$D");
 
                             c.line(args!(
-                                "_ => $.lipi.OutputDecoder(_, {decoder}, {required}),"
+                                "_ => $OD(_, {decoder}, {required}),"
                             ));
                         }
                     });
@@ -81,13 +81,13 @@ fn input_encoder(ctx: &Context, c: &mut CodeWriter, input_ty: &[Type], args: &[B
     
     let len = fields.len();
     if len == 0 {
-        return c.line("_ => $.lipi.StructEncoder(_, []),");
+        return c.line("_ => $SE(_, []),");
     }
     if len == 1 {
         let (arg_name, ty) = fields.next().unwrap();
         let decoder = ctx.serde_ty(ty, "$E");
         return c.line(args!(
-            "_ => $.lipi.StructEncoder(_, [[0, {arg_name}, {decoder}]]),"
+            "_ => $SE(_, [[0, {arg_name}, {decoder}]]),"
         ));
     }
 
@@ -95,7 +95,7 @@ fn input_encoder(ctx: &Context, c: &mut CodeWriter, input_ty: &[Type], args: &[B
         .enumerate()
         .map(|(key, (name, ty))| (name.as_ref(), ty, key as u32));
 
-    c.line("_ => $.lipi.StructEncoder(_, [");
+    c.line("_ => $SE(_, [");
     ctx.struct_encoder(c, fields);
     c.line("]),");
 }

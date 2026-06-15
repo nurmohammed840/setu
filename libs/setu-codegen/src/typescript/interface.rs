@@ -63,7 +63,7 @@ fn generate_encoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
         ComplexDataType::Struct { fields } => {
             ctx.encoder_fn(c, path, "Struct", |c| {
                 c.line("let _ = this;");
-                c.line("$.lipi.StructEncoder(_, [");
+                c.line("$SE(_, [");
                 ctx.struct_encoder(
                     c,
                     fields.iter().map(|(_, s)| (s.name.as_ref(), &s.ty, s.key)),
@@ -107,13 +107,13 @@ fn field_encoder(ctx: &Context, c: &mut CodeWriter, field: &EnumField) {
     match kind {
         EnumKind::Unit => {
             c.line(args!(
-                "case {name:?}: return $.lipi.FieldEncoder(_, [{key}, false, _.Bool]);"
+                "case {name:?}: return $FE(_, [{key}, false, _.Bool]);"
             ));
         }
         EnumKind::Field(ty) => {
             let decoder = ctx.serde_ty(ty, "$E");
             c.line(args!(
-                "case {name:?}: return $.lipi.FieldEncoder(_, [{key}, z.value, {decoder}]);"
+                "case {name:?}: return $FE(_, [{key}, z.value, {decoder}]);"
             ));
         }
     }
@@ -125,7 +125,7 @@ fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
         ComplexDataType::Struct { fields } => {
             ctx.decoder_fn(c, &interface, "Struct", |c| {
                 c.line("let _ = this;");
-                c.line(args!("return $.lipi.StructDecoder(_, ["));
+                c.line(args!("return $SD(_, ["));
                 c.scope(|c| {
                     for (_, StructField { name, ty, key }) in fields {
                         let required = ty.optional().is_none() as u8;
@@ -155,7 +155,7 @@ fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
         ComplexDataType::Enum { fields, .. } => {
             ctx.decoder_fn(c, &interface, "Struct", |c| {
                 c.line("let _ = this;");
-                c.line("return $.lipi.EnumDecoder(_, [");
+                c.line("return $ED(_, [");
                 c.scope(|c| {
                     for (_, field) in fields {
                         let EnumField {
