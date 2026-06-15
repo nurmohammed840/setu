@@ -12,7 +12,7 @@ export interface Output<T> extends Promise<T> {
 export function Output<T>(
     controller: AbortController,
     body: Promise<ReadableStream<Uint8Array>>,
-    decoder: Decoder<T>
+    decoder: (_: Decode) => T
 ) {
     let fut = Promise.withResolvers<T>();
     let stream: Stream | undefined;
@@ -43,7 +43,7 @@ export function Output<T>(
             assert(data.status == Status.Ok, Error, `trailer status: ${data.status}`);
 
             let de = new Decode(new Bytes(data.bytes));
-            fut.resolve(decoder.call(de));
+            fut.resolve(decoder(de));
         } catch (error) {
             fut.reject(error)
             // output.cancle()
@@ -61,8 +61,8 @@ export interface SSE<T, R> extends AsyncGenerator<T> {
 export function SSE<T, R>(
     controller: AbortController,
     body: Promise<ReadableStream<Uint8Array>>,
-    yielder: Decoder<T>,
-    output: Decoder<R>,
+    yielder: (_: Decode) => T,
+    output: (_: Decode) => R,
 ): SSE<T, R> {
     let canceled: { reason?: any } | undefined;
     let stream: Stream | undefined;
@@ -85,9 +85,9 @@ export function SSE<T, R>(
                 let de = new Decode(new Bytes(data.bytes));
                 if (data.type == "trailer") {
                     assert(data.status == Status.Ok, Error, `trailer status: ${data.status}`);
-                    return fut.resolve(output.call(de));
+                    return fut.resolve(output(de));
                 }
-                yield yielder.call(de);
+                yield yielder(de);
             }
         }
         finally {

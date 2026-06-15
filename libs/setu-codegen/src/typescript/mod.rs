@@ -132,47 +132,47 @@ impl Context {
 
     fn serde_ty(&self, ty: &Type, codex: &str) -> fmt!(type) {
         fmt(move |f| match ty {
-            Type::U8 => f.write_str("this.U8"),
-            Type::I8 => f.write_str("this.I8"),
+            Type::U8 => f.write_str("_.U8"),
+            Type::I8 => f.write_str("_.I8"),
 
-            Type::F32 => f.write_str("this.F32"),
-            Type::F64 => f.write_str("this.F64"),
+            Type::F32 => f.write_str("_.F32"),
+            Type::F64 => f.write_str("_.F64"),
 
-            Type::U16 => f.write_str("this.U16"),
-            Type::U32 => f.write_str("this.U32"),
-            Type::U64 => f.write_str("this.U64"),
+            Type::U16 => f.write_str("_.U16"),
+            Type::U32 => f.write_str("_.U32"),
+            Type::U64 => f.write_str("_.U64"),
 
-            Type::I16 => f.write_str("this.I16"),
-            Type::I32 => f.write_str("this.I32"),
-            Type::I64 => f.write_str("this.I64"),
+            Type::I16 => f.write_str("_.I16"),
+            Type::I32 => f.write_str("_.I32"),
+            Type::I64 => f.write_str("_.I64"),
 
-            Type::Bool => f.write_str("this.Bool"),
-            Type::String => f.write_str("this.Str"),
+            Type::Bool => f.write_str("_.Bool"),
+            Type::String => f.write_str("_.Str"),
 
             Type::Array { ty, .. } | Type::List { ty, .. } => match ty.as_ref() {
-                Type::U8 => f.write_str("this.ListU8"),
-                Type::I8 => f.write_str("this.ListI8"),
+                Type::U8 => f.write_str("_.ListU8"),
+                Type::I8 => f.write_str("_.ListI8"),
 
-                Type::F32 => f.write_str("this.ListF32"),
-                Type::F64 => f.write_str("this.ListF64"),
+                Type::F32 => f.write_str("_.ListF32"),
+                Type::F64 => f.write_str("_.ListF64"),
 
-                Type::U16 => f.write_str("this.ListU16"),
-                Type::U32 => f.write_str("this.ListU32"),
-                Type::U64 => f.write_str("this.ListU64"),
+                Type::U16 => f.write_str("_.ListU16"),
+                Type::U32 => f.write_str("_.ListU32"),
+                Type::U64 => f.write_str("_.ListU64"),
 
-                Type::I16 => f.write_str("this.ListI16"),
-                Type::I32 => f.write_str("this.ListI32"),
-                Type::I64 => f.write_str("this.ListI64"),
+                Type::I16 => f.write_str("_.ListI16"),
+                Type::I32 => f.write_str("_.ListI32"),
+                Type::I64 => f.write_str("_.ListI64"),
 
-                Type::Bool => f.write_str("this.ListBool"),
-                ty => f.write_fmt(args!("this.List({})", self.serde_ty(ty, codex))),
+                Type::Bool => f.write_str("_.ListBool"),
+                ty => f.write_fmt(args!("_.List({})", self.serde_ty(ty, codex))),
             },
             Type::Complex(path) => {
                 f.write_fmt(args!("{codex}.{}", self.symbol.interface_name(path)))
             }
             Type::Option(ty) => f.write_fmt(args!("{}", self.serde_ty(ty, codex))),
             Type::Map { ty, .. } => f.write_fmt(args!(
-                "this.Table({}, {})",
+                "_.Table({}, {})",
                 self.serde_ty(&ty.0, codex),
                 self.serde_ty(&ty.1, codex)
             )),
@@ -186,9 +186,9 @@ impl Context {
         I: ExactSizeIterator,
     {
         if fields.len() == 0 {
-            return c.line("$.lipi.StructEncoder(this, []);");
+            return c.line("$.lipi.StructEncoder(_, []);");
         }
-        c.line("$.lipi.StructEncoder(this, [");
+        c.line("$.lipi.StructEncoder(_, [");
         c.scope(|c| {
             for (name, ty, key) in fields {
                 let decoder = self.serde_ty(ty, "$E");

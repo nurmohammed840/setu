@@ -3,67 +3,72 @@ import * as $ from "./lib/mod.ts";
 export const $etu = { RPC: $.RPC };
 const $E = {
 	Data: function Struct(this: $.lipi.Encode, z: Data) {
-		$.lipi.StructEncoder(this, [
-			[1, z.u8, this.U8],
-			[2, z.u16, this.U16],
-			[3, z.u32, this.U32],
-			[4, z.u64, this.U64],
-			[5, z.i8, this.I8],
-			[6, z.i16, this.I16],
-			[7, z.i32, this.I32],
-			[8, z.i64, this.I64],
-			[9, z.f32, this.F32],
-			[10, z.f64, this.F64],
-			[11, z.bool, this.Bool],
-			[12, z.string, this.Str],
+		let _ = this;
+		$.lipi.StructEncoder(_, [
+			[1, z.u8, _.U8],
+			[2, z.u16, _.U16],
+			[3, z.u32, _.U32],
+			[4, z.u64, _.U64],
+			[5, z.i8, _.I8],
+			[6, z.i16, _.I16],
+			[7, z.i32, _.I32],
+			[8, z.i64, _.I64],
+			[9, z.f32, _.F32],
+			[10, z.f64, _.F64],
+			[11, z.bool, _.Bool],
+			[12, z.string, _.Str],
 			[13, z.numeric, $E.Numerical],
 		]);
 	},
 	JsValue: function Union(this: $.lipi.Encode, z: JsValue) {
+		let _ = this;
 		switch (z.type) {
-			case "Null": return $.lipi.FieldEncoder(this, [0, false, this.Bool]);
-			case "Bool": return $.lipi.FieldEncoder(this, [1, z.value, this.Bool]);
-			case "Number": return $.lipi.FieldEncoder(this, [2, z.value, this.F64]);
-			case "String": return $.lipi.FieldEncoder(this, [3, z.value, this.Str]);
-			case "Array": return $.lipi.FieldEncoder(this, [4, z.value, this.List($E.JsValue)]);
-			case "Object": return $.lipi.FieldEncoder(this, [5, z.value, this.Table(this.Str, $E.JsValue)]);
+			case "Null": return $.lipi.FieldEncoder(_, [0, false, _.Bool]);
+			case "Bool": return $.lipi.FieldEncoder(_, [1, z.value, _.Bool]);
+			case "Number": return $.lipi.FieldEncoder(_, [2, z.value, _.F64]);
+			case "String": return $.lipi.FieldEncoder(_, [3, z.value, _.Str]);
+			case "Array": return $.lipi.FieldEncoder(_, [4, z.value, _.List($E.JsValue)]);
+			case "Object": return $.lipi.FieldEncoder(_, [5, z.value, _.Table(_.Str, $E.JsValue)]);
 		}
 	},
 	Numerical: function U8(this: $.lipi.Encode, z: Numerical) {
 		this.U8(z)
 	},
 	HelloRequest: function Struct(this: $.lipi.Encode, z: HelloRequest) {
-		$.lipi.StructEncoder(this, [
-			[1, z.name, this.Str],
+		let _ = this;
+		$.lipi.StructEncoder(_, [
+			[1, z.name, _.Str],
 		]);
 	},
 }
 const $D = {
 	Data: function Struct(this: $.lipi.Decode): Data {
-		return $.lipi.StructDecoder(this, [
-			[1, "u8", this.U8, 1],
-			[2, "u16", this.U16, 1],
-			[3, "u32", this.U32, 1],
-			[4, "u64", this.U64, 1],
-			[5, "i8", this.I8, 1],
-			[6, "i16", this.I16, 1],
-			[7, "i32", this.I32, 1],
-			[8, "i64", this.I64, 1],
-			[9, "f32", this.F32, 1],
-			[10, "f64", this.F64, 1],
-			[11, "bool", this.Bool, 1],
-			[12, "string", this.Str, 1],
+		let _ = this;
+		return $.lipi.StructDecoder(_, [
+			[1, "u8", _.U8, 1],
+			[2, "u16", _.U16, 1],
+			[3, "u32", _.U32, 1],
+			[4, "u64", _.U64, 1],
+			[5, "i8", _.I8, 1],
+			[6, "i16", _.I16, 1],
+			[7, "i32", _.I32, 1],
+			[8, "i64", _.I64, 1],
+			[9, "f32", _.F32, 1],
+			[10, "f64", _.F64, 1],
+			[11, "bool", _.Bool, 1],
+			[12, "string", _.Str, 1],
 			[13, "numeric", $D.Numerical, 1],
 		]);
 	},
 	JsValue: function Union(this: $.lipi.Decode): JsValue {
-		return $.lipi.EnumDecoder(this, [
-			[0, "Null", this.Bool, 0],
-			[1, "Bool", this.Bool, 1],
-			[2, "Number", this.F64, 1],
-			[3, "String", this.Str, 1],
-			[4, "Array", this.List($D.JsValue), 1],
-			[5, "Object", this.Table(this.Str, $D.JsValue), 1],
+		let _ = this;
+		return $.lipi.EnumDecoder(_, [
+			[0, "Null", _.Bool, 0],
+			[1, "Bool", _.Bool, 1],
+			[2, "Number", _.F64, 1],
+			[3, "String", _.Str, 1],
+			[4, "Array", _.List($D.JsValue), 1],
+			[5, "Object", _.Table(_.Str, $D.JsValue), 1],
 		]);
 	},
 	Numerical: function U8(this: $.lipi.Decode): Numerical {
@@ -76,8 +81,9 @@ const $D = {
 		}
 	},
 	HelloReply: function Struct(this: $.lipi.Decode): HelloReply {
-		return $.lipi.StructDecoder(this, [
-			[1, "message", this.Str, 1],
+		let _ = this;
+		return $.lipi.StructDecoder(_, [
+			[1, "message", _.Str, 1],
 		]);
 	},
 }
@@ -119,11 +125,11 @@ export interface HelloRequest {
 export function say_hello(input: HelloRequest, ctx: $.Context = {}) {
 	return $.rpc(
 		1, ctx,
-		function() {
-			$.lipi.StructEncoder(this, [[0, input, $E.HelloRequest]]);
+		function(_) {
+			$.lipi.StructEncoder(_, [[0, input, $E.HelloRequest]]);
 		},
-		function() {
-			return $.lipi.OutputDecoder(this, $D.HelloReply, true);
+		function(_) {
+			return $.lipi.OutputDecoder(_, $D.HelloReply, true);
 		},
 	);
 }
@@ -135,14 +141,14 @@ export interface add {
 export function add(z: add, ctx: $.Context = {}) {
 	return $.rpc(
 		2, ctx,
-		function() {
-			$.lipi.StructEncoder(this, [
-				[0, z.a, this.I32],
-				[1, z.b, this.I32],
+		function(_) {
+			$.lipi.StructEncoder(_, [
+				[0, z.a, _.I32],
+				[1, z.b, _.I32],
 			]);
 		},
-		function() {
-			return $.lipi.OutputDecoder(this, this.I32, true);
+		function(_) {
+			return $.lipi.OutputDecoder(_, _.I32, true);
 		},
 	);
 }
@@ -154,14 +160,14 @@ export interface find_in_string {
 export function find_in_string(z: find_in_string, ctx: $.Context = {}) {
 	return $.rpc(
 		3, ctx,
-		function() {
-			$.lipi.StructEncoder(this, [
-				[0, z.input, this.Str],
-				[1, z.pat, this.Str],
+		function(_) {
+			$.lipi.StructEncoder(_, [
+				[0, z.input, _.Str],
+				[1, z.pat, _.Str],
 			]);
 		},
-		function() {
-			return $.lipi.OutputDecoder(this, this.U32, false);
+		function(_) {
+			return $.lipi.OutputDecoder(_, _.U32, false);
 		},
 	);
 }
@@ -169,31 +175,31 @@ export function find_in_string(z: find_in_string, ctx: $.Context = {}) {
 export function print(msg: string, ctx: $.Context = {}) {
 	return $.rpc(
 		4, ctx,
-		function() {
-			$.lipi.StructEncoder(this, [[0, msg, this.Str]]);
+		function(_) {
+			$.lipi.StructEncoder(_, [[0, msg, _.Str]]);
 		},
-		function() {}
+		function(_) {}
 	);
 }
 
 export function store(msg: string, ctx: $.Context = {}) {
 	return $.rpc(
 		5, ctx,
-		function() {
-			$.lipi.StructEncoder(this, [[0, msg, this.Str]]);
+		function(_) {
+			$.lipi.StructEncoder(_, [[0, msg, _.Str]]);
 		},
-		function() {}
+		function(_) {}
 	);
 }
 
 export function load(ctx: $.Context = {}) {
 	return $.rpc(
 		6, ctx,
-		function() {
-			$.lipi.StructEncoder(this, []);
+		function(_) {
+			$.lipi.StructEncoder(_, []);
 		},
-		function() {
-			return $.lipi.OutputDecoder(this, this.Str, false);
+		function(_) {
+			return $.lipi.OutputDecoder(_, _.Str, false);
 		},
 	);
 }
@@ -201,11 +207,11 @@ export function load(ctx: $.Context = {}) {
 export function what_is_my_ip(ctx: $.Context = {}) {
 	return $.rpc(
 		7, ctx,
-		function() {
-			$.lipi.StructEncoder(this, []);
+		function(_) {
+			$.lipi.StructEncoder(_, []);
 		},
-		function() {
-			return $.lipi.OutputDecoder(this, this.Str, true);
+		function(_) {
+			return $.lipi.OutputDecoder(_, _.Str, true);
 		},
 	);
 }
@@ -213,14 +219,14 @@ export function what_is_my_ip(ctx: $.Context = {}) {
 export function fetch_user_ids(count: number, ctx: $.Context = {}) {
 	return $.sse(
 		8, ctx,
-		function() {
-			$.lipi.StructEncoder(this, [[0, count, this.U8]]);
+		function(_) {
+			$.lipi.StructEncoder(_, [[0, count, _.U8]]);
 		},
-		function() {
-			return $.lipi.OutputDecoder(this, this.U8, true);
+		function(_) {
+			return $.lipi.OutputDecoder(_, _.U8, true);
 		},
-		function() {
-			return $.lipi.OutputDecoder(this, this.Str, true);
+		function(_) {
+			return $.lipi.OutputDecoder(_, _.Str, true);
 		},
 	);
 }
@@ -228,11 +234,11 @@ export function fetch_user_ids(count: number, ctx: $.Context = {}) {
 export function random_data(ctx: $.Context = {}) {
 	return $.rpc(
 		101, ctx,
-		function() {
-			$.lipi.StructEncoder(this, []);
+		function(_) {
+			$.lipi.StructEncoder(_, []);
 		},
-		function() {
-			return $.lipi.OutputDecoder(this, $D.Data, true);
+		function(_) {
+			return $.lipi.OutputDecoder(_, $D.Data, true);
 		},
 	);
 }
@@ -240,11 +246,11 @@ export function random_data(ctx: $.Context = {}) {
 export function echo_data(input: Data, ctx: $.Context = {}) {
 	return $.rpc(
 		102, ctx,
-		function() {
-			$.lipi.StructEncoder(this, [[0, input, $E.Data]]);
+		function(_) {
+			$.lipi.StructEncoder(_, [[0, input, $E.Data]]);
 		},
-		function() {
-			return $.lipi.OutputDecoder(this, $D.Data, true);
+		function(_) {
+			return $.lipi.OutputDecoder(_, $D.Data, true);
 		},
 	);
 }
@@ -256,14 +262,14 @@ export interface compare_data {
 export function compare_data(z: compare_data, ctx: $.Context = {}) {
 	return $.rpc(
 		103, ctx,
-		function() {
-			$.lipi.StructEncoder(this, [
+		function(_) {
+			$.lipi.StructEncoder(_, [
 				[0, z.left, $E.Data],
 				[1, z.right, $E.Data],
 			]);
 		},
-		function() {
-			return $.lipi.OutputDecoder(this, this.Bool, true);
+		function(_) {
+			return $.lipi.OutputDecoder(_, _.Bool, true);
 		},
 	);
 }
@@ -271,11 +277,11 @@ export function compare_data(z: compare_data, ctx: $.Context = {}) {
 export function random_js_value(ctx: $.Context = {}) {
 	return $.rpc(
 		104, ctx,
-		function() {
-			$.lipi.StructEncoder(this, []);
+		function(_) {
+			$.lipi.StructEncoder(_, []);
 		},
-		function() {
-			return $.lipi.OutputDecoder(this, $D.JsValue, true);
+		function(_) {
+			return $.lipi.OutputDecoder(_, $D.JsValue, true);
 		},
 	);
 }
@@ -283,11 +289,11 @@ export function random_js_value(ctx: $.Context = {}) {
 export function echo_js_value(input: JsValue, ctx: $.Context = {}) {
 	return $.rpc(
 		105, ctx,
-		function() {
-			$.lipi.StructEncoder(this, [[0, input, $E.JsValue]]);
+		function(_) {
+			$.lipi.StructEncoder(_, [[0, input, $E.JsValue]]);
 		},
-		function() {
-			return $.lipi.OutputDecoder(this, $D.JsValue, true);
+		function(_) {
+			return $.lipi.OutputDecoder(_, $D.JsValue, true);
 		},
 	);
 }
@@ -299,14 +305,14 @@ export interface compare_js_value {
 export function compare_js_value(z: compare_js_value, ctx: $.Context = {}) {
 	return $.rpc(
 		106, ctx,
-		function() {
-			$.lipi.StructEncoder(this, [
+		function(_) {
+			$.lipi.StructEncoder(_, [
 				[0, z.left, $E.JsValue],
 				[1, z.right, $E.JsValue],
 			]);
 		},
-		function() {
-			return $.lipi.OutputDecoder(this, this.Bool, true);
+		function(_) {
+			return $.lipi.OutputDecoder(_, _.Bool, true);
 		},
 	);
 }

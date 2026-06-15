@@ -43,14 +43,14 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                     c.scope(|c| {
                         c.line(args!("{index}, ctx,"));
 
-                        c.line("function() {");
+                        c.line("function(_) {");
                         c.scope(|c| {
                             let mut fields = args.iter().zip(input_ty);
                             if fields.len() == 1 {
                                 let (arg_name, ty) = fields.next().unwrap();
                                 let decoder = ctx.serde_ty(ty, "$E");
                                 return c.line(args!(
-                                    "$.lipi.StructEncoder(this, [[0, {arg_name}, {decoder}]]);"
+                                    "$.lipi.StructEncoder(_, [[0, {arg_name}, {decoder}]]);"
                                 ));
                             }
 
@@ -64,15 +64,15 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
 
                         for ty in return_tys {
                             if matches!(ty, Type::Tuple(tys) if tys.is_empty()) {
-                                c.line("function() {}");
+                                c.line("function(_) {}");
                                 continue;
                             }
-                            c.line("function() {");
+                            c.line("function(_) {");
                             c.scope(|c| {
                                 let required = ty.optional().is_none();
                                 let decoder = ctx.serde_ty(ty, "$D");
                                 c.line(args!(
-                                    "return $.lipi.OutputDecoder(this, {decoder}, {required});"
+                                    "return $.lipi.OutputDecoder(_, {decoder}, {required});"
                                 ));
                             });
                             c.line("},");

@@ -66,6 +66,7 @@ fn generate_encoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
                 "{interface_name}: function Struct(this: $.lipi.Encode, z: {interface_name}) {{"
             ));
             c.scope(|c| {
+                c.line("let _ = this;");
                 ctx.struct_encoder(
                     c,
                     fields.iter().map(|(_, s)| (s.name.as_ref(), &s.ty, s.key)),
@@ -90,6 +91,7 @@ fn generate_encoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
                 "{interface_name}: function Union(this: $.lipi.Encode, z: {interface_name}) {{"
             ));
             c.scope(|c| {
+                c.line("let _ = this;");
                 c.block("switch (z.type)", |c| {
                     for (_, field) in fields {
                         field_encoder(ctx, c, field)
@@ -116,13 +118,13 @@ fn field_encoder(ctx: &Context, c: &mut CodeWriter, field: &EnumField) {
     match kind {
         EnumKind::Unit => {
             c.line(args!(
-                "case {name:?}: return $.lipi.FieldEncoder(this, [{key}, false, this.Bool]);"
+                "case {name:?}: return $.lipi.FieldEncoder(_, [{key}, false, _.Bool]);"
             ));
         }
         EnumKind::Field(ty) => {
             let decoder = ctx.serde_ty(ty, "$E");
             c.line(args!(
-                "case {name:?}: return $.lipi.FieldEncoder(this, [{key}, z.value, {decoder}]);"
+                "case {name:?}: return $.lipi.FieldEncoder(_, [{key}, z.value, {decoder}]);"
             ));
         }
     }
@@ -136,7 +138,8 @@ fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
                 "{interface}: function Struct(this: $.lipi.Decode): {interface} {{"
             ));
             c.scope(|c| {
-                c.line(args!("return $.lipi.StructDecoder(this, ["));
+                c.line("let _ = this;");
+                c.line(args!("return $.lipi.StructDecoder(_, ["));
                 c.scope(|c| {
                     for (_, StructField { name, ty, key }) in fields {
                         let required = ty.optional().is_none() as u8;
@@ -173,7 +176,8 @@ fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
                 "{interface}: function Union(this: $.lipi.Decode): {interface} {{"
             ));
             c.scope(|c| {
-                c.line("return $.lipi.EnumDecoder(this, [");
+                c.line("let _ = this;");
+                c.line("return $.lipi.EnumDecoder(_, [");
                 c.scope(|c| {
                     for (_, field) in fields {
                         let EnumField {
@@ -185,7 +189,7 @@ fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
                             continue;
                         };
                         match kind {
-                            EnumKind::Unit => c.line(args!("[{key}, {name:?}, this.Bool, 0],")),
+                            EnumKind::Unit => c.line(args!("[{key}, {name:?}, _.Bool, 0],")),
                             EnumKind::Field(ty) => {
                                 let de = ctx.serde_ty(ty, "$D");
                                 c.line(args!("[{key}, {name:?}, {de}, 1],"))

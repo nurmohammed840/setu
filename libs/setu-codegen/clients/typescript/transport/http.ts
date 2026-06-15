@@ -2,7 +2,7 @@ import { ProtocolError } from "../errors.ts";
 import { Output, SSE } from "./output.ts";
 import { Timeout } from "../timeout.ts";
 import { assert } from "../utils/common.ts";
-import { Decoder } from "../lipi/decoder.ts";
+import { Decode, Decoder } from "../lipi/decoder.ts";
 import { Encode } from "../lipi/encoder.ts";
 import { encodeTrailer } from "../setu/frame.writer.ts";
 
@@ -52,13 +52,13 @@ export interface Context {
 export function rpc<T>(
     id: number,
     { timeout, url }: Context,
-    encoder: (this: Encode) => void,
-    decoder: Decoder<T>
+    encoder: (_: Encode) => void,
+    decoder: (_: Decode) => T
 ): Output<T> {
     let controller = new AbortController();
 
     let e = new Encode();
-    encoder.call(e);
+    encoder(e);
     let body = encodeTrailer(e.data());
 
     return Output(controller, RPC.call(id, body, controller, timeout, url), decoder);
@@ -67,14 +67,14 @@ export function rpc<T>(
 export function sse<T, R>(
     id: number,
     { timeout, url }: Context,
-    encoder: (this: Encode) => void,
-    yielder: Decoder<T>,
-    output: Decoder<R>,
+    encoder: (_: Encode) => void,
+    yielder: (_: Decode) => T,
+    output: (_: Decode) => R,
 ): SSE<T, R> {
     let controller = new AbortController();
 
     let e = new Encode();
-    encoder.call(e);
+    encoder(e);
     let body = encodeTrailer(e.data());
 
     return SSE(controller, RPC.call(id, body, controller, timeout, url), yielder, output);
