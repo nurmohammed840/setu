@@ -58,12 +58,12 @@ const $D = {
 	},
 	JsValue: function Union(this: $.lipi.Decode): JsValue {
 		return $.lipi.EnumDecoder(this, [
-			[0, "Null", this.Bool, 1],
-			[1, "Bool", this.Bool, 0],
-			[2, "Number", this.F64, 0],
-			[3, "String", this.Str, 0],
-			[4, "Array", this.List($D.JsValue), 0],
-			[5, "Object", this.Table(this.Str, $D.JsValue), 0],
+			[0, "Null", this.Bool, 0],
+			[1, "Bool", this.Bool, 1],
+			[2, "Number", this.F64, 1],
+			[3, "String", this.Str, 1],
+			[4, "Array", this.List($D.JsValue), 1],
+			[5, "Object", this.Table(this.Str, $D.JsValue), 1],
 		]);
 	},
 	Numerical: function U8(this: $.lipi.Decode): Numerical {

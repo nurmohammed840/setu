@@ -278,13 +278,13 @@ type EnumItem = readonly [
     id: number,
     type: string,
     decoder: Decoder<unknown>,
-    is_unit: 1 | 0
+    required: 1 | 0
 ];
 
 type Enum<Items extends readonly EnumItem[]> = {
     [Index in keyof Items]: Items[Index][3] extends 1
-    ? { type: Items[Index][1] }
-    : { type: Items[Index][1]; value: ReturnType<Items[Index][2]> }
+        ? { type: Items[Index][1]; value: ReturnType<Items[Index][2]> }
+        : { type: Items[Index][1] }
 }[number];
 
 export function EnumDecoder<const Items extends readonly EnumItem[]>(self: Decode, items: Items): Enum<Items> {
@@ -293,18 +293,18 @@ export function EnumDecoder<const Items extends readonly EnumItem[]>(self: Decod
     let item = items.find(([item_id]) => item_id == id);
     assert(item !== undefined);
 
-    let [_, type, decoder, is_unit] = item;
+    let [_, type, decoder, required] = item;
 
-    if (is_unit) {
+    if (!required) {
         skip_field(self, id, ty);
         return { type } as Enum<Items>;
     }
 
     if (decoder.name == "Bool") {
-        return { type, value: DataType.asBool(ty) }  as Enum<Items>
+        return { type, value: DataType.asBool(ty) } as Enum<Items>
     } else {
         expectedTy(decoder, ty);
-        return { type, value: decoder.call(self) }  as Enum<Items>
+        return { type, value: decoder.call(self) } as Enum<Items>
     }
 }
 

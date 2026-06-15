@@ -185,10 +185,10 @@ fn generate_decoder(c: &mut CodeWriter, ctx: &Context, path: &PathIdent, data: &
                             continue;
                         };
                         match kind {
-                            EnumKind::Unit => c.line(args!("[{key}, {name:?}, this.Bool, 1],")),
+                            EnumKind::Unit => c.line(args!("[{key}, {name:?}, this.Bool, 0],")),
                             EnumKind::Field(ty) => {
                                 let de = ctx.serde_ty(ty, "$D");
-                                c.line(args!("[{key}, {name:?}, {de}, 0],"))
+                                c.line(args!("[{key}, {name:?}, {de}, 1],"))
                             }
                         }
                     }
