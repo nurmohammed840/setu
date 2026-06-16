@@ -341,6 +341,9 @@ pub trait FieldDecoder<'de>: Sized {
     fn decode_field(reader: &mut &'de [u8], ty: DataType) -> Result<Self>;
 }
 
+pub trait FieldDecoderOwned: for<'de> FieldDecoder<'de> {}
+impl<T> FieldDecoderOwned for T where T: for<'de> FieldDecoder<'de> {}
+
 impl FieldDecoder<'_> for bool {
     #[inline]
     fn decode_field(_: &mut &'_ [u8], ty: DataType) -> Result<Self> {

@@ -244,10 +244,10 @@ async fn decode_args<Args: DecodeOwned>(mut input: HttpBody) -> Result<Args> {
 }
 
 async fn decode_last_msg(stream: &mut HttpBody) -> Result<RawBytes> {
-    let mut de = FrameDecoder::default();
+    let mut frame_decoder = FrameDecoder::default();
 
-    let (status, bytes) = de
-        .parse_frame(stream)
+    let (status, bytes) = frame_decoder
+        .parse(stream)
         .await?
         .data
         .trailer()

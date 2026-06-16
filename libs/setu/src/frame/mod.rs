@@ -48,47 +48,8 @@ pub struct FrameDecoder {
     data: bytes::Bytes,
 }
 
-#[derive(Debug, Default)]
-pub struct FrameDecoderStream {
-    decoder: FrameDecoder,
-    pub trailer: Option<(Status, MaybeCompressed<RawBytes>)>,
-}
-
-#[allow(unused)]
-impl FrameDecoderStream {
-    pub fn is_end(&self) -> bool {
-        self.trailer.is_some()
-    }
-
-    pub async fn next<I>(&mut self, stream: &mut I) -> Result<Option<MaybeCompressed<RawBytes>>>
-    where
-        I: Stream<Item = StreamData> + Unpin,
-    {
-        if self.is_end() {
-            return Ok(None);
-        }
-
-        let frame = self.decoder.parse_frame(stream).await?;
-
-        Ok(match frame.data {
-            Frame::Message(data) => Some(MaybeCompressed {
-                is_compressed: frame.is_compressed,
-                data,
-            }),
-            Frame::Trailer { status, bytes } => {
-                let data = MaybeCompressed {
-                    is_compressed: frame.is_compressed,
-                    data: bytes,
-                };
-                self.trailer = Some((status, data));
-                None
-            }
-        })
-    }
-}
-
 impl FrameDecoder {
-    pub async fn parse_frame<I>(&mut self, stream: &mut I) -> Result<MaybeCompressed<Frame>>
+    pub async fn parse<I>(&mut self, stream: &mut I) -> Result<MaybeCompressed<Frame>>
     where
         I: Stream<Item = StreamData> + Unpin,
     {
@@ -337,7 +298,7 @@ mod tests {
         let mut de = FrameDecoder::default();
 
         assert_eq!(
-            de.parse_frame(&mut stream)
+            de.parse(&mut stream)
                 .await?
                 .data
                 .message()
@@ -346,7 +307,7 @@ mod tests {
             [54, 55]
         );
 
-        let (status, data) = de.parse_frame(&mut stream).await?.data.trailer().unwrap();
+        let (status, data) = de.parse(&mut stream).await?.data.trailer().unwrap();
         assert_eq!(status, Status::Ok);
         assert!(data.is_empty());
         Ok(())
