@@ -1,10 +1,10 @@
 pub(crate) mod frame;
 
 mod context;
+mod input;
 mod status_code;
 mod timeout;
 mod trailer;
-mod input;
 mod types;
 mod utils;
 
@@ -17,6 +17,7 @@ pub use timeout::Timeout;
 pub use trailer::Trailer;
 
 mod output;
+pub use input::Stream;
 pub use setu_macros::*;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

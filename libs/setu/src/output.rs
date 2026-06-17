@@ -1,11 +1,12 @@
 use crate::{
     Context, Result, SSE, Status, Timeout,
-    frame::{FrameDecoder, FrameEncoder, RawBytes},
+    frame::FrameEncoder,
+    input::Input,
     transport::http::{HttpBody, HttpContext, HttpRequest, HttpResponse, HttpWriter},
 };
 use async_gen::{AsyncGenerator, GeneratorState};
 use futures::FutureExt;
-use lipi::{DecodeOwned, encoder::OptionalField};
+use lipi::encoder::OptionalField;
 use nio::Sleep;
 use setu_type_info::FnOutputType;
 use std::{
@@ -21,7 +22,7 @@ pub trait Output: FnOutputType {
     fn process<F, Args>(func: F, ctx: HttpContext)
     where
         F: std_lib::FnOnce<Args, Output = Self> + 'static,
-        Args: DecodeOwned;
+        Args: Input;
 }
 
 impl<T> Output for T
@@ -32,14 +33,14 @@ where
     fn process<F, Args>(func: F, ctx: HttpContext)
     where
         F: std_lib::FnOnce<Args, Output = Self> + 'static,
-        Args: DecodeOwned,
+        Args: Input,
     {
         nio::spawn_local(async move {
             let Ok((context, mut timer, input, output)) = ctx.parts() else {
                 return;
             };
 
-            let args = match decode_args(input).await {
+            let args = match Args::unmarshal(input).await {
                 Err(err) => return output.send_error(http::StatusCode::BAD_REQUEST, err),
                 Ok(args) => args,
             };
@@ -78,14 +79,14 @@ where
     fn process<F, Args>(func: F, ctx: HttpContext)
     where
         F: std_lib::FnOnce<Args, Output = Self> + 'static,
-        Args: DecodeOwned,
+        Args: Input,
     {
         nio::spawn_local(async {
             let Ok((context, mut timer, input, output)) = ctx.parts() else {
                 return;
             };
 
-            let args = match decode_args(input).await {
+            let args = match Args::unmarshal(input).await {
                 Err(err) => return output.send_error(http::StatusCode::BAD_REQUEST, err),
                 Ok(args) => args,
             };
@@ -236,25 +237,4 @@ impl HttpResponse {
             let _ = self.send_headers();
         }
     }
-}
-
-async fn decode_args<Args: DecodeOwned>(mut input: HttpBody) -> Result<Args> {
-    let bytes = decode_last_msg(&mut input).await?;
-    Args::decode(&mut &*bytes)
-}
-
-async fn decode_last_msg(stream: &mut HttpBody) -> Result<RawBytes> {
-    let mut frame_decoder = FrameDecoder::default();
-
-    let (status, bytes) = frame_decoder
-        .parse(stream)
-        .await?
-        .data
-        .trailer()
-        .ok_or("expected trailer frame")?;
-
-    if status != Status::Ok {
-        return Err(format!("unexpected status: {status:?}").into());
-    }
-    Ok(bytes)
 }

@@ -1,4 +1,3 @@
-#![allow(warnings)]
 use crate::{
     Result, Status,
     frame::{Frame, FrameDecoder, RawBytes},
@@ -8,12 +7,12 @@ use lipi::{
     Decode,
     decoder::{FieldDecoder, FieldDecoderOwned, FieldInfoDecoder, Optional},
 };
-use std::marker::PhantomData;
 use std::ops::ControlFlow;
+use std::{future::Future, marker::PhantomData};
 use type_id::{Type, TypeId};
 
-struct Stream<T, R = ()> {
-    pub body: HttpBody,
+pub struct Stream<T, R = ()> {
+    pub input: HttpBody,
     frame_decoder: FrameDecoder,
     data: PhantomData<(T, R)>,
 }
@@ -34,16 +33,16 @@ where
     T::Value: FieldDecoderOwned,
     R::Value: FieldDecoderOwned,
 {
-    fn new(frame_decoder: FrameDecoder, body: HttpBody) -> Self {
+    fn new(frame_decoder: FrameDecoder, input: HttpBody) -> Self {
         Self {
-            body,
+            input,
             frame_decoder,
             data: PhantomData,
         }
     }
 
     pub async fn next(&mut self) -> Result<ControlFlow<R, T>> {
-        match self.frame_decoder.parse(&mut self.body).await?.data {
+        match self.frame_decoder.parse(&mut self.input).await?.data {
             Frame::Message(bytes) => decode_optional_field(&mut &*bytes).map(ControlFlow::Continue),
             Frame::Trailer { status, bytes } => {
                 if status != Status::Ok {
@@ -72,7 +71,7 @@ where
 // =======================================================================
 
 pub trait Input: Sized {
-    async fn unmarshal(body: HttpBody) -> Result<Self>;
+    fn unmarshal(input: HttpBody) -> impl Future<Output = Result<Self>> + Send;
 }
 
 impl Input for () {
@@ -88,9 +87,9 @@ where
     T::Value: FieldDecoderOwned,
     R::Value: FieldDecoderOwned,
 {
-    async fn unmarshal(mut body: HttpBody) -> Result<Self> {
-        let mut frame_decoder = FrameDecoder::default();
-        Ok((Stream::new(frame_decoder, body),))
+    async fn unmarshal(input: HttpBody) -> Result<Self> {
+        let frame_decoder = FrameDecoder::default();
+        Ok((Stream::new(frame_decoder, input),))
     }
 }
 
@@ -103,8 +102,8 @@ macro_rules! tuples {
             $($name: Optional,)*
             $($name::Value: FieldDecoderOwned,)*
         {
-            async fn unmarshal(body: HttpBody) -> Result<Self> {
-                let bytes = decode_last_msg(body).await?;
+            async fn unmarshal(input: HttpBody) -> Result<Self> {
+                let bytes = decode_last_msg(input).await?;
                 Self::decode(&mut &*bytes)
             }
         }
@@ -118,13 +117,13 @@ macro_rules! tuples {
             T::Value: FieldDecoderOwned,
             R::Value: FieldDecoderOwned,
         {
-            async fn unmarshal(mut body: HttpBody) -> Result<Self> {
+            async fn unmarshal(mut input: HttpBody) -> Result<Self> {
                 let mut frame_decoder = FrameDecoder::default();
 
-                let bytes = decode_first_msg(&mut frame_decoder, &mut body).await?;
+                let bytes = decode_first_msg(&mut frame_decoder, &mut input).await?;
                 let args = <($($name,)*)>::decode(&mut &*bytes)?;
 
-                Ok(( $(args.$idx,)* Stream::new(frame_decoder, body)))
+                Ok(( $(args.$idx,)* Stream::new(frame_decoder, input)))
             }
         }
     }
