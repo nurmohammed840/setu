@@ -34,11 +34,7 @@ where
         match self.frame_decoder.parse(&mut self.body).await?.data {
             Frame::Message(bytes) => {
                 let reader = &mut &*bytes;
-                let (id, ty) = decode_field_id_and_ty(reader)?;
-                if id != 0 {
-                    return Err(format!("id must be `0`, found {id:?}").into());
-                }
-                let _: T = FieldDecoder::decode_field(reader, ty)?;
+                let _: T = decode_optional_field(reader)?;
                 // T::decode(&mut &*bytes).map(ControlFlow::Continue)
                 todo!()
             }
@@ -53,27 +49,19 @@ where
     }
 }
 
-fn decode_field_output<'de, T>(reader: &mut &'de [u8]) -> Result<T>
+fn decode_optional_field<'de, T>(reader: &mut &'de [u8]) -> Result<T>
 where
-    T: FieldDecoder<'de>,
+    T: decoder::Optional,
+    T::Item: lipi::decoder::FieldDecoder<'de>,
+    T::Error: std::error::Error + Send + Sync + 'static,
 {
-    let mut val: Option<T> = None;
+    let mut val = None;
     let mut fd = decoder::FieldInfoDecoder::new(reader);
     if let Some((key, ty)) = fd.next_field_id_and_ty()? {
+        assert_eq!(key, 0);
         val = fd.decode(ty, "tuple 0")?;
     }
     Ok(decoder::Optional::convert(val, "tuple 0")?)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_name() {
-        let mut d: &[u8] = [0].as_slice();
-        // let a: Option<u8> = decode_field_output(&mut d).unwrap();
-    }
 }
 
 // =======================================================================

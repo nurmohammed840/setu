@@ -410,12 +410,14 @@ impl<'c, 'de> FieldInfoDecoder<'c, 'de> {
     }
 }
 
-pub trait Optional<T>: Sized {
+pub trait Optional: Sized {
+    type Item;
     type Error;
-    fn convert(val: Option<T>, name: &'static str) -> Result<Self, Self::Error>;
+    fn convert(val: Option<Self::Item>, name: &'static str) -> Result<Self, Self::Error>;
 }
 
-impl<T> Optional<T> for Option<T> {
+impl<T> Optional for Option<T> {
+    type Item = T;
     type Error = std::convert::Infallible;
     #[inline]
     fn convert(val: Option<T>, _: &'static str) -> Result<Self, Self::Error> {
@@ -423,10 +425,11 @@ impl<T> Optional<T> for Option<T> {
     }
 }
 
-impl<'de, T> Optional<T> for T
+impl<'de, T> Optional for T
 where
     T: FieldDecoder<'de>,
 {
+    type Item = T;
     type Error = errors::RequiredField;
     #[inline]
     fn convert(val: Option<T>, name: &'static str) -> Result<Self, Self::Error> {
