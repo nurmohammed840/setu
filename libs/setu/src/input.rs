@@ -10,11 +10,21 @@ use lipi::{
 };
 use std::marker::PhantomData;
 use std::ops::ControlFlow;
+use type_id::{Type, TypeId};
 
 struct Stream<T, R = ()> {
     pub body: HttpBody,
     frame_decoder: FrameDecoder,
     data: PhantomData<(T, R)>,
+}
+
+impl<T: TypeId, R: TypeId> TypeId for Stream<T, R> {
+    fn ty(r: &mut type_id::TypeRegistry) -> Type {
+        Type::ControlFlow(Box::new(type_id::ControlFlowType {
+            yield_ty: T::ty(r),
+            return_ty: R::ty(r),
+        }))
+    }
 }
 
 impl<T, R> Stream<T, R>

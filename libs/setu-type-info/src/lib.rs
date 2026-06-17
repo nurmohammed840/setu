@@ -1,9 +1,10 @@
 pub use type_id;
 
-use type_id::{Ident, Type, TypeId, TypeRegistry};
+use type_id::{ControlFlowType, Ident, Type, TypeId, TypeRegistry};
 
 #[derive(Debug, Clone)]
 pub struct Func<T> {
+    pub stream: Option<Box<ControlFlowType>>,
     pub input_ty: Vec<Type>,
     pub output_ty: FnOutputTy,
     pub meta: T,
@@ -27,14 +28,23 @@ impl<T> Func<T> {
     pub fn new<F, Args>(_: &F, r: &mut TypeRegistry, meta: T) -> Func<T>
     where
         F: std_lib::FnOnce<Args>,
-        Args: TypeId,
         F::Output: FnOutputType,
+        Args: TypeId,
     {
-        let Type::Tuple(input_ty) = Args::ty(r) else {
+        let Type::Tuple(mut input_ty) = Args::ty(r) else {
             unreachable!()
         };
+
+        let stream = input_ty
+            .pop_if(|ty| matches!(ty, Type::ControlFlow(_)))
+            .map(|ty| match ty {
+                Type::ControlFlow(inner) => inner,
+                _ => unreachable!(),
+            });
+
         Func {
             meta,
+            stream,
             input_ty,
             output_ty: <F::Output as FnOutputType>::fn_output_ty(r),
         }
@@ -52,8 +62,8 @@ impl Func<FnMetaData> {
     ) -> Func<FnMetaData>
     where
         F: std_lib::FnOnce<Args>,
-        Args: TypeId,
         F::Output: FnOutputType,
+        Args: TypeId,
     {
         let meta = FnMetaData {
             docs: docs.to_string(),

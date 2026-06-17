@@ -41,6 +41,7 @@ pub enum Type {
     // ===== STD =====
     Option(Box<Type>),
     Result(Box<(Type, Type)>),
+    ControlFlow(Box<ControlFlowType>),
 
     // ===== Compound =====
     Array {
@@ -66,6 +67,13 @@ pub enum Type {
     /// Type::Complex("<path>::Bar" | "<path>::Foo")
     /// ```
     Complex(PathIdent),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct ControlFlowType {
+    pub yield_ty: Type,
+    pub return_ty: Type,
 }
 
 macro_rules! option {
