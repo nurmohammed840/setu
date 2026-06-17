@@ -18,10 +18,10 @@ use std::{
 use type_id::TypeId;
 
 pub trait Output: FnOutputType {
-    fn process<Args, F>(func: F, ctx: HttpContext)
+    fn process<F, Args>(func: F, ctx: HttpContext)
     where
-        Args: DecodeOwned,
-        F: std_lib::FnOnce<Args, Output = Self> + 'static;
+        F: std_lib::FnOnce<Args, Output = Self> + 'static,
+        Args: DecodeOwned;
 }
 
 impl<T> Output for T
@@ -29,10 +29,10 @@ where
     T: Future,
     T::Output: OptionalField + TypeId,
 {
-    fn process<Args, F>(func: F, ctx: HttpContext)
+    fn process<F, Args>(func: F, ctx: HttpContext)
     where
-        Args: DecodeOwned,
         F: std_lib::FnOnce<Args, Output = Self> + 'static,
+        Args: DecodeOwned,
     {
         nio::spawn_local(async move {
             let Ok((context, mut timer, input, output)) = ctx.parts() else {
@@ -75,10 +75,10 @@ where
     S::Yield: OptionalField + TypeId,
     S::Return: OptionalField + TypeId,
 {
-    fn process<Args, F>(func: F, ctx: HttpContext)
+    fn process<F, Args>(func: F, ctx: HttpContext)
     where
-        Args: DecodeOwned,
         F: std_lib::FnOnce<Args, Output = Self> + 'static,
+        Args: DecodeOwned,
     {
         nio::spawn_local(async {
             let Ok((context, mut timer, input, output)) = ctx.parts() else {

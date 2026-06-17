@@ -302,7 +302,7 @@ macro_rules! tuples {
             fn decode(reader: &mut &'de [u8]) -> Result<Self> {
                 $(let mut $name: Option<_> = None;)*
 
-                let mut fd = FieldInfoDecoder::new(reader)?;
+                let mut fd = FieldInfoDecoder::new(reader);
                 while let Some((key, _ty)) = fd.next_field_id_and_ty()? {
                     match key {
                         $($idx => $name = fd.decode(_ty, concat!("tuple ", $idx))?,)*
@@ -367,8 +367,8 @@ pub struct FieldInfoDecoder<'c, 'de> {
 
 impl<'c, 'de> FieldInfoDecoder<'c, 'de> {
     #[inline]
-    pub fn new(reader: &'c mut &'de [u8]) -> Result<Self> {
-        Ok(Self { reader })
+    pub fn new(reader: &'c mut &'de [u8]) -> Self {
+        Self { reader }
     }
 
     pub fn next_field_id_and_ty(&mut self) -> Result<Option<(u64, DataType)>> {

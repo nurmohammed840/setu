@@ -4,48 +4,75 @@ use crate::{
     frame::{Frame, FrameDecoder, RawBytes},
     transport::http::HttpBody,
 };
-use lipi::{Decode, DecodeOwned, decoder::FieldDecoderOwned};
+use lipi::{
+    Decode,
+    decoder::{self, FieldDecoder, FieldDecoderOwned, decode_field_id_and_ty},
+};
 use std::marker::PhantomData;
+use std::ops::ControlFlow;
 
 struct Stream<T, R = ()> {
     pub body: HttpBody,
-    end: Option<R>,
     frame_decoder: FrameDecoder,
-    data: PhantomData<T>,
+    data: PhantomData<(T, R)>,
 }
 
 impl<T, R> Stream<T, R>
 where
-    T: DecodeOwned,
-    R: DecodeOwned,
+    T: FieldDecoderOwned,
+    R: FieldDecoderOwned,
 {
     fn new(frame_decoder: FrameDecoder, body: HttpBody) -> Self {
         Self {
             body,
-            end: None,
             frame_decoder,
             data: PhantomData,
         }
     }
 
-    pub async fn next(&mut self) -> Result<Option<T>> {
-        if self.end.is_some() {
-            return Ok(None);
-        }
+    pub async fn next(&mut self) -> Result<ControlFlow<R, T>> {
         match self.frame_decoder.parse(&mut self.body).await?.data {
-            Frame::Message(bytes) => T::decode(&mut &*bytes).map(Some),
+            Frame::Message(bytes) => {
+                let reader = &mut &*bytes;
+                let (id, ty) = decode_field_id_and_ty(reader)?;
+                if id != 0 {
+                    return Err(format!("id must be `0`, found {id:?}").into());
+                }
+                let _: T = FieldDecoder::decode_field(reader, ty)?;
+                // T::decode(&mut &*bytes).map(ControlFlow::Continue)
+                todo!()
+            }
             Frame::Trailer { status, bytes } => {
                 if status != Status::Ok {
                     return Err(format!("unexpected status: {status:?}").into());
                 }
-                self.end = R::decode(&mut &*bytes).map(Some)?;
-                return Ok(None);
+                // R::decode(&mut &*bytes).map(ControlFlow::Break)
+                todo!()
             }
         }
     }
+}
 
-    pub fn end(&mut self) -> Option<R> {
-        self.end.take()
+fn decode_field_output<'de, T>(reader: &mut &'de [u8]) -> Result<T>
+where
+    T: FieldDecoder<'de>,
+{
+    let mut val: Option<T> = None;
+    let mut fd = decoder::FieldInfoDecoder::new(reader);
+    if let Some((key, ty)) = fd.next_field_id_and_ty()? {
+        val = fd.decode(ty, "tuple 0")?;
+    }
+    Ok(decoder::Optional::convert(val, "tuple 0")?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_name() {
+        let mut d: &[u8] = [0].as_slice();
+        // let a: Option<u8> = decode_field_output(&mut d).unwrap();
     }
 }
 
@@ -58,6 +85,17 @@ pub trait Input: Sized {
 impl Input for () {
     async fn unmarshal(_: HttpBody) -> Result<Self> {
         Ok(())
+    }
+}
+
+impl<T, R> Input for (Stream<T, R>,)
+where
+    T: FieldDecoderOwned,
+    R: FieldDecoderOwned,
+{
+    async fn unmarshal(mut body: HttpBody) -> Result<Self> {
+        let mut frame_decoder = FrameDecoder::default();
+        Ok((Stream::new(frame_decoder, body),))
     }
 }
 
@@ -78,15 +116,15 @@ macro_rules! tuples {
         impl<$($name,)* T, R> Input for ($($name,)* Stream<T, R>)
         where
             $($name: FieldDecoderOwned,)*
-            T: DecodeOwned,
-            R: DecodeOwned,
+            T: FieldDecoderOwned,
+            R: FieldDecoderOwned,
         {
             async fn unmarshal(mut body: HttpBody) -> Result<Self> {
                 let mut frame_decoder = FrameDecoder::default();
-        
+
                 let mut bytes = decode_first_msg(&mut frame_decoder, &mut body).await?;
                 let args = <($($name,)*)>::decode(&mut &*bytes)?;
-        
+
                 Ok(( $(args.$idx,)* Stream::new(frame_decoder, body)))
             }
         }

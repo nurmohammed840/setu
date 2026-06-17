@@ -91,7 +91,7 @@ pub fn expand(
             }
 
             quote!(t, {
-                let mut __obj__ = __crate::decoder::FieldInfoDecoder::new(__r__)?;
+                let mut __obj__ = __crate::decoder::FieldInfoDecoder::new(__r__);
 
                 while let Some((__key__, __ty__)) = __obj__.next_field_id_and_ty()? {
                     match __key__ {
@@ -158,7 +158,7 @@ pub fn expand(
 
             quote!(t, {
                 let (__id__, __ty__) = __crate::decoder::decode_field_id_and_ty(__r__)?;
-                let mut __obj__ = __crate::decoder::FieldInfoDecoder::new(__r__)?;
+                let mut __obj__ = __crate::decoder::FieldInfoDecoder::new(__r__);
 
                 Ok(match __id__ {
                     #map_variants
