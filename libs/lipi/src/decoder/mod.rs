@@ -295,7 +295,8 @@ macro_rules! tuples {
     [$( $name:tt : $idx:tt) *] => {
         impl <'de, $($name,)*> Decode<'de> for ($($name,)*)
         where
-            $($name: FieldDecoder<'de>,)*
+            $($name: Optional,)*
+            $($name::Value: FieldDecoder<'de>,)*
         {
             const TY: DataType = DataType::Struct;
             #[allow(non_snake_case)]
@@ -411,13 +412,13 @@ impl<'c, 'de> FieldInfoDecoder<'c, 'de> {
 }
 
 pub trait Optional: Sized {
-    type Item;
-    type Error;
-    fn convert(val: Option<Self::Item>, name: &'static str) -> Result<Self, Self::Error>;
+    type Value;
+    type Error: std::error::Error + Send + Sync + 'static;
+    fn convert(val: Option<Self::Value>, name: &'static str) -> Result<Self, Self::Error>;
 }
 
 impl<T> Optional for Option<T> {
-    type Item = T;
+    type Value = T;
     type Error = std::convert::Infallible;
     #[inline]
     fn convert(val: Option<T>, _: &'static str) -> Result<Self, Self::Error> {
@@ -429,7 +430,7 @@ impl<'de, T> Optional for T
 where
     T: FieldDecoder<'de>,
 {
-    type Item = T;
+    type Value = T;
     type Error = errors::RequiredField;
     #[inline]
     fn convert(val: Option<T>, name: &'static str) -> Result<Self, Self::Error> {

@@ -52,8 +52,7 @@ where
 fn decode_optional_field<'de, T>(reader: &mut &'de [u8]) -> Result<T>
 where
     T: decoder::Optional,
-    T::Item: lipi::decoder::FieldDecoder<'de>,
-    T::Error: std::error::Error + Send + Sync + 'static,
+    T::Value: lipi::decoder::FieldDecoder<'de>,
 {
     let mut val = None;
     let mut fd = decoder::FieldInfoDecoder::new(reader);
