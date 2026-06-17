@@ -1,4 +1,4 @@
-#![allow(unused)]
+#![allow(warnings)]
 use crate::{
     Result, Status,
     frame::{Frame, FrameDecoder, RawBytes},
@@ -6,7 +6,7 @@ use crate::{
 };
 use lipi::{
     Decode,
-    decoder::{self, FieldDecoder, FieldDecoderOwned, decode_field_id_and_ty},
+    decoder::{FieldDecoder, FieldDecoderOwned, FieldInfoDecoder, Optional},
 };
 use std::marker::PhantomData;
 use std::ops::ControlFlow;
@@ -19,8 +19,10 @@ struct Stream<T, R = ()> {
 
 impl<T, R> Stream<T, R>
 where
-    T: FieldDecoderOwned,
-    R: FieldDecoderOwned,
+    T: Optional,
+    R: Optional,
+    T::Value: FieldDecoderOwned,
+    R::Value: FieldDecoderOwned,
 {
     fn new(frame_decoder: FrameDecoder, body: HttpBody) -> Self {
         Self {
@@ -32,18 +34,12 @@ where
 
     pub async fn next(&mut self) -> Result<ControlFlow<R, T>> {
         match self.frame_decoder.parse(&mut self.body).await?.data {
-            Frame::Message(bytes) => {
-                let reader = &mut &*bytes;
-                let _: T = decode_optional_field(reader)?;
-                // T::decode(&mut &*bytes).map(ControlFlow::Continue)
-                todo!()
-            }
+            Frame::Message(bytes) => decode_optional_field(&mut &*bytes).map(ControlFlow::Continue),
             Frame::Trailer { status, bytes } => {
                 if status != Status::Ok {
                     return Err(format!("unexpected status: {status:?}").into());
                 }
-                // R::decode(&mut &*bytes).map(ControlFlow::Break)
-                todo!()
+                decode_optional_field(&mut &*bytes).map(ControlFlow::Break)
             }
         }
     }
@@ -51,16 +47,16 @@ where
 
 fn decode_optional_field<'de, T>(reader: &mut &'de [u8]) -> Result<T>
 where
-    T: decoder::Optional,
-    T::Value: lipi::decoder::FieldDecoder<'de>,
+    T: Optional,
+    T::Value: FieldDecoder<'de>,
 {
     let mut val = None;
-    let mut fd = decoder::FieldInfoDecoder::new(reader);
+    let mut fd = FieldInfoDecoder::new(reader);
     if let Some((key, ty)) = fd.next_field_id_and_ty()? {
         assert_eq!(key, 0);
         val = fd.decode(ty, "tuple 0")?;
     }
-    Ok(decoder::Optional::convert(val, "tuple 0")?)
+    Ok(Optional::convert(val, "tuple 0")?)
 }
 
 // =======================================================================
@@ -77,8 +73,10 @@ impl Input for () {
 
 impl<T, R> Input for (Stream<T, R>,)
 where
-    T: FieldDecoderOwned,
-    R: FieldDecoderOwned,
+    T: Optional,
+    R: Optional,
+    T::Value: FieldDecoderOwned,
+    R::Value: FieldDecoderOwned,
 {
     async fn unmarshal(mut body: HttpBody) -> Result<Self> {
         let mut frame_decoder = FrameDecoder::default();
@@ -92,24 +90,28 @@ macro_rules! tuples {
     [$($name:tt : $idx:tt)*] => {
         impl<$($name,)*> Input for ($($name,)*)
         where
-            $($name: FieldDecoderOwned,)*
+            $($name: Optional,)*
+            $($name::Value: FieldDecoderOwned,)*
         {
             async fn unmarshal(body: HttpBody) -> Result<Self> {
-                let mut bytes = decode_last_msg(body).await?;
+                let bytes = decode_last_msg(body).await?;
                 Self::decode(&mut &*bytes)
             }
         }
 
         impl<$($name,)* T, R> Input for ($($name,)* Stream<T, R>)
         where
-            $($name: FieldDecoderOwned,)*
-            T: FieldDecoderOwned,
-            R: FieldDecoderOwned,
+            $($name: Optional,)*
+            $($name::Value: FieldDecoderOwned,)*
+            T: Optional,
+            R: Optional,
+            T::Value: FieldDecoderOwned,
+            R::Value: FieldDecoderOwned,
         {
             async fn unmarshal(mut body: HttpBody) -> Result<Self> {
                 let mut frame_decoder = FrameDecoder::default();
 
-                let mut bytes = decode_first_msg(&mut frame_decoder, &mut body).await?;
+                let bytes = decode_first_msg(&mut frame_decoder, &mut body).await?;
                 let args = <($($name,)*)>::decode(&mut &*bytes)?;
 
                 Ok(( $(args.$idx,)* Stream::new(frame_decoder, body)))
