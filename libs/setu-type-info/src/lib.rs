@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 pub use type_id;
 
-use type_id::{ControlFlowType, Ident, Type, TypeId, TypeRegistry};
+use type_id::{Ident, Type, TypeId, TypeRegistry};
 
 #[derive(Debug, Clone)]
 pub struct Func<T> {
-    pub stream: Option<Box<ControlFlowType>>,
+    pub stream: Option<Arc<GeneratorType>>,
     pub input_ty: Vec<Type>,
     pub output_ty: FnOutputTy,
     pub meta: T,
@@ -13,7 +15,7 @@ pub struct Func<T> {
 #[derive(Debug, Clone)]
 pub enum FnOutputTy {
     Return(Type),
-    Generator { yield_ty: Type, return_ty: Type },
+    Generator(GeneratorType),
 }
 
 #[derive(Debug, Clone)]
@@ -36,9 +38,9 @@ impl<T> Func<T> {
         };
 
         let stream = input_ty
-            .pop_if(|ty| matches!(ty, Type::ControlFlow(_)))
+            .pop_if(|ty| matches!(ty, Type::Other(ty) if ty.0.is::<GeneratorType>()))
             .map(|ty| match ty {
-                Type::ControlFlow(inner) => inner,
+                Type::Other(ty) => ty.0.downcast().unwrap(),
                 _ => unreachable!(),
             });
 
@@ -73,6 +75,12 @@ impl Func<FnMetaData> {
         };
         Func::new(f, r, meta)
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct GeneratorType {
+    pub yield_ty: Type,
+    pub return_ty: Type,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -110,18 +118,18 @@ where
 pub const fn fn_args_count<F, Args>(_: &F) -> usize
 where
     F: std_lib::FnOnce<Args>,
-    Args: TupleArgs,
+    Args: TupleLen,
 {
     Args::LEN
 }
 
-pub trait TupleArgs {
+pub trait TupleLen {
     const LEN: usize;
 }
 
 macro_rules! tuple_args {
     [Len: $len:tt $($name:tt)*] => {
-        impl<$($name,)*> TupleArgs for ($($name,)*) {
+        impl<$($name,)*> TupleLen for ($($name,)*) {
             const LEN: usize = $len;
         }
     }

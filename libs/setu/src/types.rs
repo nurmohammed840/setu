@@ -1,6 +1,6 @@
 use async_gen::AsyncGenerator;
 use lipi::encoder::OptionalField;
-use setu_type_info::{FnOutputTy, FnOutputType};
+use setu_type_info::{FnOutputTy, FnOutputType, GeneratorType};
 use type_id::{TypeId, TypeRegistry};
 
 use crate::SSE;
@@ -12,9 +12,9 @@ where
     S::Return: OptionalField + TypeId,
 {
     fn fn_output_ty(c: &mut TypeRegistry) -> FnOutputTy {
-        FnOutputTy::Generator {
+        FnOutputTy::Generator(GeneratorType {
             yield_ty: <S::Yield as TypeId>::ty(c),
             return_ty: <S::Return as TypeId>::ty(c),
-        }
+        })
     }
 }

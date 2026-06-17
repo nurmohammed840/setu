@@ -118,7 +118,7 @@ impl Context {
             }
 
             Type::Option(ty) => f.write_fmt(args!("{} | undefined", self.data_ty(ty))),
-            Type::Result(_) | Type::Char | Type::U128 | Type::I128 | Type::ControlFlow(_) => {
+            Type::Result(_) | Type::Char | Type::U128 | Type::I128 | Type::Other(_) => {
                 unimplemented!()
             }
         })

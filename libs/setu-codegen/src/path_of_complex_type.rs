@@ -56,12 +56,9 @@ impl<'a> OutputTypeIter<'a> {
                 yield_ty: None,
                 return_ty: Some(ty),
             },
-            FnOutputTy::Generator {
-                yield_ty,
-                return_ty,
-            } => Self {
-                yield_ty: Some(yield_ty),
-                return_ty: Some(return_ty),
+            FnOutputTy::Generator(g) => Self {
+                yield_ty: Some(&g.yield_ty),
+                return_ty: Some(&g.return_ty),
             },
         }
     }

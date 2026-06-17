@@ -2,7 +2,7 @@ mod registry;
 mod types;
 mod utils;
 
-use std::{fmt, sync::Arc};
+use std::{any::Any, fmt, sync::Arc};
 
 pub use registry::TypeRegistry;
 pub use type_id_macros::TypeId;
@@ -41,7 +41,7 @@ pub enum Type {
     // ===== STD =====
     Option(Box<Type>),
     Result(Box<(Type, Type)>),
-    ControlFlow(Box<ControlFlowType>),
+    Other(OtherType),
 
     // ===== Compound =====
     Array {
@@ -69,11 +69,13 @@ pub enum Type {
     Complex(PathIdent),
 }
 
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct ControlFlowType {
-    pub yield_ty: Type,
-    pub return_ty: Type,
+#[derive(Debug, Clone)]
+pub struct OtherType(pub Arc<dyn Any + Send + Sync>);
+
+impl PartialEq for OtherType {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
 }
 
 macro_rules! option {

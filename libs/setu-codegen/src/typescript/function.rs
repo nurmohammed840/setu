@@ -62,11 +62,8 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                     FnOutputTy::Return(return_ty) => {
                         fn_call_body("rpc", &[return_ty]);
                     }
-                    FnOutputTy::Generator {
-                        return_ty,
-                        yield_ty,
-                    } => {
-                        fn_call_body("sse", &[yield_ty, return_ty]);
+                    FnOutputTy::Generator(g) => {
+                        fn_call_body("sse", &[&g.yield_ty, &g.return_ty]);
                     }
                 }
             },
