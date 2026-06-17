@@ -1,7 +1,7 @@
 pub use async_gen;
 pub use lipi;
 pub use setu_type_info;
-pub use type_id;
+pub use setu_type_info::type_id;
 
 use crate::transport::http::HttpContext;
 

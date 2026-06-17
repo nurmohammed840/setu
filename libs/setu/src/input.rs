@@ -7,10 +7,12 @@ use lipi::{
     Decode,
     decoder::{FieldDecoder, FieldDecoderOwned, FieldInfoDecoder, Optional},
 };
-use setu_type_info::GeneratorType;
+use setu_type_info::{
+    GeneratorType,
+    type_id::{OtherType, Type, TypeId, TypeRegistry},
+};
 use std::{future::Future, marker::PhantomData};
 use std::{ops::ControlFlow, sync::Arc};
-use type_id::{OtherType, Type, TypeId};
 
 pub struct Stream<T, R = ()> {
     pub input: HttpBody,
@@ -19,7 +21,7 @@ pub struct Stream<T, R = ()> {
 }
 
 impl<T: TypeId, R: TypeId> TypeId for Stream<T, R> {
-    fn ty(r: &mut type_id::TypeRegistry) -> Type {
+    fn ty(r: &mut TypeRegistry) -> Type {
         Type::Other(OtherType(Arc::new(GeneratorType {
             yield_ty: T::ty(r),
             return_ty: R::ty(r),

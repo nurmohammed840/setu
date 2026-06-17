@@ -8,7 +8,7 @@ use async_gen::{AsyncGenerator, GeneratorState};
 use futures::FutureExt;
 use lipi::encoder::OptionalField;
 use nio::Sleep;
-use setu_type_info::FnOutputType;
+use setu_type_info::{FnOutputType, type_id::TypeId};
 use std::{
     future::poll_fn,
     io,
@@ -16,7 +16,6 @@ use std::{
     str::FromStr,
     task::{self, Poll},
 };
-use type_id::TypeId;
 
 pub trait Output: FnOutputType {
     fn process<F, Args>(func: F, ctx: HttpContext)
