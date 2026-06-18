@@ -9,6 +9,7 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
         meta,
         input_ty,
         output_ty,
+        // stream,
         ..
     } in &ctx.info.fns
     {

@@ -171,7 +171,7 @@ export function print(msg: string, ctx: $.Context = {}) {
 	return $.rpc(
 		4, ctx,
 		_ => $SE(_, [[0, msg, _.Str]]),
-		_ => {}
+		_ => { }
 	);
 }
 
@@ -179,7 +179,7 @@ export function store(msg: string, ctx: $.Context = {}) {
 	return $.rpc(
 		5, ctx,
 		_ => $SE(_, [[0, msg, _.Str]]),
-		_ => {}
+		_ => { }
 	);
 }
 
@@ -205,6 +205,14 @@ export function fetch_user_ids(count: number, ctx: $.Context = {}) {
 		_ => $SE(_, [[0, count, _.U8]]),
 		_ => $OD(_, _.U8, true),
 		_ => $OD(_, _.Str, true),
+	);
+}
+
+export function process_msg(ctx: $.Context = {}) {
+	return $.rpc(
+		9, ctx,
+		_ => $SE(_, []),
+		_ => { }
 	);
 }
 

@@ -2,9 +2,11 @@ import { ProtocolError } from "../errors.ts";
 import { Output, SSE } from "./output.ts";
 import { Timeout } from "../timeout.ts";
 import { assert } from "../utils/common.ts";
-import { Decode, Decoder } from "../lipi/decoder.ts";
+import { MPSC } from "../utils/mpsc.ts";
+import { Decode } from "../lipi/decoder.ts";
 import { Encode } from "../lipi/encoder.ts";
-import { encodeTrailer } from "../setu/frame.writer.ts";
+import { encode_frame } from "../setu/frame.writer.ts";
+import { Status } from "../status.ts";
 
 export class RPC {
     static URL = new URL("/", "https://localhost:443");
@@ -50,8 +52,7 @@ export interface Context {
 }
 
 export function rpc<T>(
-    id: number,
-    { timeout, url }: Context,
+    id: number, { timeout, url }: Context,
     encoder: (_: Encode) => void,
     decoder: (_: Decode) => T
 ): Output<T> {
@@ -59,14 +60,13 @@ export function rpc<T>(
 
     let e = new Encode();
     encoder(e);
-    let body = encodeTrailer(e.data());
+    let body = encode_frame(e.data(), Status.Ok);
 
     return Output(controller, RPC.call(id, body, controller, timeout, url), decoder);
 }
 
 export function sse<T, R>(
-    id: number,
-    { timeout, url }: Context,
+    id: number, { timeout, url }: Context,
     encoder: (_: Encode) => void,
     yielder: (_: Decode) => T,
     output: (_: Decode) => R,
@@ -75,7 +75,25 @@ export function sse<T, R>(
 
     let e = new Encode();
     encoder(e);
-    let body = encodeTrailer(e.data());
+    let body = encode_frame(e.data(), Status.Ok);
 
     return SSE(controller, RPC.call(id, body, controller, timeout, url), yielder, output);
 }
+
+export function uni<Y, R, T>(
+    id: number, { timeout, url }: Context,
+    encoder: (_: Encode) => void,
+    output: (_: Decode) => T,
+) {
+    let controller = new AbortController();
+    let channel = new MPSC<Uint8Array>();
+
+    let e = new Encode();
+    encoder(e);
+    channel.send(encode_frame(e.data()));
+
+
+    Output(controller, RPC.call(id, channel.stream, controller, timeout, url), output);
+}
+
+export function bi() { }
