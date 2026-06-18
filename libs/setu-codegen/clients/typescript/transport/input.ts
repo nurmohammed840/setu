@@ -4,8 +4,3 @@ import { MPSC } from "../utils/mpsc.ts";
 export class Stream<T, R> {
     channel = new MPSC<Uint8Array>();
 }
-
-// export interface Stream<T, R> {
-//     send(_: T): void;
-//     close(_: R): void;
-// }

@@ -1,4 +1,4 @@
-import { Decode, Decoder } from "../lipi/decoder.ts";
+import { Decode } from "../lipi/decoder.ts";
 import { FrameDecoder } from "../setu/frame.ts";
 import { Status } from "../status.ts";
 import { Bytes } from "../utils/bytes.ts";
@@ -10,7 +10,7 @@ export interface Output<T> extends Promise<T> {
 }
 
 export function Output<T>(
-    controller: AbortController,
+    connection: AbortController,
     body: Promise<ReadableStream<Uint8Array>>,
     decoder: (_: Decode) => T
 ) {
@@ -20,8 +20,8 @@ export function Output<T>(
 
     let output: Output<T> = Object.assign(fut.promise, {
         cancle(reason?: any) {
-            controller.abort(reason);
             stream?.reader.cancel(reason);
+            connection.abort(reason);
             canceled = { reason };
         }
     });
@@ -29,7 +29,6 @@ export function Output<T>(
     (async () => {
         try {
             let res = await body;
-
             if (canceled) {
                 res.cancel(canceled.reason);
                 return fut.reject(canceled.reason);
@@ -59,7 +58,7 @@ export interface SSE<T, R> extends AsyncGenerator<T> {
 }
 
 export function SSE<T, R>(
-    controller: AbortController,
+    connection: AbortController,
     body: Promise<ReadableStream<Uint8Array>>,
     yielder: (_: Decode) => T,
     output: (_: Decode) => R,
@@ -73,7 +72,7 @@ export function SSE<T, R>(
             let res = await body;
             if (canceled) {
                 res.cancel(canceled.reason);
-                controller.abort(canceled.reason);
+                connection.abort(canceled.reason);
                 return
             }
 
@@ -101,7 +100,7 @@ export function SSE<T, R>(
             asyncIter.return(undefined);
 
             stream?.reader.cancel(reason);
-            controller.abort(reason);
+            connection.abort(reason);
         },
         output() {
             return fut.promise

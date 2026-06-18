@@ -5,8 +5,9 @@ import { assert } from "../utils/common.ts";
 import { MPSC } from "../utils/mpsc.ts";
 import { Decode } from "../lipi/decoder.ts";
 import { Encode } from "../lipi/encoder.ts";
-import { encode_frame } from "../setu/frame.writer.ts";
+import { encodeFrame, encodeLastFrame } from "../setu/frame.writer.ts";
 import { Status } from "../status.ts";
+import { error } from "node:console";
 
 export class RPC {
     static URL = new URL("/", "https://localhost:443");
@@ -15,7 +16,7 @@ export class RPC {
     static async call(
         id: number,
         body: BodyInit,
-        controller: AbortController,
+        conn: AbortController,
         timeout: Timeout | null = RPC.TIMEOUT,
         url: URL = RPC.URL
     ) {
@@ -26,11 +27,11 @@ export class RPC {
 
         let timer;
         if (timeout) {
-            timer = setTimeout(() => controller.abort(), timeout.duration());
+            timer = setTimeout(() => conn.abort(), timeout.duration());
             headers["rpc-timeout"] = timeout.toString();
         }
 
-        let res = await fetch(url, { method: "POST", headers, body, signal: controller.signal });
+        let res = await fetch(url, { method: "POST", headers, body, signal: conn.signal });
 
         clearTimeout(timer);
 
@@ -53,47 +54,63 @@ export interface Context {
 
 export function rpc<T>(
     id: number, { timeout, url }: Context,
-    encoder: (_: Encode) => void,
-    decoder: (_: Decode) => T
+    input: (_: Encode) => void,
+    output: (_: Decode) => T
 ): Output<T> {
-    let controller = new AbortController();
-
-    let e = new Encode();
-    encoder(e);
-    let body = encode_frame(e.data(), Status.Ok);
-
-    return Output(controller, RPC.call(id, body, controller, timeout, url), decoder);
+    let conn = new AbortController();
+    let body = encodeLastFrame(input);
+    return Output(conn, RPC.call(id, body, conn, timeout, url), output);
 }
 
 export function sse<T, R>(
     id: number, { timeout, url }: Context,
-    encoder: (_: Encode) => void,
+    input: (_: Encode) => void,
     yielder: (_: Decode) => T,
     output: (_: Decode) => R,
 ): SSE<T, R> {
-    let controller = new AbortController();
-
-    let e = new Encode();
-    encoder(e);
-    let body = encode_frame(e.data(), Status.Ok);
-
-    return SSE(controller, RPC.call(id, body, controller, timeout, url), yielder, output);
+    let conn = new AbortController();
+    let body = encodeLastFrame(input);
+    return SSE(conn, RPC.call(id, body, conn, timeout, url), yielder, output);
 }
 
-export function uni<Y, R, T>(
+export async function uni<T, R, O>(
     id: number, { timeout, url }: Context,
-    encoder: (_: Encode) => void,
-    output: (_: Decode) => T,
+    input: (_: Encode) => void,
+    output: (_: Decode) => O,
+    send: (self: Encode, _: T) => void,
+    final: (self: Encode, _: R) => void,
 ) {
-    let controller = new AbortController();
-    let channel = new MPSC<Uint8Array>();
+    let conn = new AbortController();
+    let writer = new MPSC<Uint8Array>();
 
-    let e = new Encode();
-    encoder(e);
-    channel.send(encode_frame(e.data()));
+    await writer.send(encodeFrame(input));
 
+    let rpc = Output(conn, RPC.call(id, writer.stream, conn, timeout, url), output);
 
-    Output(controller, RPC.call(id, channel.stream, controller, timeout, url), output);
+    return {
+        [Symbol.dispose]() {
+            writer.close();
+        },
+
+        send(value: T) {
+            return writer.send(encodeFrame(e => send(e, value)));
+        },
+        async sendFinal(value: R) {
+            await writer.send(encodeLastFrame(e => final(e, value)));
+            writer.close();
+        },
+        async sendError(reason?: string) {
+            writer.close();
+        },
+
+        cancle() {
+            writer.close();
+            rpc.cancle();
+        },
+        async output() {
+            return await rpc;
+        }
+    }
 }
 
 export function bi() { }

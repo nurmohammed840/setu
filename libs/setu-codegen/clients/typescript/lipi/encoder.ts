@@ -11,12 +11,12 @@ export type Encoder<T> = (this: Encode, val: T) => void;
 
 export class Writer extends Buffer {
     writeVarint(num: number | bigint) {
-        this.append(encodeVarInt(num));
+        this.push(encodeVarInt(num));
     }
 
     writeBytes(bytes: Uint8Array) {
         this.writeVarint(bytes.length);
-        this.append(bytes);
+        this.push(bytes);
     }
 
     write_field_id_and_ty(num: number, ty: DataType) {
@@ -48,19 +48,19 @@ export class Encode extends Writer {
 
         const buf = new ArrayBuffer(1);
         new DataView(buf).setInt8(0, num);
-        this.append(new Uint8Array(buf));
+        this.push(new Uint8Array(buf));
     }
 
     F32(num: number) {
         const buf = new ArrayBuffer(4);
         new DataView(buf).setFloat32(0, num, true); // true = little-endian
-        this.append(new Uint8Array(buf));
+        this.push(new Uint8Array(buf));
     }
 
     F64(num: number) {
         const buf = new ArrayBuffer(8);
         new DataView(buf).setFloat64(0, num, true); // true = little-endian
-        this.append(new Uint8Array(buf));
+        this.push(new Uint8Array(buf));
     }
 
     U16 = function UInt(this: Encode, num: number) {
@@ -101,23 +101,23 @@ export class Encode extends Writer {
 
     ListU8 = function List(this: Encode, v: Uint8Array) {
         this.write_len_and_ty(v.length, DataType.U8);
-        this.append(v)
+        this.push(v)
     }
 
     ListI8 = function List(this: Encode, v: Int8Array) {
         this.write_len_and_ty(v.length, DataType.I8);
-        this.append(RawBytes(v))
+        this.push(RawBytes(v))
     }
 
     ListF32 = function List(this: Encode, v: Float32Array) {
         this.write_len_and_ty(v.length, DataType.F32);
-        if (IS_LITTLE_ENDIAN) return this.append(RawBytes(v));
+        if (IS_LITTLE_ENDIAN) return this.push(RawBytes(v));
         for (let n of v) this.F32(n)
     }
 
     ListF64 = function List(this: Encode, v: Float64Array) {
         this.write_len_and_ty(v.length, DataType.F64);
-        if (IS_LITTLE_ENDIAN) return this.append(RawBytes(v));
+        if (IS_LITTLE_ENDIAN) return this.push(RawBytes(v));
         for (let n of v) this.F64(n)
     }
 
@@ -131,7 +131,7 @@ export class Encode extends Writer {
 
     ListBool = function List(this: Encode, bools: Array<boolean>) {
         this.write_len_and_ty(bools.length, DataType.True);
-        this.append(bitvecFrom(bools).asBytes())
+        this.push(bitvecFrom(bools).asBytes())
     }
 
     Table<K, V>(k: Encoder<K>, v: Encoder<V>) {

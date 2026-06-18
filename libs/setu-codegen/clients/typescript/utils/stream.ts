@@ -25,7 +25,7 @@ export class Stream {
         let chunk;
         let buf = new Buffer();
         while (chunk = await this.read())
-            buf.append(chunk);
+            buf.push(chunk);
 
         return buf.data();
     }
@@ -58,7 +58,7 @@ export class StreamReader {
 
             let remaining = len - buf.len;
             let takeN = Math.min(remaining, data.length);
-            buf.append(data.take(takeN));
+            buf.push(data.take(takeN));
         }
 
         return buf.data()

@@ -51,7 +51,6 @@ export class MPSC<T> {
     }
 
     close(reason?: any) {
-        if (this.#closed) return
         this.#wake_all_sender(reason);
         this.#controller.close();
     }
