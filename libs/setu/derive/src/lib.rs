@@ -87,7 +87,7 @@ pub fn check_fn_args_count(crate_path: &TokenStream, list: &FnList, t: &mut Toke
     let body = quote(|t| {
         for rpc in &list.fns {
             let ident = &rpc.name;
-            let args_len = rpc.args.len();
+            let args_len = rpc.args.len() as u8;
 
             let panic_msg = quote(|t| {
                 let span = rpc.name.span();
@@ -96,7 +96,7 @@ pub fn check_fn_args_count(crate_path: &TokenStream, list: &FnList, t: &mut Toke
             });
 
             quote!(t, {
-                if __crate::fn_args_count(&#ident) != #args_len {
+                if __fn_args_count(&#ident) != #args_len {
                     #panic_msg;
                 }
             });
@@ -104,7 +104,7 @@ pub fn check_fn_args_count(crate_path: &TokenStream, list: &FnList, t: &mut Toke
     });
     quote!(t, {
         const _: () = {
-            use #crate_path::__private::setu_type_info as __crate;
+            use #crate_path::__private::__fn_args_count;
             #body
         };
     });

@@ -26,6 +26,7 @@ setu::export! {
 
     // stream
     fn fetch_user_ids(count) = 8;
+    fn process_msg() = 9;
 
     // ----------
     fn random_data() = 101;
