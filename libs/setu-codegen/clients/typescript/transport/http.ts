@@ -5,7 +5,7 @@ import { assert } from "../utils/common.ts";
 import { MPSC } from "../utils/mpsc.ts";
 import { Decode } from "../lipi/decoder.ts";
 import { Encode } from "../lipi/encoder.ts";
-import { encodeFrame, encodeLastFrame } from "../setu/frame.writer.ts";
+import { encodeErrorFrame, encodeFrame, encodeLastFrame } from "../setu/frame.writer.ts";
 import { Status } from "../status.ts";
 import { error } from "node:console";
 
@@ -99,7 +99,8 @@ export async function uni<T, R, O>(
             await writer.send(encodeLastFrame(e => final(e, value)));
             writer.close();
         },
-        async sendError(reason?: string) {
+        async sendError(status: Status, reason?: string) {
+            await writer.send(encodeErrorFrame(status, reason));
             writer.close();
         },
 
