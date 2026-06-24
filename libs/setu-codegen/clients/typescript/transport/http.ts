@@ -7,7 +7,6 @@ import { Decode } from "../lipi/decoder.ts";
 import { Encode } from "../lipi/encoder.ts";
 import { encodeErrorFrame, encodeFrame, encodeLastFrame } from "../setu/frame.writer.ts";
 import { Status } from "../status.ts";
-import { error } from "node:console";
 
 export class RPC {
     static URL = new URL("/", "https://localhost:443");
@@ -76,9 +75,9 @@ export function sse<T, R>(
 export async function uni<T, R, O>(
     id: number, { timeout, url }: Context,
     input: (_: Encode) => void,
+    send: (_: Encode, z: T) => void,
+    final: (_: Encode, z: R) => void,
     output: (_: Decode) => O,
-    send: (self: Encode, _: T) => void,
-    final: (self: Encode, _: R) => void,
 ) {
     let conn = new AbortController();
     let writer = new MPSC<Uint8Array>();

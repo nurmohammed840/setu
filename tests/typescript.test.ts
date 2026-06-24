@@ -33,6 +33,11 @@ for (let _ of Range(0, 3)) {
     assert(await api.compare_js_value({ left, right }));
 }
 
+// -------------------------- Uni ---------------------------
+
+let a = api.process_msg();
+
+
 // -------------------------- SSE ---------------------------
 
 let ids = api.fetch_user_ids(3);

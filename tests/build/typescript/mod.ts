@@ -209,10 +209,12 @@ export function fetch_user_ids(count: number, ctx: $.Context = {}) {
 }
 
 export function process_msg(ctx: $.Context = {}) {
-	return $.rpc(
+	return $.uni(
 		9, ctx,
 		_ => $SE(_, []),
-		_ => { }
+		(_, z: number) => $SE(_, [[0, z, _.F32]]),
+		(_, z: number) => $SE(_, [[0, z, _.F32]]),
+		_ => { },
 	);
 }
 
