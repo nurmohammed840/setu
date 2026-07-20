@@ -1,7 +1,7 @@
 # for Linux
-[target.x86_64-unknown-linux-gnu]
-linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+# [target.x86_64-unknown-linux-gnu]
+# linker = "clang"
+# rustflags = ["-C", "link-arg=-fuse-ld=lld"]
 
 # for Windows
 [target.x86_64-pc-windows-msvc]
@@ -10,6 +10,6 @@ linker = "rust-lld.exe"
 [env]
 # SSLKEYLOGFILE = { value = "./sslkeylog.log", relative = true }
 
-SERVER_ADDR = "127.0.0.1:443"
+SERVER_ADDR = "127.0.0.1:4433"
 TLS_CERTS = ".vscode/cert/cert.pem"
 TLS_KEY = ".vscode/cert/key.pem"

@@ -82,7 +82,6 @@ impl HttpServer {
         }
 
         let tls = TlsAcceptor::from(Arc::new(tls_config));
-
         HttpServer::_run(addr, tls, h).await
     }
 

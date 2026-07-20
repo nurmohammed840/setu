@@ -3,7 +3,7 @@ use setu::{Application, transport::HttpServer};
 use test_suite::TestSuite;
 
 #[nio::main]
-async fn main() {
+async fn main() -> setu::Result<()> {
     HttpServer::new()
         .run(|mut ctx: HttpContext| {
             if let Some(id) = ctx.req.get_rpc_key() {
@@ -13,5 +13,4 @@ async fn main() {
             }
         })
         .await
-        .unwrap();
 }

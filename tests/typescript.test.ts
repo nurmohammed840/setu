@@ -3,6 +3,8 @@ import { assertEquals, assert } from "jsr:@std/assert";
 import * as api from "./build/typescript/mod.ts";
 import { Range } from "./build/typescript/utils.ts";
 
+api.$etu.RPC.URL = new URL("/", "https://localhost:4433");
+
 // greeting
 assertEquals(await api.say_hello({ name: "Nur" }), { message: "Hello Nur!" });
 
@@ -35,7 +37,7 @@ for (let _ of Range(0, 3)) {
 
 // -------------------------- Uni ---------------------------
 
-let a = api.process_msg();
+// let a = api.process_msg();
 
 
 // -------------------------- SSE ---------------------------
