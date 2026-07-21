@@ -65,8 +65,6 @@ pub fn generate(c: &mut CodeWriter, ctx: &Context) {
                 match output_ty {
                     FnOutputTy::Return(return_ty) if let Some(ty) = stream => {
                         fn_call_body("uni", &[return_ty], &|c| {
-                            
-                            // ty.yield_ty;
                             // ty.yield_ty;
                         });
                     }

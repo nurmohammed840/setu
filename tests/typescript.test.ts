@@ -37,9 +37,12 @@ for (let _ of Range(0, 3)) {
 
 // -------------------------- Uni ---------------------------
 
-// let a = api.process_msg();
+{
 
-
+    let stream = await api.process_msg();
+    stream.send(42);
+    stream.sendFinal(24);
+}
 // -------------------------- SSE ---------------------------
 
 let ids = api.fetch_user_ids(3);

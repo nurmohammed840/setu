@@ -11,9 +11,9 @@ pub fn fetch_user_ids(count: u8) -> impl Output {
     }
 }
 
-pub async fn process_msg(mut s: Stream<String, u8>) {
-    loop {
-        match s.next().await.unwrap() {
+pub async fn process_msg(mut stream: Stream<String, u8>) {
+    while let Ok(msg) = stream.next().await {
+        match msg {
             ControlFlow::Continue(msg) => {
                 println!("msg: {msg}",);
             }

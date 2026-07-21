@@ -11,9 +11,15 @@
     "**/.DS_Store": true,
     "**/Thumbs.db": true,
     // ---------------------
+    "libs/lipi/src/bin": true,
+    // ---------------------
+    ".cargo": true,
+    ".vscode/cert": true,
+    ".gitignore": true,
+    "crates": true,
+    "tests/build": true,
+    "target": true,
     "LICENSE": true,
     "README.md": true,
-    // ================
-    "libs/lipi/src/bin": true,
   },
 }
