@@ -11,22 +11,12 @@ use setu_type_info::{
     GeneratorType,
     type_id::{OtherType, Type, TypeId, TypeRegistry},
 };
-use std::{future::Future, marker::PhantomData};
-use std::{ops::ControlFlow, sync::Arc};
+use std::{future::Future, marker::PhantomData, ops::ControlFlow, sync::Arc};
 
 pub struct Stream<T, R = ()> {
     pub input: HttpBody,
     frame_decoder: FrameDecoder,
     data: PhantomData<(T, R)>,
-}
-
-impl<T: TypeId, R: TypeId> TypeId for Stream<T, R> {
-    fn ty(r: &mut TypeRegistry) -> Type {
-        Type::Other(OtherType(Arc::new(GeneratorType {
-            yield_ty: T::ty(r),
-            return_ty: R::ty(r),
-        })))
-    }
 }
 
 impl<T, R> Stream<T, R>
@@ -57,18 +47,13 @@ where
     }
 }
 
-fn decode_optional_field<'de, T>(reader: &mut &'de [u8]) -> Result<T>
-where
-    T: Optional,
-    T::Value: FieldDecoder<'de>,
-{
-    let mut val = None;
-    let mut fd = FieldInfoDecoder::new(reader);
-    if let Some((key, ty)) = fd.next_field_id_and_ty()? {
-        assert_eq!(key, 0);
-        val = fd.decode(ty, "tuple 0")?;
+impl<T: TypeId, R: TypeId> TypeId for Stream<T, R> {
+    fn ty(r: &mut TypeRegistry) -> Type {
+        Type::Other(OtherType(Arc::new(GeneratorType {
+            yield_ty: T::ty(r),
+            return_ty: R::ty(r),
+        })))
     }
-    Ok(Optional::convert(val, "tuple 0")?)
 }
 
 // =======================================================================
@@ -179,4 +164,18 @@ async fn decode_last_msg(mut stream: HttpBody) -> Result<RawBytes> {
         return Err(format!("unexpected status: {status:?}").into());
     }
     Ok(bytes)
+}
+
+fn decode_optional_field<'de, T>(reader: &mut &'de [u8]) -> Result<T>
+where
+    T: Optional,
+    T::Value: FieldDecoder<'de>,
+{
+    let mut val = None;
+    let mut fd = FieldInfoDecoder::new(reader);
+    if let Some((key, ty)) = fd.next_field_id_and_ty()? {
+        assert_eq!(key, 0);
+        val = fd.decode(ty, "tuple 0")?;
+    }
+    Ok(Optional::convert(val, "tuple 0")?)
 }

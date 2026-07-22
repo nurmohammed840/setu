@@ -21,7 +21,6 @@ pub enum Frame {
 }
 
 impl Frame {
-    #[allow(dead_code)]
     pub fn message(self) -> Option<RawBytes> {
         match self {
             Frame::Message(data) => Some(data),

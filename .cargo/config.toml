@@ -2,7 +2,7 @@
 linker = "rust-lld.exe"
 
 [env]
-# SSLKEYLOGFILE = { value = "./sslkeylog.log", relative = true }
+SSLKEYLOGFILE = { value = "./target/sslkeylog.log", relative = true }
 
 SERVER_ADDR = "127.0.0.1:4433"
 TLS_CERTS = ".vscode/cert/cert.pem"
