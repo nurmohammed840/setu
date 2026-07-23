@@ -177,6 +177,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct FrameHeader {
     // 1 bit
     pub is_compressed: bool,
@@ -235,6 +236,11 @@ impl std::ops::Deref for RawBytes {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_name() {
+        println!("FrameHeader::parse(0x02): {:#?}", FrameHeader::parse(0x02));
+    }
 
     #[test]
     fn test_frame_header() {
