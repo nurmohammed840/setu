@@ -24,10 +24,9 @@ pub struct HttpResponse {
 
 impl From<SendResponse<Bytes>> for HttpResponse {
     fn from(writer: SendResponse<Bytes>) -> Self {
-        Self {
-            writer,
-            response: http::Response::new(()),
-        }
+        let response = http::Response::new(());
+
+        Self { writer, response }
     }
 }
 

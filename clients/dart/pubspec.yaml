@@ -6,10 +6,11 @@ version: 1.0.0
 environment:
   sdk: ^3.12.2
 
-# Add regular dependencies here.
 dependencies:
-  # path: ^1.9.0
+  dio: ^5.10.0
+  dio_http2_adapter: ^2.7.1
 
+# Add regular dependencies here.
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.25.6

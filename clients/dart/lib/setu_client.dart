@@ -3,6 +3,3 @@
 /// More dartdocs go here.
 library;
 
-export 'src/setu_client_base.dart';
-
-// TODO: Export any libraries intended for clients of this package.
