@@ -26,8 +26,43 @@ When using raw Socket (ex: TCP) or protocols such as WebSocket, these capabiliti
 
 Length-Prefixed-Message:
 
-```
+```rs
+struct Frame {
+    // 1 byte
+    header: FrameHeader,
+    // 1-4 bytes
+    length: u32,
+    // N bytes
+    payload: [u8]
+}
 
+struct FrameHeader {
+    // 1 bit
+    is_compressed: bool,
+    // 1 bit
+    is_trailer: bool,
+    // 2 bit
+    len_size: u8,
+    // 4 bit 
+    code: u8, // Must be `0` if `!is_trailer`
+}
+
+fn parse_header(byte: u8) -> FrameHeader {
+    FrameHeader {
+        is_compressed: (byte & 0b1) == 0b1,
+        is_trailer: (byte & 0b10) == 0b10,
+        len_size: ((byte >> 2) & 0b11) + 1,
+        code: byte >> 4,
+    }
+}
+
+fn parse_length_big_endian(size: u8) -> u32 {
+    let length = 0;
+    for _ in 0..size {
+        length = (length << 8) | next_byte();
+    }
+    return length;
+}
 ```
 
 # Responses
