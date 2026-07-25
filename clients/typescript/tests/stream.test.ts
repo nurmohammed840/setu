@@ -1,7 +1,5 @@
 import { assertEquals, assertRejects } from "jsr:@std/assert";
-import { encodeAsLastFrame } from "../src/setu/frame.writer.ts";
 import { Stream, StreamReader } from "../src/utils/stream.ts";
-
 
 function createStream(...s: number[][]) {
     const stream = new ReadableStream<Uint8Array>({
