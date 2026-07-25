@@ -78,7 +78,6 @@ export class Timeout {
     }
 
     equals(other: Timeout): boolean {
-        console.log({ other });
         return this.unit === other.unit && this.value === other.value;
     }
 }
