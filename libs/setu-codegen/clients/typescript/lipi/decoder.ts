@@ -1,7 +1,7 @@
 import { Bytes } from "../utils/bytes.ts";
 import { assert, IS_LITTLE_ENDIAN, checkOverflowInt, checkOverflowUint } from "../utils/common.ts";
 import { decodeVarInt } from "./varint.ts";
-import { DataType } from "./type.ts";
+import { DataType } from "./data_type.ts";
 import { zigzagDecode } from "./zigzag.ts";
 import { bitvecToBools, boolPackedLen } from "../bitset.ts";
 import { skip_field } from "./skip.ts";

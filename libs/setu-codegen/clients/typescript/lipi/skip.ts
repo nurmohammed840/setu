@@ -1,7 +1,7 @@
 import { boolPackedLen } from "../bitset.ts";
 import { assert } from "../utils/common.ts";
 import { Deserialize, } from "./decoder.ts";
-import { DataType } from "./type.ts";
+import { DataType } from "./data_type.ts";
 
 export function skip_field(self: Deserialize, id: number, ty: DataType) {
     try {

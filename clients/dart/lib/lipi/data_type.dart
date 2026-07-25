@@ -36,15 +36,6 @@ enum DataType {
     return value ? DataType.True : DataType.False;
   }
 
-  static DataType fromString(String str) {
-    return DataType.values.firstWhere(
-      (e) => e.name == str,
-      orElse: () => throw TypeError(),
-    );
-  }
-}
-
-extension DataTypeExt on DataType {
   bool asBool() {
     switch (this) {
       case DataType.False:
@@ -54,6 +45,13 @@ extension DataTypeExt on DataType {
       default:
         throw ArgumentError('expected: False or True, found: $name');
     }
+  }
+
+  static DataType fromString(String str) {
+    return DataType.values.firstWhere(
+      (e) => e.name == str,
+      orElse: () => throw TypeError(),
+    );
   }
 
   void expected(DataType expected) {

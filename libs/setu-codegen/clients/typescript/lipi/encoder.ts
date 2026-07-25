@@ -1,4 +1,4 @@
-import { DataType } from "./type.ts";
+import { DataType } from "./data_type.ts";
 import { encodeVarInt } from "./varint.ts";
 import { zigzagEncode } from "./zigzag.ts";
 import { Buffer } from "../utils/buffer.ts";
