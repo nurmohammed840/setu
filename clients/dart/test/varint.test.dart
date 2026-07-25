@@ -1,18 +1,15 @@
+import 'package:setu_client/lipi/zigzag.dart';
 import 'package:test/test.dart';
-
-BigInt zigzagEncode(BigInt n) {
-  return (n << 1) ^ (n >> 63);
-}
-
-BigInt zigzagDecode(BigInt encoded) {
-  return (encoded >> 1) ^ -(encoded & BigInt.one);
-}
 
 void main() {
   group('ZigZag Encoding & Decoding', () {
     void checkZigZag(BigInt actual, BigInt encoded) {
       expect(zigzagEncode(actual), equals(encoded), reason: 'Failed encoding for $actual');
-      expect(zigzagDecode(encoded), equals(actual), reason: 'Failed decoding for $encoded');
+      expect(
+        BigInt.from(zigzagDecode(encoded)),
+        equals(actual),
+        reason: 'Failed decoding for $encoded',
+      );
     }
 
     test('encodes and decodes basic values correctly', () {
