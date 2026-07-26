@@ -39,7 +39,6 @@ export class RPC {
         }
 
         let contentType = res.headers.get("content-type");
-
         assert(contentType == "application/setu", ProtocolError, () => `unexpected content-type: ${contentType ?? "none"}`);
         assert(res.body, ProtocolError, "No response body");
         return res.body;
