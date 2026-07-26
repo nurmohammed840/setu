@@ -1,7 +1,7 @@
 name: setu_client
 description: A starting point for Dart libraries or applications.
 version: 1.0.0
-# repository: https://github.com/my_org/my_repo
+repository: https://github.com/nurmohammed840/setu
 
 environment:
   sdk: ^3.12.2
@@ -10,7 +10,6 @@ dependencies:
   dio: ^5.10.0
   dio_http2_adapter: ^2.7.1
 
-# Add regular dependencies here.
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.25.6

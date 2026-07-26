@@ -13,6 +13,8 @@
     // ---------------------
     "libs/lipi/src/bin": true,
     // ---------------------
+    "clients/dart/.dart_tool": true,
+    // ---------------------
     ".cargo": true,
     ".vscode/cert": true,
     ".gitignore": true,

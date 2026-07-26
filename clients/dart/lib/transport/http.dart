@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:setu_client/errors.dart';
 
+import 'package:setu_client/errors.dart';
 import 'package:setu_client/http/client.dart';
 import 'package:setu_client/setu/http_headers.dart';
 import 'package:setu_client/timeout.dart';
