@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 T expected<T>(T? data, [String message = 'expected value']) {
   if (data == null) {
-    throw TypeError();
+    throw Exception(message);
   }
   return data;
 }

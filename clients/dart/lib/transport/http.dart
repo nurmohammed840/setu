@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
 
 import 'package:setu_client/errors.dart';
@@ -13,7 +11,7 @@ class RPC {
   static var timeout = Timeout.minute(2);
   static var dio = createHttpClient();
 
-  static Future<Stream<Uint8List>> call({
+  static Future<ResponseBody> call({
     required int id,
     required Object body,
 
@@ -53,6 +51,6 @@ class RPC {
       message: () => 'unexpected content-type: ${contentType ?? "none"}',
     );
 
-    return response.data.stream;
+    return response.data!;
   }
 }

@@ -1,10 +1,10 @@
 class EndOfData implements Exception {
-  final String? message;
+  final String message;
 
-  const EndOfData([this.message]);
+  const EndOfData([this.message = 'read after end of stream']);
 
   @override
-  String toString() => message == null ? 'EndOfData' : 'EndOfData: $message';
+  String toString() => 'EndOfData: $message';
 }
 
 class ProtocolError implements Exception {
@@ -13,5 +13,6 @@ class ProtocolError implements Exception {
   const ProtocolError([this.message]);
 
   @override
-  String toString() => message == null ? 'ProtocolError' : 'ProtocolError: $message';
+  String toString() =>
+      message == null ? 'ProtocolError' : 'ProtocolError: $message';
 }
