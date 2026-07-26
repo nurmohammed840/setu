@@ -7,6 +7,7 @@ Dio createHttpClient() {
   final dio = Dio();
 
   configureAdapter(dio);
+  // dio.interceptors.add(LogInterceptor());
 
   return dio;
 }
