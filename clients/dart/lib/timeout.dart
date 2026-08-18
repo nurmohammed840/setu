@@ -7,7 +7,6 @@ enum TimeoutUnit {
   millisecond('m');
 
   const TimeoutUnit(this.symbol);
-
   final String symbol;
 }
 
