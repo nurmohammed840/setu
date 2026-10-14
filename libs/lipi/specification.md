@@ -185,7 +185,7 @@ This ensures that small negative numbers remain compact when encoded with unsign
 ZigZag is computed using the following formula:
 
 ```rust
-fn into_zig_zag(n: u64) -> i64 = (n << 1) ^ (n >> u64::BITS - 1)
+fn into_zig_zag(n: i64) -> u64 = (n << 1) ^ (n >> u64::BITS - 1)
 fn from_zig_zag(n: u64) -> i64 = (n >>> 1) ^ - (n & 1)
 ```
 

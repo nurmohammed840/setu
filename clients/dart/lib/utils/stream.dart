@@ -20,7 +20,8 @@ class HttpStream {
       throw EndOfData();
     }
 
-    if (!await _iterator.moveNext()) {
+    final hasData = await _iterator.moveNext();
+    if (!hasData) {
       _eos = true;
       return null;
     }
@@ -39,10 +40,10 @@ class HttpStream {
 }
 
 class StreamReader {
-  StreamReader(this.stream);
-
-  final HttpStream stream;
   var _data = Bytes.empty();
+
+  StreamReader(this.stream);
+  final HttpStream stream;
 
   Future<void> close() => stream.cancel();
 

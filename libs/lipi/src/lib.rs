@@ -7,7 +7,7 @@ pub mod decoder;
 pub mod encoder;
 pub mod errors;
 
-pub use bit_set::BitSet;
+pub use bit_set::{BitSet, BitSetMut};
 pub use decoder::Decode;
 pub use encoder::Encode;
 pub use lipi_macros::*;
